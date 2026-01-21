@@ -1,0 +1,60 @@
+package com.complextalents.elemental.talents;
+
+import com.complextalents.TalentsMod;
+import com.complextalents.elemental.ElementalTalents;
+import com.complextalents.elemental.attributes.MasteryAttributes;
+import com.complextalents.talent.PassiveTalent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+
+import java.util.UUID;
+
+/**
+ * Ice Mastery talent - grants Ice-specific mastery
+ * Each level grants +10 Ice Mastery
+ * Affects Ice-based reactions: Melt, Frozen, Superconduct, Fracture
+ */
+public class IceMasteryTalent extends PassiveTalent {
+    private static final UUID MODIFIER_UUID = UUID.nameUUIDFromBytes("IceMasteryTalent".getBytes());
+    private static final double MASTERY_PER_LEVEL = 10.0;
+
+    public IceMasteryTalent() {
+        super(
+                ElementalTalents.ICE_MASTERY,
+                Component.translatable("talent.complextalents.ice_mastery.name"),
+                Component.translatable("talent.complextalents.ice_mastery.description"),
+                10  // Max level 10 = 100 Ice Mastery
+        );
+    }
+
+    @Override
+    public void onUnlock(ServerPlayer player, int level) {
+        TalentsMod.LOGGER.debug("Player {} unlocked Ice Mastery at level {}",
+                               player.getName().getString(), level);
+
+        player.getAttribute(MasteryAttributes.ICE_MASTERY.get())
+              .removeModifier(MODIFIER_UUID);
+
+        double masteryAmount = MASTERY_PER_LEVEL * level;
+        AttributeModifier modifier = new AttributeModifier(
+            MODIFIER_UUID,
+            "Ice Mastery Talent Bonus",
+            masteryAmount,
+            AttributeModifier.Operation.ADDITION
+        );
+
+        player.getAttribute(MasteryAttributes.ICE_MASTERY.get())
+              .addPermanentModifier(modifier);
+
+        TalentsMod.LOGGER.debug("Granted {} ice mastery to {}",
+                               masteryAmount, player.getName().getString());
+    }
+
+    @Override
+    public void onRemove(ServerPlayer player) {
+        TalentsMod.LOGGER.debug("Player {} lost Ice Mastery", player.getName().getString());
+        player.getAttribute(MasteryAttributes.ICE_MASTERY.get())
+              .removeModifier(MODIFIER_UUID);
+    }
+}

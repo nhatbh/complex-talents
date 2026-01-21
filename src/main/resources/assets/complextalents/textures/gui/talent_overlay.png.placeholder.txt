@@ -1,0 +1,3 @@
+This is a placeholder file for talent_icons.png.
+In the actual implementation, this would be a PNG spritesheet containing talent icons.
+Create a 256x256 PNG file with talent icon sprites arranged in a grid.
