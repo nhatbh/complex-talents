@@ -168,4 +168,24 @@ public interface PlayerTalents {
      */
     @OnlyIn(Dist.CLIENT)
     ResourceBarRenderer getResourceBarRenderer();
+
+    // ===== Combat Mode Management =====
+
+    /**
+     * Check if Combat Mode is currently enabled
+     * @return true if Combat Mode is active
+     */
+    boolean isCombatModeEnabled();
+
+    /**
+     * Toggle Combat Mode on or off
+     * @param enabled true to enable Combat Mode, false to disable
+     */
+    void setCombatMode(boolean enabled);
+
+    /**
+     * Toggle Combat Mode (switch between enabled/disabled)
+     * @return The new Combat Mode state
+     */
+    boolean toggleCombatMode();
 }

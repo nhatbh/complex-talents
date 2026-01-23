@@ -291,8 +291,6 @@ public class ElementalOrbEntity extends Projectile {
         this.damage = compound.getFloat("Damage");
         this.ticksAlive = compound.getInt("TicksAlive");
         this.currentAngle = compound.getFloat("CurrentAngle");
-        this.orbitRadius = compound.getFloat("OrbitRadius");
-        this.orbitSpeed = compound.getFloat("OrbitSpeed");
     }
 
     @Override
@@ -306,7 +304,5 @@ public class ElementalOrbEntity extends Projectile {
         compound.putFloat("Damage", this.damage);
         compound.putInt("TicksAlive", this.ticksAlive);
         compound.putFloat("CurrentAngle", this.currentAngle);
-        compound.putFloat("OrbitRadius", this.orbitRadius);
-        compound.putFloat("OrbitSpeed", this.orbitSpeed);
     }
 }

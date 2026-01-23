@@ -49,6 +49,12 @@ public class PacketHandler {
                 SyncBranchSelectionPacket::new,
                 SyncBranchSelectionPacket::handle);
 
+        INSTANCE.registerMessage(packetId++,
+                ToggleCombatModePacket.class,
+                ToggleCombatModePacket::encode,
+                ToggleCombatModePacket::decode,
+                ToggleCombatModePacket::handle);
+
         TalentsMod.LOGGER.info("Network packets registered");
     }
 

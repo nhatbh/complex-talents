@@ -4,6 +4,7 @@ import com.complextalents.TalentsMod;
 import com.complextalents.capability.TalentsCapabilities;
 import com.complextalents.elemental.ElementType;
 import com.complextalents.elemental.ElementalReaction;
+import com.complextalents.elemental.ElementalReactionHandler;
 import com.complextalents.elemental.ElementalStackManager;
 import com.complextalents.elemental.superreaction.SuperReactionHandler;
 import com.complextalents.talent.BranchingHybridTalent;
@@ -505,70 +506,34 @@ public class ElementalUnleashTalent extends BranchingHybridTalent {
         }
 
         if (event.level instanceof ServerLevel serverLevel) {
-            // Process all Lingering Chaos clouds in the world
-            List<AreaEffectCloud> clouds = serverLevel.getEntitiesOfClass(
-                AreaEffectCloud.class,
-                serverLevel.getWorldBorder().getBounds(),
-                cloud -> cloud.getPersistentData().contains("lingering_chaos")
-            );
-
-            for (AreaEffectCloud cloud : clouds) {
-                processLingeringChaosCloud(serverLevel, cloud);
-            }
-
-            // Process Lava Pool zones (Fire Tier 2)
-            List<AreaEffectCloud> lavaPools = serverLevel.getEntitiesOfClass(
-                AreaEffectCloud.class,
-                serverLevel.getWorldBorder().getBounds(),
-                cloud -> cloud.getPersistentData().contains("lava_pool")
-            );
-
-            for (AreaEffectCloud cloud : lavaPools) {
-                processDamageZone(serverLevel, cloud);
-            }
-
-            // Process Scorched Earth zones (Fire Tier 3)
-            List<AreaEffectCloud> scorchedEarth = serverLevel.getEntitiesOfClass(
-                AreaEffectCloud.class,
-                serverLevel.getWorldBorder().getBounds(),
-                cloud -> cloud.getPersistentData().contains("scorched_earth")
-            );
-
-            for (AreaEffectCloud cloud : scorchedEarth) {
-                processDamageZone(serverLevel, cloud);
-            }
-
-            // Process Slow Field zones (Aqua Tier 2)
-            List<AreaEffectCloud> slowFields = serverLevel.getEntitiesOfClass(
-                AreaEffectCloud.class,
-                serverLevel.getWorldBorder().getBounds(),
-                cloud -> cloud.getPersistentData().contains("slow_field")
-            );
-
-            for (AreaEffectCloud cloud : slowFields) {
-                processSlowField(serverLevel, cloud);
-            }
-
-            // Process Great Flood zones (Aqua Tier 4)
-            List<AreaEffectCloud> greatFloods = serverLevel.getEntitiesOfClass(
-                AreaEffectCloud.class,
-                serverLevel.getWorldBorder().getBounds(),
-                cloud -> cloud.getPersistentData().contains("great_flood")
-            );
-
-            for (AreaEffectCloud cloud : greatFloods) {
-                processGreatFlood(serverLevel, cloud);
-            }
-
-            // Process Jungle zones (Nature Tier 2)
-            List<AreaEffectCloud> jungleZones = serverLevel.getEntitiesOfClass(
-                AreaEffectCloud.class,
-                serverLevel.getWorldBorder().getBounds(),
-                cloud -> cloud.getPersistentData().contains("jungle_zone")
-            );
-
-            for (AreaEffectCloud cloud : jungleZones) {
-                processJungleZone(serverLevel, cloud);
+            // Process all area effect clouds by iterating through all entities
+            for (net.minecraft.world.entity.Entity entity : serverLevel.getAllEntities()) {
+                if (entity instanceof AreaEffectCloud cloud) {
+                    // Process Lingering Chaos clouds
+                    if (cloud.getPersistentData().contains("lingering_chaos")) {
+                        processLingeringChaosCloud(serverLevel, cloud);
+                    }
+                    // Process Lava Pool zones (Fire Tier 2)
+                    else if (cloud.getPersistentData().contains("lava_pool")) {
+                        processDamageZone(serverLevel, cloud);
+                    }
+                    // Process Scorched Earth zones (Fire Tier 3)
+                    else if (cloud.getPersistentData().contains("scorched_earth")) {
+                        processDamageZone(serverLevel, cloud);
+                    }
+                    // Process Slow Field zones (Aqua Tier 2)
+                    else if (cloud.getPersistentData().contains("slow_field")) {
+                        processSlowField(serverLevel, cloud);
+                    }
+                    // Process Great Flood zones (Aqua Tier 4)
+                    else if (cloud.getPersistentData().contains("great_flood")) {
+                        processGreatFlood(serverLevel, cloud);
+                    }
+                    // Process Jungle zones (Nature Tier 2)
+                    else if (cloud.getPersistentData().contains("jungle_zone")) {
+                        processJungleZone(serverLevel, cloud);
+                    }
+                }
             }
         }
     }

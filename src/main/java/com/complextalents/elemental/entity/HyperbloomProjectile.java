@@ -121,7 +121,7 @@ public class HyperbloomProjectile extends Projectile {
         }
 
         // Check for collisions
-        HitResult hitResult = ProjectileUtil.getHitResult(this, this::canHitEntity);
+        HitResult hitResult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
         if (hitResult.getType() != HitResult.Type.MISS) {
             this.onHit(hitResult);
         }

@@ -30,6 +30,7 @@ public class PlayerTalentsImpl implements PlayerTalents {
     private final Map<ResourceLocation, Integer> cooldowns = new HashMap<>();
     private final Map<TalentSlotType, ResourceLocation> equippedTalents = new EnumMap<>(TalentSlotType.class);
     private float currentResource = 0.0f;
+    private boolean combatModeEnabled = false;
     private boolean dirty = false;
     private ServerPlayer owningPlayer = null;
 
@@ -438,6 +439,9 @@ public class PlayerTalentsImpl implements PlayerTalents {
         // Serialize resource value
         nbt.putFloat("Resource", currentResource);
 
+        // Serialize combat mode
+        nbt.putBoolean("CombatMode", combatModeEnabled);
+
         // Serialize branch selections
         if (owningPlayer != null) {
             CompoundTag branchData = TalentBranches.saveToNBT(owningPlayer.getUUID());
@@ -511,10 +515,41 @@ public class PlayerTalentsImpl implements PlayerTalents {
             currentResource = 0.0f;
         }
 
+        // Deserialize combat mode
+        if (nbt.contains("CombatMode")) {
+            combatModeEnabled = nbt.getBoolean("CombatMode");
+        } else {
+            combatModeEnabled = false;
+        }
+
         // Deserialize branch selections
         if (nbt.contains("TalentBranches") && owningPlayer != null) {
             CompoundTag branchData = nbt.getCompound("TalentBranches");
             TalentBranches.loadFromNBT(owningPlayer.getUUID(), branchData);
         }
+    }
+
+    // ===== Combat Mode Implementation =====
+
+    @Override
+    public boolean isCombatModeEnabled() {
+        return combatModeEnabled;
+    }
+
+    @Override
+    public void setCombatMode(boolean enabled) {
+        if (combatModeEnabled != enabled) {
+            combatModeEnabled = enabled;
+            markDirty();
+            TalentsMod.LOGGER.debug("Combat Mode {} for player {}",
+                enabled ? "enabled" : "disabled",
+                owningPlayer != null ? owningPlayer.getName().getString() : "unknown");
+        }
+    }
+
+    @Override
+    public boolean toggleCombatMode() {
+        setCombatMode(!combatModeEnabled);
+        return combatModeEnabled;
     }
 }

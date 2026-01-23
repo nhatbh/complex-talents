@@ -376,6 +376,7 @@ public class SpawnParticlesPacket {
             case FRACTURE -> getIronParticle("snowflake"); // Shattering ice/crystal
             case WITHERING_SEED -> getIronParticle("blood_ground");
             case DECREPIT_GRASP -> getIronParticle("blood");
+            default -> throw new IllegalArgumentException("Unexpected value: " + reaction);
         };
     }
 

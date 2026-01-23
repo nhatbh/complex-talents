@@ -6,7 +6,9 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(./gradlew classes:*)",
-      "Bash(gradlew.bat build:*)"
+      "Bash(gradlew.bat build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
