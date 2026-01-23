@@ -48,6 +48,20 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> WITHERING = EFFECTS.register("withering",
         WitheringEffect::new);
 
+    // Ice Super-Reaction Effects
+    public static final RegistryObject<MobEffect> SHATTERING_PRISM = EFFECTS.register("shattering_prism",
+        ShatteringPrismEffect::new);
+
+    public static final RegistryObject<MobEffect> CRYO_SHATTER = EFFECTS.register("cryo_shatter",
+        CryoShatterEffect::new);
+
+    // Ender Super-Reaction Effects
+    public static final RegistryObject<MobEffect> VOID_TOUCHED = EFFECTS.register("void_touched",
+        VoidTouchedEffect::new);
+
+    public static final RegistryObject<MobEffect> UNRAVELING = EFFECTS.register("unraveling",
+        UnravelingEffect::new);
+
     public static void register(IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered {} custom status effects for Elemental Reaction System", EFFECTS.getEntries().size());
