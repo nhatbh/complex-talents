@@ -24,7 +24,8 @@ public class LightningMasteryTalent extends PassiveTalent {
                 ElementalTalents.LIGHTNING_MASTERY,
                 Component.translatable("talent.complextalents.lightning_mastery.name"),
                 Component.translatable("talent.complextalents.lightning_mastery.description"),
-                10  // Max level 10 = 100 Lightning Mastery
+                10,  // Max level 10 = 100 Lightning Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

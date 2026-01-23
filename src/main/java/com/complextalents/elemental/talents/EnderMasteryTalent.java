@@ -24,7 +24,8 @@ public class EnderMasteryTalent extends PassiveTalent {
                 ElementalTalents.ENDER_MASTERY,
                 Component.translatable("talent.complextalents.ender_mastery.name"),
                 Component.translatable("talent.complextalents.ender_mastery.description"),
-                10  // Max level 10 = 100 Ender Mastery
+                10,  // Max level 10 = 100 Ender Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

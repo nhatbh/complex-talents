@@ -24,7 +24,8 @@ public class AquaMasteryTalent extends PassiveTalent {
                 ElementalTalents.AQUA_MASTERY,
                 Component.translatable("talent.complextalents.aqua_mastery.name"),
                 Component.translatable("talent.complextalents.aqua_mastery.description"),
-                10  // Max level 10 = 100 Aqua Mastery
+                10,  // Max level 10 = 100 Aqua Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

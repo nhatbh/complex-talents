@@ -1,5 +1,7 @@
 package com.complextalents.elemental;
 
+import net.minecraft.ChatFormatting;
+
 public enum ElementType {
     FIRE,
     AQUA,
@@ -82,6 +84,48 @@ public enum ElementType {
                 default -> null;
             };
             default -> null;
+        };
+    }
+
+    /**
+     * Get the display name for this element
+     */
+    public String getDisplayName() {
+        return switch (this) {
+            case FIRE -> "Fire";
+            case AQUA -> "Aqua";
+            case LIGHTNING -> "Lightning";
+            case ICE -> "Ice";
+            case NATURE -> "Nature";
+            case ENDER -> "Ender";
+        };
+    }
+
+    /**
+     * Get the chat color for this element
+     */
+    public ChatFormatting getChatColor() {
+        return switch (this) {
+            case FIRE -> ChatFormatting.RED;
+            case AQUA -> ChatFormatting.BLUE;
+            case LIGHTNING -> ChatFormatting.YELLOW;
+            case ICE -> ChatFormatting.AQUA;
+            case NATURE -> ChatFormatting.GREEN;
+            case ENDER -> ChatFormatting.DARK_PURPLE;
+        };
+    }
+
+    /**
+     * Get the particle color as RGB values (0-1 range)
+     */
+    public float[] getParticleRGB() {
+        return switch (this) {
+            case FIRE -> new float[]{1.0f, 0.3f, 0.0f};      // Orange-red
+            case AQUA -> new float[]{0.0f, 0.5f, 1.0f};      // Light blue
+            case LIGHTNING -> new float[]{1.0f, 1.0f, 0.0f};  // Yellow
+            case ICE -> new float[]{0.7f, 0.9f, 1.0f};       // Ice blue
+            case NATURE -> new float[]{0.2f, 0.8f, 0.2f};    // Green
+            case ENDER -> new float[]{0.5f, 0.0f, 0.8f};     // Purple
         };
     }
 }

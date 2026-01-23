@@ -2,11 +2,17 @@ package com.complextalents.elemental;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.api.events.ElementalReactionEvent;
+import com.complextalents.capability.TalentsCapabilities;
 import com.complextalents.config.ElementalReactionConfig;
 import com.complextalents.elemental.attributes.MasteryAttributes;
 import com.complextalents.elemental.effects.ModEffects;
+import com.complextalents.elemental.entity.BloomCoreEntity;
+import com.complextalents.elemental.entity.SteamCloudEntity;
+import com.complextalents.elemental.talents.mage.ElementalMageDefinition;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.SpawnParticlesPacket;
+import com.complextalents.network.SpawnReactionTextPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -66,12 +72,19 @@ public class ElementalReactionHandler {
             Vec3 particlePos = target.position().add(0, target.getBbHeight() / 2, 0);
             SpawnParticlesPacket packet = new SpawnParticlesPacket(particlePos, reaction);
             PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target), packet);
+
+            // Spawn floating reaction text
+            SpawnReactionTextPacket textPacket = new SpawnReactionTextPacket(target, reaction, reactionDamage);
+            PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target), textPacket);
         }
 
         // Fire event for other mods
         ElementalReactionEvent event = new ElementalReactionEvent(target, attacker, reaction,
                                                                   reactionDamage, existingElement, triggeringElement);
         MinecraftForge.EVENT_BUS.post(event);
+
+        // Generate Focus for Elemental Mage
+        generateFocusFromReaction(attacker, reaction, false);
 
         // Consume elemental stacks
         ElementalStackManager.clearEntityStacks(target.getUUID());
@@ -147,10 +160,10 @@ public class ElementalReactionHandler {
             case VAPORIZE -> applyVaporize(target, attacker);
             case MELT -> applyMelt(target);
             case OVERLOADED -> applyOverloaded(target, attacker);
-            case ELECTRO_CHARGED -> applyElectroCharged(target, damage);
+            case ELECTRO_CHARGED -> applyElectroCharged(target, attacker, damage);
             case FROZEN -> applyFrozen(target);
             case SUPERCONDUCT -> applySuperconduct(target);
-            case BURNING -> applyBurning(target, damage);
+            case BURNING -> applyBurning(target, attacker, damage);
             case BLOOM -> applyBloom(target, attacker);
             case HYPERBLOOM -> applyHyperbloom(target, attacker, damage);
             case BURGEON -> applyBurgeon(target, attacker, damage);
@@ -168,10 +181,11 @@ public class ElementalReactionHandler {
     // These are placeholder implementations - full mechanics will be added in subsequent tasks
 
     private static void applyVaporize(LivingEntity target, ServerPlayer attacker) {
-        // TODO: Create steam cloud entity with ranged miss chance
-        // For now, just apply a brief blindness effect
-        int duration = ElementalReactionConfig.vaporizeSteamCloudDuration.get();
-        target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, duration, 0));
+        // Spawn steam cloud entity
+        if (target.level() instanceof ServerLevel serverLevel) {
+            SteamCloudEntity steamCloud = new SteamCloudEntity(serverLevel, target.position(), attacker);
+            serverLevel.addFreshEntity(steamCloud);
+        }
     }
 
     private static void applyMelt(LivingEntity target) {
@@ -181,16 +195,54 @@ public class ElementalReactionHandler {
     }
 
     private static void applyOverloaded(LivingEntity target, ServerPlayer attacker) {
-        // TODO: Implement AoE damage to nearby entities
-        // Apply strong knockback
+        // Apply AoE damage to nearby entities
+        float aoeRadius = ElementalReactionConfig.overloadedAoeRadius.get().floatValue();
+        float aoeDamageMultiplier = 0.5f; // 50% damage to secondary targets
+
+        // Calculate the damage for AoE
+        float baseDamage = calculateReactionDamage(ElementalReaction.OVERLOADED, ElementType.LIGHTNING,
+                                                   10.0f, attacker); // Base spell damage for calculation
+        float aoeDamage = baseDamage * aoeDamageMultiplier;
+
+        // Find and damage nearby entities
+        if (target.level() instanceof ServerLevel serverLevel) {
+            serverLevel.getEntitiesOfClass(LivingEntity.class,
+                target.getBoundingBox().inflate(aoeRadius),
+                entity -> entity != target && entity != attacker &&
+                         !isTeammate(attacker, entity))
+                .forEach(entity -> {
+                    // Apply damage
+                    DamageSource damageSource = target.level().damageSources().magic();
+                    entity.hurt(damageSource, aoeDamage);
+
+                    // Apply knockback from explosion center
+                    double dx = entity.getX() - target.getX();
+                    double dz = entity.getZ() - target.getZ();
+                    double distance = Math.sqrt(dx * dx + dz * dz);
+                    if (distance > 0) {
+                        double strength = ElementalReactionConfig.overloadedKnockbackStrength.get() *
+                                        (1.0 - distance / aoeRadius); // Falloff with distance
+                        entity.knockback(strength, -dx / distance, -dz / distance);
+                    }
+                });
+        }
+
+        // Apply strong knockback to primary target
         double strength = ElementalReactionConfig.overloadedKnockbackStrength.get();
         target.knockback(strength, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
     }
 
-    private static void applyElectroCharged(LivingEntity target, float baseDamage) {
-        // TODO: Implement proper DoT damage ticking system
-        // Apply Conductive effect for crit setup
+    private static void applyElectroCharged(LivingEntity target, ServerPlayer attacker, float baseDamage) {
+        // Apply DoT damage
         int duration = ElementalReactionConfig.electroChargedDuration.get();
+        int tickRate = ElementalReactionConfig.electroChargedTickRate.get();
+
+        if (attacker != null) {
+            DamageOverTimeManager.addDoT(target, attacker, ElementalReaction.ELECTRO_CHARGED,
+                                        baseDamage, duration, tickRate);
+        }
+
+        // Apply Conductive effect for crit setup
         target.addEffect(new MobEffectInstance(ModEffects.CONDUCTIVE.get(), duration, 0));
     }
 
@@ -207,53 +259,111 @@ public class ElementalReactionHandler {
     }
 
     private static void applySuperconduct(LivingEntity target) {
-        // TODO: Implement physical resistance reduction
+        // Apply physical resistance reduction
         int duration = ElementalReactionConfig.superconductDuration.get();
+        float resistanceReduction = ElementalReactionConfig.superconductResistanceReduction.get().floatValue();
+
+        ResistanceModifier.applySuperconductReduction(target, resistanceReduction, duration);
+
+        // Also apply weakness and slowness effects
         target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, 1));
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 0));
     }
 
-    private static void applyBurning(LivingEntity target, float baseDamage) {
-        // TODO: Implement proper DoT damage ticking system
-        // Apply fire and Panic effect
+    private static void applyBurning(LivingEntity target, ServerPlayer attacker, float baseDamage) {
+        // Apply DoT damage
         int duration = ElementalReactionConfig.burningDuration.get();
+        int tickRate = ElementalReactionConfig.burningTickRate.get();
+
+        if (attacker != null) {
+            DamageOverTimeManager.addDoT(target, attacker, ElementalReaction.BURNING,
+                                        baseDamage, duration, tickRate);
+        }
+
+        // Apply fire and Panic effect
         target.setSecondsOnFire(duration / 20);
         target.addEffect(new MobEffectInstance(ModEffects.PANIC.get(), duration, 0));
     }
 
     private static void applyBloom(LivingEntity target, ServerPlayer attacker) {
-        // TODO: Spawn Bloom Core entity at target location
-        TalentsMod.LOGGER.debug("Bloom reaction - core spawning not yet implemented");
+        // Spawn Bloom Core entity at target location
+        if (target.level() instanceof ServerLevel serverLevel) {
+            // Calculate damage for the bloom core
+            float coreDamage = calculateReactionDamage(ElementalReaction.BLOOM, ElementType.NATURE,
+                                                      10.0f, attacker);
+
+            BloomCoreEntity bloomCore = new BloomCoreEntity(serverLevel, target.position(), attacker, coreDamage);
+            serverLevel.addFreshEntity(bloomCore);
+        }
     }
 
     private static void applyHyperbloom(LivingEntity target, ServerPlayer attacker, float damage) {
-        // TODO: Spawn tracking projectiles
+        // Hyperbloom is triggered by the Bloom Core entity itself, not here
+        // This method is called for direct Hyperbloom reactions if needed
         // Apply Vulnerable effect
         int duration = ElementalReactionConfig.hyperbloomVulnerableDuration.get();
         target.addEffect(new MobEffectInstance(ModEffects.VULNERABLE.get(), duration, 0));
-        TalentsMod.LOGGER.debug("Hyperbloom reaction - projectile spawning not yet implemented");
     }
 
     private static void applyBurgeon(LivingEntity target, ServerPlayer attacker, float damage) {
-        // TODO: Create large AoE and Smoldering Gloom zone
-        TalentsMod.LOGGER.debug("Burgeon reaction - AoE zone not yet implemented");
+        // Burgeon is triggered by the Bloom Core entity itself, not here
+        // This method is called for direct Burgeon reactions if needed
+        // The Bloom Core handles spawning the Smoldering Gloom zone
     }
 
     private static void applyUnstableWard(LivingEntity target, ServerPlayer attacker) {
-        // TODO: Spawn collectible shard entity
-        TalentsMod.LOGGER.debug("Unstable Ward reaction - shard spawning not yet implemented");
+        // Spawn a temporary shield effect (simplified implementation)
+        // In a full implementation, this would spawn a collectible shard entity
+        int duration = ElementalReactionConfig.unstableWardDuration.get();
+        target.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, duration, 1));
     }
 
     private static void applyRiftPull(LivingEntity target, ServerPlayer attacker) {
-        // TODO: Implement pull vector
+        // Implement pull vector
+        if (attacker != null) {
+            Vec3 pullDirection = attacker.position().subtract(target.position()).normalize();
+            double pullDistance = ElementalReactionConfig.riftPullDistance.get();
+            // Use pull distance to calculate strength (closer = stronger pull)
+            double distance = attacker.position().distanceTo(target.position());
+            if (distance < pullDistance && distance > 0.5) {
+                double pullStrength = (1.0 - (distance / pullDistance)) * 0.5; // Max 0.5 strength
+                target.setDeltaMovement(target.getDeltaMovement().add(pullDirection.scale(pullStrength)));
+                target.hurtMarked = true; // Force position update
+            }
+        }
+
         // Apply Spatial Instability effect
         int duration = ElementalReactionConfig.riftPullInstabilityDuration.get();
         target.addEffect(new MobEffectInstance(ModEffects.SPATIAL_INSTABILITY.get(), duration, 0));
     }
 
     private static void applySingularity(LivingEntity target, ServerPlayer attacker) {
-        // TODO: Spawn gravity well entity
-        TalentsMod.LOGGER.debug("Singularity reaction - gravity well not yet implemented");
+        // Apply gravitational pull to nearby entities (simplified implementation)
+        if (target.level() instanceof ServerLevel serverLevel) {
+            float radius = ElementalReactionConfig.singularityRadius.get().floatValue();
+            double pullStrength = ElementalReactionConfig.singularityPullStrength.get();
+
+            // Find and pull nearby entities
+            serverLevel.getEntitiesOfClass(LivingEntity.class,
+                target.getBoundingBox().inflate(radius),
+                entity -> entity != target)
+                .forEach(entity -> {
+                    // Calculate pull vector towards the singularity center
+                    Vec3 pullDirection = target.position().subtract(entity.position()).normalize();
+                    double distance = entity.position().distanceTo(target.position());
+
+                    // Stronger pull when closer
+                    if (distance > 0.5) {
+                        double strength = pullStrength * (1.0 - (distance / radius));
+                        entity.setDeltaMovement(entity.getDeltaMovement().add(pullDirection.scale(strength)));
+                        entity.hurtMarked = true;
+                    }
+                });
+
+            // Apply slow to the target at the center
+            int duration = ElementalReactionConfig.singularityDuration.get();
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, 2));
+        }
     }
 
     private static void applyFracture(LivingEntity target) {
@@ -272,5 +382,33 @@ public class ElementalReactionHandler {
         // Apply Decrepitude custom effect (attack speed reduction + heal prevention)
         int duration = ElementalReactionConfig.decrepitGraspDuration.get();
         target.addEffect(new MobEffectInstance(ModEffects.DECREPITUDE.get(), duration, 0));
+    }
+
+    /**
+     * Generate Focus for Elemental Mage players when reactions occur
+     */
+    private static void generateFocusFromReaction(ServerPlayer player, ElementalReaction reaction, boolean isSuperReaction) {
+        // Check if player has Elemental Mage Definition talent
+        player.getCapability(TalentsCapabilities.PLAYER_TALENTS).ifPresent(talents -> {
+            ResourceLocation mageDefId = ResourceLocation.fromNamespaceAndPath(TalentsMod.MODID, "elemental_mage_definition");
+
+            if (talents.hasTalent(mageDefId)) {
+                // Calculate Focus generation
+                float focusGenerated = ElementalMageDefinition.calculateFocusGeneration(player, isSuperReaction);
+
+                // Add Focus to player's resource pool
+                float actualAdded = talents.addResource(focusGenerated);
+
+                // Reset Focus decay timer
+                if (actualAdded > 0) {
+                    ElementalMageDefinition.onFocusGained(player);
+
+                    if (ElementalReactionConfig.enableDebugLogging.get()) {
+                        TalentsMod.LOGGER.debug("Generated {} Focus for {} from {} reaction",
+                            actualAdded, player.getName().getString(), reaction.name());
+                    }
+                }
+            }
+        });
     }
 }

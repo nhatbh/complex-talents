@@ -1,9 +1,15 @@
 package com.complextalents.capability;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.client.DefaultResourceBarRenderer;
+import com.complextalents.talent.TalentBranches;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.SyncTalentsPacket;
+import com.complextalents.talent.ResourceBarConfig;
+import com.complextalents.talent.ResourceBarRenderer;
 import com.complextalents.talent.Talent;
+import com.complextalents.talent.TalentRegistry;
+import com.complextalents.talent.TalentSlotType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -13,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +28,8 @@ public class PlayerTalentsImpl implements PlayerTalents {
     private final Map<ResourceLocation, Integer> talents = new HashMap<>();
     private final Map<ResourceLocation, Boolean> activeTalents = new HashMap<>();
     private final Map<ResourceLocation, Integer> cooldowns = new HashMap<>();
+    private final Map<TalentSlotType, ResourceLocation> equippedTalents = new EnumMap<>(TalentSlotType.class);
+    private float currentResource = 0.0f;
     private boolean dirty = false;
     private ServerPlayer owningPlayer = null;
 
@@ -66,6 +75,10 @@ public class PlayerTalentsImpl implements PlayerTalents {
         talents.remove(talentId);
         activeTalents.remove(talentId);
         cooldowns.remove(talentId);
+
+        // Auto-unequip from slot if equipped
+        equippedTalents.entrySet().removeIf(entry -> entry.getValue().equals(talentId));
+
         markDirty();
     }
 
@@ -150,6 +163,245 @@ public class PlayerTalentsImpl implements PlayerTalents {
         }
     }
 
+    @Override
+    public ResourceLocation getTalentInSlot(TalentSlotType slotType) {
+        return equippedTalents.get(slotType);
+    }
+
+    @Override
+    public boolean equipTalentToSlot(ResourceLocation talentId, TalentSlotType slotType) {
+        // Check if talent is unlocked
+        if (!hasTalent(talentId)) {
+            TalentsMod.LOGGER.warn("Cannot equip talent {} - not unlocked", talentId);
+            return false;
+        }
+
+        // Check if talent matches the slot type
+        Talent talent = TalentRegistry.getTalent(talentId);
+        if (talent == null) {
+            TalentsMod.LOGGER.warn("Cannot equip talent {} - not found in registry", talentId);
+            return false;
+        }
+
+        if (talent.getSlotType() != slotType) {
+            TalentsMod.LOGGER.warn("Cannot equip talent {} to slot {} - talent is for slot {}",
+                    talentId, slotType, talent.getSlotType());
+            return false;
+        }
+
+        // Check if required Definition talent is equipped (if this talent has a requirement)
+        if (talent.hasDefinitionRequirement()) {
+            ResourceLocation requiredDef = talent.getRequiredDefinition();
+            ResourceLocation equippedDef = equippedTalents.get(TalentSlotType.DEFINITION);
+
+            if (equippedDef == null || !equippedDef.equals(requiredDef)) {
+                TalentsMod.LOGGER.warn("Cannot equip talent {} - requires Definition talent {} to be equipped first",
+                        talentId, requiredDef);
+                return false;
+            }
+        }
+
+        // Equip the talent
+        equippedTalents.put(slotType, talentId);
+
+        // If equipping a Definition talent with a resource bar, initialize resource
+        if (slotType == TalentSlotType.DEFINITION && talent.hasResourceBar()) {
+            ResourceBarConfig config = talent.getResourceBarConfig();
+            currentResource = config.getStartingValue();
+            TalentsMod.LOGGER.debug("Initialized resource bar for {} with starting value {}",
+                    talentId, config.getStartingValue());
+        }
+
+        markDirty();
+        TalentsMod.LOGGER.debug("Equipped talent {} to slot {}", talentId, slotType);
+        return true;
+    }
+
+    @Override
+    public void unequipTalentFromSlot(TalentSlotType slotType) {
+        // If unequipping a Definition talent, check if any equipped talents depend on it
+        if (slotType == TalentSlotType.DEFINITION) {
+            ResourceLocation definitionId = equippedTalents.get(TalentSlotType.DEFINITION);
+            if (definitionId != null) {
+                // Check all other equipped talents for dependencies
+                for (Map.Entry<TalentSlotType, ResourceLocation> entry : equippedTalents.entrySet()) {
+                    if (entry.getKey() == TalentSlotType.DEFINITION) continue;
+
+                    Talent equippedTalent = TalentRegistry.getTalent(entry.getValue());
+                    if (equippedTalent != null && equippedTalent.hasDefinitionRequirement()) {
+                        if (definitionId.equals(equippedTalent.getRequiredDefinition())) {
+                            TalentsMod.LOGGER.warn("Cannot unequip Definition talent {} - talent {} depends on it",
+                                    definitionId, entry.getValue());
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (equippedTalents.remove(slotType) != null) {
+            markDirty();
+            TalentsMod.LOGGER.debug("Unequipped talent from slot {}", slotType);
+        }
+    }
+
+    @Override
+    public Map<TalentSlotType, ResourceLocation> getEquippedTalents() {
+        return new EnumMap<>(equippedTalents);
+    }
+
+    @Override
+    public boolean isSlotFilled(TalentSlotType slotType) {
+        return equippedTalents.containsKey(slotType);
+    }
+
+    @Override
+    public boolean canEquipTalent(ResourceLocation talentId, TalentSlotType slotType) {
+        // Check if talent is unlocked
+        if (!hasTalent(talentId)) {
+            return false;
+        }
+
+        // Check if talent exists in registry
+        Talent talent = TalentRegistry.getTalent(talentId);
+        if (talent == null) {
+            return false;
+        }
+
+        // Check if talent matches the slot type
+        if (talent.getSlotType() != slotType) {
+            return false;
+        }
+
+        // Check if required Definition talent is equipped (if this talent has a requirement)
+        if (talent.hasDefinitionRequirement()) {
+            ResourceLocation requiredDef = talent.getRequiredDefinition();
+            ResourceLocation equippedDef = equippedTalents.get(TalentSlotType.DEFINITION);
+
+            if (equippedDef == null || !equippedDef.equals(requiredDef)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public List<ResourceLocation> getDependentTalents(ResourceLocation definitionId) {
+        List<ResourceLocation> dependents = new ArrayList<>();
+
+        // Check all equipped talents for dependencies on this definition
+        for (Map.Entry<TalentSlotType, ResourceLocation> entry : equippedTalents.entrySet()) {
+            if (entry.getKey() == TalentSlotType.DEFINITION) continue;
+
+            Talent equippedTalent = TalentRegistry.getTalent(entry.getValue());
+            if (equippedTalent != null && equippedTalent.hasDefinitionRequirement()) {
+                if (definitionId.equals(equippedTalent.getRequiredDefinition())) {
+                    dependents.add(entry.getValue());
+                }
+            }
+        }
+
+        return dependents;
+    }
+
+    // ===== Resource Bar Implementation =====
+
+    @Override
+    public ResourceBarConfig getResourceBarConfig() {
+        ResourceLocation definitionId = equippedTalents.get(TalentSlotType.DEFINITION);
+        if (definitionId == null) {
+            return null;
+        }
+
+        Talent definitionTalent = TalentRegistry.getTalent(definitionId);
+        if (definitionTalent == null) {
+            return null;
+        }
+
+        return definitionTalent.getResourceBarConfig();
+    }
+
+    @Override
+    public float getResource() {
+        return currentResource;
+    }
+
+    @Override
+    public void setResource(float value) {
+        ResourceBarConfig config = getResourceBarConfig();
+        if (config == null) {
+            currentResource = 0.0f;
+            return;
+        }
+
+        // Clamp between 0 and max
+        currentResource = Math.max(0.0f, Math.min(value, config.getMaxValue()));
+        markDirty();
+    }
+
+    @Override
+    public float addResource(float amount) {
+        ResourceBarConfig config = getResourceBarConfig();
+        if (config == null) {
+            return 0.0f;
+        }
+
+        float oldValue = currentResource;
+        setResource(currentResource + amount);
+        return currentResource - oldValue;
+    }
+
+    @Override
+    public float getMaxResource() {
+        ResourceBarConfig config = getResourceBarConfig();
+        return config != null ? config.getMaxValue() : 0.0f;
+    }
+
+    @Override
+    public boolean hasResource(float amount) {
+        return currentResource >= amount;
+    }
+
+    @Override
+    public boolean consumeResource(float amount) {
+        if (!hasResource(amount)) {
+            return false;
+        }
+
+        setResource(currentResource - amount);
+        return true;
+    }
+
+    @Override
+    public ResourceBarRenderer getResourceBarRenderer() {
+        ResourceBarConfig config = getResourceBarConfig();
+        if (config == null) {
+            return null;
+        }
+
+        // Use custom renderer if provided, otherwise use default
+        if (config.hasCustomRenderer()) {
+            return config.getRendererSupplier().get();
+        }
+
+        return new DefaultResourceBarRenderer();
+    }
+
+    public void tickResource() {
+        ResourceBarConfig config = getResourceBarConfig();
+        if (config == null) {
+            currentResource = 0.0f;
+            return;
+        }
+
+        // Apply regeneration/decay (rate is per second, tick every 10 ticks = 0.5 seconds)
+        float regenPerTick = config.getRegenRate() * 0.5f;
+        if (regenPerTick != 0) {
+            addResource(regenPerTick);
+        }
+    }
+
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
 
@@ -176,6 +428,24 @@ public class PlayerTalentsImpl implements PlayerTalents {
         }
         nbt.put("Cooldowns", cooldownsNBT);
 
+        // Serialize equipped talents (slot system)
+        CompoundTag equippedNBT = new CompoundTag();
+        for (Map.Entry<TalentSlotType, ResourceLocation> entry : equippedTalents.entrySet()) {
+            equippedNBT.putString(entry.getKey().name(), entry.getValue().toString());
+        }
+        nbt.put("EquippedTalents", equippedNBT);
+
+        // Serialize resource value
+        nbt.putFloat("Resource", currentResource);
+
+        // Serialize branch selections
+        if (owningPlayer != null) {
+            CompoundTag branchData = TalentBranches.saveToNBT(owningPlayer.getUUID());
+            if (!branchData.isEmpty()) {
+                nbt.put("TalentBranches", branchData);
+            }
+        }
+
         return nbt;
     }
 
@@ -183,6 +453,7 @@ public class PlayerTalentsImpl implements PlayerTalents {
         talents.clear();
         activeTalents.clear();
         cooldowns.clear();
+        equippedTalents.clear();
 
         // Deserialize talents
         if (nbt.contains("Talents")) {
@@ -215,6 +486,35 @@ public class PlayerTalentsImpl implements PlayerTalents {
                     cooldowns.put(talentId, cooldownsNBT.getInt(key));
                 }
             }
+        }
+
+        // Deserialize equipped talents (slot system)
+        if (nbt.contains("EquippedTalents")) {
+            CompoundTag equippedNBT = nbt.getCompound("EquippedTalents");
+            for (String key : equippedNBT.getAllKeys()) {
+                try {
+                    TalentSlotType slotType = TalentSlotType.valueOf(key);
+                    ResourceLocation talentId = ResourceLocation.tryParse(equippedNBT.getString(key));
+                    if (talentId != null) {
+                        equippedTalents.put(slotType, talentId);
+                    }
+                } catch (IllegalArgumentException e) {
+                    TalentsMod.LOGGER.warn("Unknown slot type in save data: {}", key);
+                }
+            }
+        }
+
+        // Deserialize resource value
+        if (nbt.contains("Resource")) {
+            currentResource = nbt.getFloat("Resource");
+        } else {
+            currentResource = 0.0f;
+        }
+
+        // Deserialize branch selections
+        if (nbt.contains("TalentBranches") && owningPlayer != null) {
+            CompoundTag branchData = nbt.getCompound("TalentBranches");
+            TalentBranches.loadFromNBT(owningPlayer.getUUID(), branchData);
         }
     }
 }

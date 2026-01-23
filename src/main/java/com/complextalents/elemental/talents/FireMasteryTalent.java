@@ -24,7 +24,8 @@ public class FireMasteryTalent extends PassiveTalent {
                 ElementalTalents.FIRE_MASTERY,
                 Component.translatable("talent.complextalents.fire_mastery.name"),
                 Component.translatable("talent.complextalents.fire_mastery.description"),
-                10  // Max level 10 = 100 Fire Mastery
+                10,  // Max level 10 = 100 Fire Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

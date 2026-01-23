@@ -24,7 +24,8 @@ public class NatureMasteryTalent extends PassiveTalent {
                 ElementalTalents.NATURE_MASTERY,
                 Component.translatable("talent.complextalents.nature_mastery.name"),
                 Component.translatable("talent.complextalents.nature_mastery.description"),
-                10  // Max level 10 = 100 Nature Mastery
+                10,  // Max level 10 = 100 Nature Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

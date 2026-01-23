@@ -6,6 +6,7 @@ import com.complextalents.client.ClientHandler;
 import com.complextalents.command.GrantTalentCommand;
 import com.complextalents.command.ListTalentsCommand;
 import com.complextalents.command.RevokeTalentCommand;
+import com.complextalents.command.SelectBranchCommand;
 import com.complextalents.command.TalentCommand;
 import com.complextalents.config.ElementalReactionConfig;
 import com.complextalents.config.TalentClientConfig;
@@ -88,6 +89,7 @@ public class TalentsMod {
         GrantTalentCommand.register(event.getServer().getCommands().getDispatcher());
         RevokeTalentCommand.register(event.getServer().getCommands().getDispatcher());
         ListTalentsCommand.register(event.getServer().getCommands().getDispatcher());
+        SelectBranchCommand.register(event.getServer().getCommands().getDispatcher());
         LOGGER.info("Talent commands registered");
 
         // Initialize elemental stack manager on server start

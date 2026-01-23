@@ -24,7 +24,8 @@ public class ElementalMasteryTalent extends PassiveTalent {
                 ElementalTalents.ELEMENTAL_MASTERY,
                 Component.translatable("talent.complextalents.elemental_mastery.name"),
                 Component.translatable("talent.complextalents.elemental_mastery.description"),
-                5  // Max level 5 = 100 Elemental Mastery
+                5,  // Max level 5 = 100 Elemental Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

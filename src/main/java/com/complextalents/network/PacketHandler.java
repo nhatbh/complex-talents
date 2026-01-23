@@ -37,6 +37,18 @@ public class PacketHandler {
                 SpawnParticlesPacket::decode,
                 SpawnParticlesPacket::handle);
 
+        INSTANCE.registerMessage(packetId++,
+                SpawnReactionTextPacket.class,
+                SpawnReactionTextPacket::encode,
+                SpawnReactionTextPacket::decode,
+                SpawnReactionTextPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SyncBranchSelectionPacket.class,
+                SyncBranchSelectionPacket::encode,
+                SyncBranchSelectionPacket::new,
+                SyncBranchSelectionPacket::handle);
+
         TalentsMod.LOGGER.info("Network packets registered");
     }
 

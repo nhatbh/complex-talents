@@ -22,4 +22,8 @@ public class TalentRegistry {
     public static boolean hasTalent(ResourceLocation id) {
         return TALENTS.containsKey(id);
     }
+
+    public static java.util.Collection<Talent> getAllTalents() {
+        return TALENTS.values();
+    }
 }

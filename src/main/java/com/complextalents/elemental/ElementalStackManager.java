@@ -285,4 +285,89 @@ public class ElementalStackManager {
     public static void clearEntityStacks(UUID entityId) {
         entityElements.remove(entityId);
     }
+
+    /**
+     * Check if an entity has any elemental stacks
+     */
+    public static boolean hasAnyStack(UUID entityId) {
+        Map<ElementType, ElementStack> stacks = entityElements.get(entityId);
+        return stacks != null && !stacks.isEmpty();
+    }
+
+    /**
+     * Check if an entity has any elemental stacks (entity version)
+     */
+    public static boolean hasAnyStack(LivingEntity entity) {
+        return hasAnyStack(entity.getUUID());
+    }
+
+    /**
+     * Get all elemental stacks for an entity
+     * Returns a map of ElementType to stack count
+     */
+    public static Map<ElementType, Integer> getEntityStacks(UUID entityId) {
+        Map<ElementType, Integer> result = new HashMap<>();
+        Map<ElementType, ElementStack> stacks = entityElements.get(entityId);
+        if (stacks != null) {
+            for (Map.Entry<ElementType, ElementStack> entry : stacks.entrySet()) {
+                result.put(entry.getKey(), entry.getValue().getStackCount());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Get all elemental stacks for an entity (entity version)
+     */
+    public static Map<ElementType, Integer> getEntityStacks(LivingEntity entity) {
+        return getEntityStacks(entity.getUUID());
+    }
+
+    /**
+     * Get the element type with the highest stack count on an entity
+     * Returns null if no stacks are present
+     */
+    public static ElementType getHighestStack(UUID entityId) {
+        Map<ElementType, ElementStack> stacks = entityElements.get(entityId);
+        if (stacks == null || stacks.isEmpty()) {
+            return null;
+        }
+
+        ElementType highest = null;
+        int maxCount = 0;
+        for (Map.Entry<ElementType, ElementStack> entry : stacks.entrySet()) {
+            if (entry.getValue().getStackCount() > maxCount) {
+                maxCount = entry.getValue().getStackCount();
+                highest = entry.getKey();
+            }
+        }
+        return highest;
+    }
+
+    /**
+     * Set the stack count for a specific element on an entity
+     */
+    public static void setStacks(LivingEntity target, ElementType element, int count) {
+        if (count <= 0) {
+            // Remove the element stack if count is 0 or less
+            Map<ElementType, ElementStack> stacks = entityElements.get(target.getUUID());
+            if (stacks != null) {
+                stacks.remove(element);
+                if (stacks.isEmpty()) {
+                    entityElements.remove(target.getUUID());
+                }
+            }
+        } else {
+            Map<ElementType, ElementStack> stacks = entityElements.computeIfAbsent(target.getUUID(), k -> new HashMap<>());
+            ElementStack stack = stacks.get(element);
+            if (stack != null) {
+                stack.setStackCount(count);
+            } else {
+                // Create new stack with specified count
+                stack = new ElementStack(element, target, null);
+                stack.setStackCount(count);
+                stacks.put(element, stack);
+            }
+        }
+    }
 }

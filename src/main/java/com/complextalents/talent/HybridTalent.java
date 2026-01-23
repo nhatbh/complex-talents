@@ -8,6 +8,31 @@ import net.minecraft.server.level.ServerPlayer;
 public abstract class HybridTalent extends Talent {
     private final int cooldownTicks;
 
+    public HybridTalent(ResourceLocation id, Component name, Component description, int maxLevel, TalentSlotType slotType, int cooldownTicks) {
+        super(id, name, description, maxLevel, TalentType.HYBRID, slotType, ChatFormatting.GOLD);
+        this.cooldownTicks = cooldownTicks;
+    }
+
+    public HybridTalent(ResourceLocation id, Component name, Component description, int maxLevel, TalentSlotType slotType, int cooldownTicks, ChatFormatting rarityColor) {
+        super(id, name, description, maxLevel, TalentType.HYBRID, slotType, rarityColor);
+        this.cooldownTicks = cooldownTicks;
+    }
+
+    public HybridTalent(ResourceLocation id, Component name, Component description, int maxLevel, TalentSlotType slotType, ResourceLocation requiredDefinition, int cooldownTicks) {
+        super(id, name, description, maxLevel, TalentType.HYBRID, slotType, requiredDefinition, ChatFormatting.GOLD);
+        this.cooldownTicks = cooldownTicks;
+    }
+
+    public HybridTalent(ResourceLocation id, Component name, Component description, int maxLevel, TalentSlotType slotType, ResourceLocation requiredDefinition, int cooldownTicks, ChatFormatting rarityColor) {
+        super(id, name, description, maxLevel, TalentType.HYBRID, slotType, requiredDefinition, rarityColor);
+        this.cooldownTicks = cooldownTicks;
+    }
+
+    /**
+     * Legacy constructor for backwards compatibility
+     * @deprecated Use constructor with TalentSlotType parameter
+     */
+    @Deprecated
     public HybridTalent(ResourceLocation id, Component name, Component description, int maxLevel, int cooldownTicks) {
         super(id, name, description, maxLevel, TalentType.HYBRID, ChatFormatting.GOLD);
         this.cooldownTicks = cooldownTicks;

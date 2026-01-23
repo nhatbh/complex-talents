@@ -24,7 +24,8 @@ public class IceMasteryTalent extends PassiveTalent {
                 ElementalTalents.ICE_MASTERY,
                 Component.translatable("talent.complextalents.ice_mastery.name"),
                 Component.translatable("talent.complextalents.ice_mastery.description"),
-                10  // Max level 10 = 100 Ice Mastery
+                10,  // Max level 10 = 100 Ice Mastery
+                com.complextalents.talent.TalentSlotType.HARMONY  // Enhances playstyle mechanics
         );
     }
 

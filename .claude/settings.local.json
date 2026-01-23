@@ -3,7 +3,10 @@
     "allow": [
       "Bash(./gradlew build:*)",
       "Bash(./gradlew compileJava:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(./gradlew classes:*)",
+      "Bash(gradlew.bat build:*)"
     ]
   }
 }
