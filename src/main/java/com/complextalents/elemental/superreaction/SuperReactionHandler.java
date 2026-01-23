@@ -2,6 +2,7 @@ package com.complextalents.elemental.superreaction;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.capability.TalentsCapabilities;
+import com.complextalents.config.ElementalReactionConfig;
 import com.complextalents.elemental.ElementType;
 import com.complextalents.elemental.ElementalStackManager;
 import com.complextalents.elemental.ParticleHelper;
@@ -165,31 +166,59 @@ public class SuperReactionHandler {
         // Check for amplification from Unleash talent (Rank 3B)
         if (caster.getPersistentData().contains("amplification_multiplier")) {
             float amplification = caster.getPersistentData().getFloat("amplification_multiplier");
-            baseDamage *= (1f + amplification);
+            // Validate amplification is reasonable (0-10x multiplier)
+            if (amplification >= 0f && amplification <= 10f) {
+                baseDamage *= (1f + amplification);
+            } else {
+                TalentsMod.LOGGER.warn("Invalid amplification_multiplier value: {} for player {}",
+                    amplification, caster.getName().getString());
+            }
             caster.getPersistentData().remove("amplification_multiplier");
         }
 
         // Check for Overload damage multiplier (Unleash Rank 3A multi-hit)
         if (caster.getPersistentData().contains("overload_damage_multiplier")) {
             float overloadMultiplier = caster.getPersistentData().getFloat("overload_damage_multiplier");
-            baseDamage *= overloadMultiplier;
+            // Validate multiplier is reasonable (0.1-2.0x range)
+            if (overloadMultiplier >= 0.1f && overloadMultiplier <= 2.0f) {
+                baseDamage *= overloadMultiplier;
+            } else {
+                TalentsMod.LOGGER.warn("Invalid overload_damage_multiplier value: {} for player {}",
+                    overloadMultiplier, caster.getName().getString());
+            }
             caster.getPersistentData().remove("overload_damage_multiplier");
         }
 
         // Check for Resonant Cascade buff (Attunement Rank 4B)
         if (caster.getPersistentData().contains("resonant_cascade_active")) {
-            long expirationTime = caster.getPersistentData().getLong("resonant_cascade_expiration");
-            if (caster.level().getGameTime() < expirationTime) {
+            // Ensure expiration time exists, default to 0 if missing
+            long expirationTime = caster.getPersistentData().contains("resonant_cascade_expiration")
+                ? caster.getPersistentData().getLong("resonant_cascade_expiration")
+                : 0L;
+
+            long currentTime = caster.level().getGameTime();
+
+            if (expirationTime > 0 && currentTime < expirationTime) {
                 baseDamage *= 2.0f; // 200% damage
                 caster.getPersistentData().remove("resonant_cascade_active");
                 caster.getPersistentData().remove("resonant_cascade_expiration");
 
                 // Apply all 6 elements to target after this reaction
                 caster.getPersistentData().putBoolean("resonant_cascade_apply_all_elements", true);
+
+                if (ElementalReactionConfig.enableDebugLogging.get()) {
+                    TalentsMod.LOGGER.debug("Resonant Cascade consumed for {}: 200% damage bonus applied",
+                        caster.getName().getString());
+                }
             } else {
-                // Expired, clean up
+                // Expired or invalid, clean up
                 caster.getPersistentData().remove("resonant_cascade_active");
                 caster.getPersistentData().remove("resonant_cascade_expiration");
+
+                if (ElementalReactionConfig.enableDebugLogging.get()) {
+                    TalentsMod.LOGGER.debug("Resonant Cascade expired for {} (current: {}, expiration: {})",
+                        caster.getName().getString(), currentTime, expirationTime);
+                }
             }
         }
 

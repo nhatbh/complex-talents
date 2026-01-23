@@ -15,6 +15,7 @@ import com.complextalents.elemental.ElementalStackManager;
 import com.complextalents.elemental.ElementalTalents;
 import com.complextalents.elemental.attributes.MasteryAttributes;
 import com.complextalents.elemental.effects.ModEffects;
+import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.IronSpellbooksIntegration;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
 import com.complextalents.network.PacketHandler;
@@ -53,6 +54,9 @@ public class TalentsMod {
 
         // Register custom status effects
         ModEffects.register(modEventBus);
+
+        // Register custom entities
+        ModEntities.register(modEventBus);
 
         // Register network packets
         PacketHandler.register();

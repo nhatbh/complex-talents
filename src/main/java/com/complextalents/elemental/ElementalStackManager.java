@@ -5,6 +5,7 @@ import com.complextalents.capability.PlayerTalents;
 import com.complextalents.capability.PlayerTalentsImpl;
 import com.complextalents.capability.TalentsCapabilities;
 import com.complextalents.config.TalentConfig;
+import com.complextalents.elemental.talents.mage.unleash.ElementalUnleashTalent;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.SpawnParticlesPacket;
 import net.minecraft.resources.ResourceLocation;
@@ -108,6 +109,11 @@ public class ElementalStackManager {
                     secondsUntilExpiry
                 ))
             );
+
+            // Mark target if Elemental Unleash is active
+            if (ElementalUnleashTalent.isUnleashActive(player)) {
+                ElementalUnleashTalent.markTargetForUnleash(player, target);
+            }
         }
     }
 

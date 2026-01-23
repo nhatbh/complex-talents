@@ -83,6 +83,63 @@ public class ElementalEffectHandler {
             damageModified = true;
         }
 
+        // === Super-Reaction Effects (Ice) ===
+
+        // Shattering Prism: AoE explosion on next hit
+        if (target.hasEffect(ModEffects.SHATTERING_PRISM.get())) {
+            applyShatteringPrismExplosion(target, source, modifiedDamage);
+            // Note: Effect is removed in the explosion handler
+        }
+
+        // Cryo-Shatter: Convert damage to Poise damage
+        if (target.hasEffect(ModEffects.CRYO_SHATTER.get())) {
+            // TODO: Implement Poise system integration
+            // For now, just amplify damage by the poise multiplier
+            modifiedDamage *= (float) CryoShatterEffect.POISE_DAMAGE_MULTIPLIER;
+            damageModified = true;
+            if (ElementalReactionConfig.enableDebugLogging.get()) {
+                TalentsMod.LOGGER.debug("Cryo-Shatter amplified damage on {} (Poise system pending): {}x",
+                    target.getName().getString(), CryoShatterEffect.POISE_DAMAGE_MULTIPLIER);
+            }
+        }
+
+        // === Super-Reaction Effects (Ender) ===
+
+        // Void Touched: Armor reduction (damage taken amplification)
+        if (target.hasEffect(ModEffects.VOID_TOUCHED.get())) {
+            modifiedDamage *= (1.0f + (float) VoidTouchedEffect.ARMOR_REDUCTION);
+            damageModified = true;
+            if (ElementalReactionConfig.enableDebugLogging.get()) {
+                TalentsMod.LOGGER.debug("Void Touched amplified damage on {}: +{}%",
+                    target.getName().getString(), VoidTouchedEffect.ARMOR_REDUCTION * 100);
+            }
+        }
+
+        // Unraveling: Increased damage taken + true damage per hit
+        if (target.hasEffect(ModEffects.UNRAVELING.get())) {
+            int amplifier = target.getEffect(ModEffects.UNRAVELING.get()).getAmplifier();
+            double damageMultiplier = amplifier == 1
+                ? UnravelingEffect.TIER_4_DAMAGE_MULTIPLIER
+                : UnravelingEffect.TIER_3_DAMAGE_MULTIPLIER;
+
+            modifiedDamage *= (float) damageMultiplier;
+            damageModified = true;
+
+            // Tier 4: Apply 1% max HP true damage
+            if (amplifier == 1) {
+                float trueDamage = target.getMaxHealth() * (float) UnravelingEffect.TIER_4_TRUE_DAMAGE_PERCENT;
+                target.hurt(target.level().damageSources().magic(), trueDamage);
+
+                if (ElementalReactionConfig.enableDebugLogging.get()) {
+                    TalentsMod.LOGGER.debug("Unraveling Tier 4 on {}: {}x damage + {} true damage",
+                        target.getName().getString(), damageMultiplier, trueDamage);
+                }
+            } else if (ElementalReactionConfig.enableDebugLogging.get()) {
+                TalentsMod.LOGGER.debug("Unraveling Tier 3 on {}: {}x damage",
+                    target.getName().getString(), damageMultiplier);
+            }
+        }
+
         // === Effects on the ATTACKER (dealing damage) ===
 
         if (source.getEntity() instanceof LivingEntity attacker) {
@@ -257,7 +314,38 @@ public class ElementalEffectHandler {
     }
 
     /**
-     * Healing event handler for Decrepitude effect
+     * Shattering Prism effect: AoE explosion on hit
+     * Deals 150% of the triggering damage to all enemies in 4-block radius
+     */
+    private static void applyShatteringPrismExplosion(LivingEntity target, DamageSource source, float triggerDamage) {
+        float explosionDamage = triggerDamage * (float) ShatteringPrismEffect.SHATTER_DAMAGE_MULTIPLIER;
+        float radius = ShatteringPrismEffect.SHATTER_RADIUS;
+
+        // Find all nearby entities
+        target.level().getEntitiesOfClass(LivingEntity.class,
+            target.getBoundingBox().inflate(radius),
+            entity -> entity != target && entity.isAlive() && !entity.isAlliedTo(target))
+            .forEach(nearbyEntity -> {
+                // Deal AoE damage
+                nearbyEntity.hurt(target.level().damageSources().magic(), explosionDamage);
+
+                if (ElementalReactionConfig.enableDebugLogging.get()) {
+                    TalentsMod.LOGGER.debug("Shattering Prism AoE hit {} for {} damage",
+                        nearbyEntity.getName().getString(), explosionDamage);
+                }
+            });
+
+        // Remove effect after triggering
+        target.removeEffect(ModEffects.SHATTERING_PRISM.get());
+
+        if (ElementalReactionConfig.enableDebugLogging.get()) {
+            TalentsMod.LOGGER.debug("Shattering Prism explosion on {}: {} trigger damage -> {} AoE damage in {} block radius",
+                target.getName().getString(), triggerDamage, explosionDamage, radius);
+        }
+    }
+
+    /**
+     * Healing event handler for Decrepitude effect and Unraveling
      * Prevents healing and converts first heal to damage
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -282,6 +370,16 @@ public class ElementalEffectHandler {
             if (ElementalReactionConfig.enableDebugLogging.get()) {
                 TalentsMod.LOGGER.debug("Decrepitude converted {} healing to damage on {}",
                                       healAmount, entity.getName().getString());
+            }
+        }
+
+        // Unraveling: Disable healing
+        if (entity.hasEffect(ModEffects.UNRAVELING.get())) {
+            event.setCanceled(true);
+
+            if (ElementalReactionConfig.enableDebugLogging.get()) {
+                TalentsMod.LOGGER.debug("Unraveling blocked {} healing on {}",
+                    event.getAmount(), entity.getName().getString());
             }
         }
     }

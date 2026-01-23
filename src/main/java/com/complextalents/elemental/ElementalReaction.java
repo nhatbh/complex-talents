@@ -29,7 +29,12 @@ public enum ElementalReaction {
     // Ender Debuff Reactions
     FRACTURE(1.0f, 100, ReactionType.DEBUFF, "Ender + Ice: Variable damage modifier"),
     WITHERING_SEED(0.0f, 200, ReactionType.DEBUFF, "Ender + Nature: Damage reduction with life siphon"),
-    DECREPIT_GRASP(0.8f, 160, ReactionType.DEBUFF, "Ender + Aqua: Attack speed and heal prevention");
+    DECREPIT_GRASP(0.8f, 160, ReactionType.DEBUFF, "Ender + Aqua: Attack speed and heal prevention"),
+
+    // Fire Super-Reaction Effects
+    CONFLAGRATION_BURN(0.4f, 50, ReactionType.DOT, "Tier 1: Burning damage over 2.5s"),
+    SCORCHED_EARTH(0.3f, 75, ReactionType.DOT, "Tier 3: Zone DOT for 3.75s"),
+    IGNITION_FUSE(0.0f, 160, ReactionType.DEBUFF, "Tier 4: 8-second countdown to detonation");
 
     private final float baseMultiplier;
     private final int effectDurationTicks;

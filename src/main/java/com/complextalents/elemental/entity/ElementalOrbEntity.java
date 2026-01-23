@@ -22,6 +22,17 @@ import java.util.UUID;
 /**
  * Orbiting projectile spawned by Elemental Ward (Rank 3B - Reprisal)
  * Orbits around the player and damages enemies on contact
+ *
+ * TODO: CLIENT-SIDE RENDERING REQUIRED
+ * This entity needs a client-side renderer to be visible in-game:
+ * 1. Create ElementalOrbRenderer class in com.complextalents.client.renderer.entity package
+ * 2. Register renderer in ClientSetup or client event handler:
+ *    EntityRenderers.register(ModEntities.ELEMENTAL_ORB.get(), ElementalOrbRenderer::new)
+ * 3. Renderer should render a glowing sphere with element-specific color
+ * 4. Consider using a custom model or billboard texture
+ * 5. Add texture file: assets/complextalents/textures/entity/elemental_orb.png
+ *
+ * Without renderer, the entity will be invisible but still functional (collision/damage works).
  */
 public class ElementalOrbEntity extends Projectile {
 
@@ -29,13 +40,31 @@ public class ElementalOrbEntity extends Projectile {
     private ElementType elementType;
     private float damage = 10.0f;
     private int ticksAlive = 0;
-    private static final int MAX_LIFETIME = 600; // 30 seconds
 
-    // Orbital motion parameters
-    private float orbitRadius = 2.5f;
-    private float orbitSpeed = 0.1f; // Radians per tick
+    // Lifetime configuration
+    private static final int MAX_LIFETIME_TICKS = 600; // 30 seconds - matches talent duration
+
+    // Orbital motion parameters - tuned for visual clarity and gameplay feel
+    /** Distance from player center in blocks - close enough to be protective, far enough to avoid obstruction */
+    private static final float ORBIT_RADIUS = 2.5f;
+
+    /** Rotation speed in radians per tick - 0.1 rad/tick = ~18 degrees/second = full rotation in 20 seconds */
+    private static final float ORBIT_SPEED = 0.1f;
+
+    /** Height above player's feet in blocks - positions orb at chest/shoulder level for visibility */
+    private static final float VERTICAL_OFFSET = 1.5f;
+
+    /** Collision detection radius in blocks - slightly larger than visual size for forgiving hitbox */
+    private static final float COLLISION_RADIUS = 0.5f;
+
+    /** Particle spawn interval in ticks - every 2 ticks = 10 particles/second for smooth trail */
+    private static final int PARTICLE_INTERVAL = 2;
+
+    /** Mastery scaling factor for damage calculation - 50% bonus per mastery point above 1.0 */
+    private static final double MASTERY_SCALING_FACTOR = 0.5;
+
+    // Dynamic state
     private float currentAngle = 0f;
-    private float verticalOffset = 1.5f; // Height above player's feet
 
     public ElementalOrbEntity(EntityType<? extends Projectile> type, Level level) {
         super(type, level);
@@ -52,7 +81,7 @@ public class ElementalOrbEntity extends Projectile {
         this.elementType = element;
         this.currentAngle = startAngle;
 
-        // Calculate damage with mastery scaling: baseDamage * (1 + 0.5 * (Mastery - 1))
+        // Calculate damage with mastery scaling
         this.damage = calculateDamageWithMastery(owner, element, baseDamage);
 
         // Set initial position
@@ -69,7 +98,7 @@ public class ElementalOrbEntity extends Projectile {
         super.tick();
 
         ticksAlive++;
-        if (ticksAlive > MAX_LIFETIME) {
+        if (ticksAlive > MAX_LIFETIME_TICKS) {
             this.discard();
             return;
         }
@@ -90,7 +119,7 @@ public class ElementalOrbEntity extends Projectile {
         }
 
         // Update orbital angle
-        currentAngle += orbitSpeed;
+        currentAngle += ORBIT_SPEED;
         if (currentAngle > Math.PI * 2) {
             currentAngle -= Math.PI * 2;
         }
@@ -101,7 +130,7 @@ public class ElementalOrbEntity extends Projectile {
         // Spawn particles
         if (!this.level().isClientSide) {
             // Server-side particle spawning for visibility
-            if (ticksAlive % 2 == 0 && elementType != null) { // Every other tick
+            if (ticksAlive % PARTICLE_INTERVAL == 0 && elementType != null) {
                 spawnOrbParticles((ServerLevel) this.level());
             }
         }
@@ -117,9 +146,9 @@ public class ElementalOrbEntity extends Projectile {
      */
     private void updateOrbitalPosition(ServerPlayer player) {
         // Calculate orbital position using sin/cos
-        double x = player.getX() + Math.cos(currentAngle) * orbitRadius;
-        double y = player.getY() + verticalOffset;
-        double z = player.getZ() + Math.sin(currentAngle) * orbitRadius;
+        double x = player.getX() + Math.cos(currentAngle) * ORBIT_RADIUS;
+        double y = player.getY() + VERTICAL_OFFSET;
+        double z = player.getZ() + Math.sin(currentAngle) * ORBIT_RADIUS;
 
         this.setPos(x, y, z);
     }
@@ -129,7 +158,7 @@ public class ElementalOrbEntity extends Projectile {
      */
     private void checkEntityCollisions(ServerPlayer owner) {
         // Get entities within collision range
-        for (Entity entity : this.level().getEntities(this, this.getBoundingBox().inflate(0.5))) {
+        for (Entity entity : this.level().getEntities(this, this.getBoundingBox().inflate(COLLISION_RADIUS))) {
             if (entity instanceof LivingEntity living && entity != owner && living.isAlive()) {
                 onHitEntity(new EntityHitResult(living));
                 break; // Only hit one entity per tick
@@ -182,8 +211,8 @@ public class ElementalOrbEntity extends Projectile {
         // Use the higher mastery value
         float effectiveMastery = Math.max(generalMastery, specificMastery);
 
-        // Apply formula: baseDamage * (1 + 0.5 * (Mastery - 1))
-        return baseDamage * (1f + 0.5f * (effectiveMastery - 1f));
+        // Apply formula using constant: baseDamage * (1 + MASTERY_SCALING_FACTOR * (Mastery - 1))
+        return baseDamage * (1f + (float)MASTERY_SCALING_FACTOR * (effectiveMastery - 1f));
     }
 
     /**

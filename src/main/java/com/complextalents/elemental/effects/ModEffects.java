@@ -62,6 +62,16 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> UNRAVELING = EFFECTS.register("unraveling",
         UnravelingEffect::new);
 
+    // Fire Super-Reaction Effects
+    public static final RegistryObject<MobEffect> CONFLAGRATION_BURN = EFFECTS.register("conflagration_burn",
+        ConflagrationBurnEffect::new);
+
+    public static final RegistryObject<MobEffect> SCORCHED_EARTH = EFFECTS.register("scorched_earth",
+        ScorchedEarthEffect::new);
+
+    public static final RegistryObject<MobEffect> IGNITION_FUSE = EFFECTS.register("ignition_fuse",
+        IgnitionFuseEffect::new);
+
     public static void register(IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered {} custom status effects for Elemental Reaction System", EFFECTS.getEntries().size());
