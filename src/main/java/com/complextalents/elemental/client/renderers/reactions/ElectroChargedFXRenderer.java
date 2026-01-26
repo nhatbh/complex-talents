@@ -46,7 +46,7 @@ public class ElectroChargedFXRenderer {
      * Renders a chain lightning effect from source to target position
      */
     public static void renderChain(Level level, Vec3 source, Vec3 target) {
-        ParticleOptions zapParticle = IronParticleHelper.getIronParticle("zap");
+        ParticleOptions zapParticle = IronParticleHelper.getIronParticle("electricity");
 
         // Create lightning bolt path
         Vec3 direction = target.subtract(source);
@@ -76,9 +76,6 @@ public class ElectroChargedFXRenderer {
             level.addParticle(ParticleTypes.FLASH, segmentPos.x, segmentPos.y, segmentPos.z, 0, 0, 0);
             level.addParticle(zapParticle, segmentPos.x, segmentPos.y, segmentPos.z, 0, 0, 0);
         }
-
-        // Ensure we hit the target
-        level.addParticle(ParticleTypes.FLASH, target.x, target.y, target.z, 0, 0, 0);
 
         // Play sound at both positions
         SoundHelper.playStackedSound(level, source, SoundEvents.TRIDENT_THUNDER, 1, 0.8f, 1.2f);

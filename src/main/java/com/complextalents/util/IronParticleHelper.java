@@ -22,7 +22,7 @@ public class IronParticleHelper {
         String[] ironParticles = {
             "fire", "dragon_fire", "ice", "snowflake", "lightning", "electricity",
             "acid_bubble", "unstable_ender", "portal", "nature", "firefly",
-            "ember", "smoke", "ender", "blood", "magic", "shield"
+            "ember", "smoke", "ender", "blood", "magic", "shield", "shockwave"
         };
         for (String particle : ironParticles) {
             PARTICLE_CACHE.put(particle, ResourceLocation.fromNamespaceAndPath("irons_spellbooks", particle));

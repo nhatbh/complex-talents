@@ -9,27 +9,26 @@ import net.minecraft.world.phys.Vec3;
 
 public class FreezeFXRenderer {
     public static void render(Level level, Vec3 pos) {
-        // Spherical ice shell formation
+        // Ice particle ring around the target
         ParticleOptions iceParticle = IronParticleHelper.getIronParticle("ice");
         ParticleOptions snowflakeParticle = IronParticleHelper.getIronParticle("snowflake");
 
-        // Create spherical shell effect
-        int rings = 5;
+        // Create horizontal ring effect at different heights
+        int rings = 4;
         for (int ring = 0; ring < rings; ring++) {
-            double radius = 0.8 + (ring * 0.15);
-            int particlesPerRing = 12 + ring * 4;
+            double radius = 0.8;
+            double yOffset = 0.2 + (ring * 0.3);
+            int particlesPerRing = 20;
 
             for (int i = 0; i < particlesPerRing; i++) {
-                double phi = Math.acos(1 - 2.0 * i / particlesPerRing);
-                double theta = Math.PI * (1 + Math.sqrt(5)) * i;
+                double angle = (double) i / particlesPerRing * Math.PI * 2;
 
-                double offsetX = Math.cos(theta) * Math.sin(phi) * radius;
-                double offsetY = Math.sin(theta) * Math.sin(phi) * radius + 0.5;
-                double offsetZ = Math.cos(phi) * radius;
+                double offsetX = Math.cos(angle) * radius;
+                double offsetZ = Math.sin(angle) * radius;
 
                 ParticleOptions particle = level.random.nextBoolean() ? iceParticle : snowflakeParticle;
                 level.addParticle(particle,
-                    pos.x + offsetX, pos.y + offsetY, pos.z + offsetZ,
+                    pos.x + offsetX, pos.y + yOffset, pos.z + offsetZ,
                     0, 0, 0);
             }
         }

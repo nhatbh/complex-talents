@@ -11,33 +11,33 @@ import net.minecraft.world.phys.Vec3;
 
 public class VoidfireFXRenderer {
     public static void render(Level level, Vec3 pos) {
-        // Dragon breath flame burst
-        ParticleOptions dragonFlameParticle = IronParticleHelper.getIronParticle("dragon_breath");
-        for (int i = 0; i < 40; i++) {
+        // Portal effect explosion
+        ParticleOptions portalParticle = IronParticleHelper.getIronParticle("portal");
+        for (int i = 0; i < 50; i++) {
             double angle = level.random.nextDouble() * Math.PI * 2;
-            double verticalAngle = (level.random.nextDouble() - 0.5) * Math.PI * 0.6;
-            double speed = 0.3 + level.random.nextDouble() * 0.5;
+            double verticalAngle = (level.random.nextDouble() - 0.5) * Math.PI;
+            double speed = 0.4 + level.random.nextDouble() * 0.6;
 
             double offsetX = Math.cos(angle) * Math.cos(verticalAngle) * speed;
-            double offsetY = Math.sin(verticalAngle) * speed + 0.2;
+            double offsetY = Math.sin(verticalAngle) * speed + 0.3;
             double offsetZ = Math.sin(angle) * Math.cos(verticalAngle) * speed;
 
-            level.addParticle(dragonFlameParticle,
+            level.addParticle(portalParticle,
                 pos.x, pos.y, pos.z,
                 offsetX, offsetY, offsetZ);
         }
 
-        // Ender particles
-        for (int i = 0; i < 25; i++) {
-            double offsetX = (level.random.nextDouble() - 0.5) * 1.2;
-            double offsetY = level.random.nextDouble() * 1.0;
-            double offsetZ = (level.random.nextDouble() - 0.5) * 1.2;
+        // Additional vanilla portal particles for extra effect
+        for (int i = 0; i < 30; i++) {
+            double offsetX = (level.random.nextDouble() - 0.5) * 1.5;
+            double offsetY = level.random.nextDouble() * 1.2;
+            double offsetZ = (level.random.nextDouble() - 0.5) * 1.5;
 
-            level.addParticle(ParticleTypes.DRAGON_BREATH,
+            level.addParticle(ParticleTypes.PORTAL,
                 pos.x + offsetX, pos.y + offsetY, pos.z + offsetZ,
-                (level.random.nextDouble() - 0.5) * 0.1,
+                (level.random.nextDouble() - 0.5) * 0.15,
                 0.05 + level.random.nextDouble() * 0.1,
-                (level.random.nextDouble() - 0.5) * 0.1);
+                (level.random.nextDouble() - 0.5) * 0.15);
         }
 
         // Ender teleport sound

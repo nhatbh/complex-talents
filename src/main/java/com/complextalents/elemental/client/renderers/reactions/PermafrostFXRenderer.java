@@ -9,27 +9,29 @@ import net.minecraft.world.phys.Vec3;
 
 public class PermafrostFXRenderer {
     public static void render(Level level, Vec3 pos) {
-        // Ice particles in circle on ground
+        // Ice particles in 2x2 circle on ground
         ParticleOptions iceParticle = IronParticleHelper.getIronParticle("ice");
         ParticleOptions snowflakeParticle = IronParticleHelper.getIronParticle("snowflake");
 
-        // Create circular frost pattern on ground
-        int circles = 3;
-        for (int circle = 0; circle < circles; circle++) {
-            double radius = 0.6 + (circle * 0.4);
-            int particlesPerCircle = 20 + circle * 8;
+        // Create 2x2 circular frost pattern on ground
+        for (int x = -1; x <= 0; x++) {
+            for (int z = -1; z <= 0; z++) {
+                double centerX = pos.x + (x * 1.0);
+                double centerZ = pos.z + (z * 1.0);
 
-            for (int i = 0; i < particlesPerCircle; i++) {
-                double angle = (double) i / particlesPerCircle * Math.PI * 2;
+                for (int i = 0; i < 15; i++) {
+                    double angle = level.random.nextDouble() * Math.PI * 2;
+                    double radius = 0.3 + level.random.nextDouble() * 0.4;
 
-                double offsetX = Math.cos(angle) * radius;
-                double offsetY = 0.05;
-                double offsetZ = Math.sin(angle) * radius;
+                    double offsetX = Math.cos(angle) * radius;
+                    double offsetZ = Math.sin(angle) * radius;
+                    double offsetY = 0.05;
 
-                ParticleOptions particle = level.random.nextBoolean() ? iceParticle : snowflakeParticle;
-                level.addParticle(particle,
-                    pos.x + offsetX, pos.y + offsetY, pos.z + offsetZ,
-                    0, 0.05, 0);
+                    ParticleOptions particle = level.random.nextBoolean() ? iceParticle : snowflakeParticle;
+                    level.addParticle(particle,
+                        centerX + offsetX, pos.y + offsetY, centerZ + offsetZ,
+                        0, 0.05, 0);
+                }
             }
         }
 

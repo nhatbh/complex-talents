@@ -22,8 +22,8 @@ public class SuperconductFXRenderer {
                 0, 0, 0);
         }
 
-        // Shockwave particles spreading outward
-        ParticleOptions zapParticle = IronParticleHelper.getIronParticle("zap");
+        // Iron's spell shockwave particle
+        ParticleOptions shockwaveParticle = IronParticleHelper.getIronParticle("shockwave");
         for (int ring = 0; ring < 3; ring++) {
             double radius = 0.5 + (ring * 0.4);
             int particlesPerRing = 16 + ring * 8;
@@ -35,7 +35,7 @@ public class SuperconductFXRenderer {
                 double offsetY = 0.1 + (ring * 0.15);
                 double offsetZ = Math.sin(angle) * radius;
 
-                level.addParticle(zapParticle,
+                level.addParticle(shockwaveParticle,
                     pos.x + offsetX, pos.y + offsetY, pos.z + offsetZ,
                     Math.cos(angle) * 0.2, 0.1, Math.sin(angle) * 0.2);
             }
