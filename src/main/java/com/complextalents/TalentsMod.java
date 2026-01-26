@@ -1,7 +1,6 @@
 package com.complextalents;
 
 import com.complextalents.config.ElementalReactionConfig;
-import com.complextalents.elemental.ElementalStackManager;
 import com.complextalents.elemental.attributes.MasteryAttributes;
 import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.elemental.entity.ModEntities;

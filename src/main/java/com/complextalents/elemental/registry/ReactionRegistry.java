@@ -5,10 +5,18 @@ import com.complextalents.elemental.ElementalReaction;
 import com.complextalents.elemental.ElementType;
 import com.complextalents.elemental.api.IReactionStrategy;
 import com.complextalents.elemental.api.ReactionContext;
+import com.complextalents.elemental.events.ElementalReactionTriggeredEvent;
 import com.complextalents.elemental.strategies.reactions.*;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -104,6 +112,8 @@ public class ReactionRegistry {
             return false;
         }
 
+        final float mastery = calculateElementalMastery(attacker);
+
         // Build the reaction context
         ReactionContext context = ReactionContext.builder()
             .target(target)
@@ -112,6 +122,7 @@ public class ReactionRegistry {
             .triggeringElement(triggeringElement)
             .existingElement(existingElement)
             .damageMultiplier(damageMultiplier)
+            .elementalMastery(mastery)
             .level((ServerLevel) target.level())
             .build();
 
@@ -122,8 +133,31 @@ public class ReactionRegistry {
             return false;
         }
 
+        // Calculate final damage before execution
+        float finalDamage = strategy.calculateDamage(context);
+
+        // Fire the reaction triggered event
+        ElementalReactionTriggeredEvent reactionEvent = new ElementalReactionTriggeredEvent(
+            target, attacker, reaction, triggeringElement, existingElement,
+            finalDamage, mastery, damageMultiplier
+        );
+        MinecraftForge.EVENT_BUS.post(reactionEvent);
+
+        // Check if event was canceled
+        if (reactionEvent.isCanceled()) {
+            TalentsMod.LOGGER.debug("Reaction {} canceled by event handler for target {}",
+                reaction, target.getName().getString());
+            return false;
+        }
+
+        // Update damage from event (in case handler modified it)
+        finalDamage = reactionEvent.getDamage();
+
         // Execute the reaction
         strategy.execute(context);
+
+        // Send chat message with damage breakdown
+        sendDamageChatMessage(attacker, reaction, mastery, damageMultiplier, finalDamage, target);
 
         TalentsMod.LOGGER.info("Executed {} reaction on {} by {}",
             reaction, target.getName().getString(), attacker.getName().getString());
@@ -314,5 +348,132 @@ public class ReactionRegistry {
         stats.put("priority_distribution", priorityCounts);
 
         return stats;
+    }
+
+    /**
+     * Calculates elemental mastery using the geometric mean of spell power attributes.
+     * This provides a balanced overall power metric that considers all elements equally.
+     *
+     * Geometric mean is calculated as: (product of all values)^(1/n)
+     * This is better than arithmetic mean for this use case because:
+     * - It penalizes having very low values in any element
+     * - It prevents extremely high single-element stats from skewing the result
+     * - It better represents overall elemental proficiency
+     *
+     * @param player The player to calculate mastery for
+     * @return The geometric mean of all spell power attributes, or 1.0 if no attributes found
+     */
+    public float calculateElementalMastery(ServerPlayer player) {
+        // List of all spell power attributes to include in calculation
+        List<ResourceLocation> spellPowerAttributes = List.of(
+            ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "fire_spell_power"),
+            ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "ice_spell_power"),
+            ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "lightning_spell_power"),
+            ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "nature_spell_power"),
+            ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "ender_spell_power"),
+            ResourceLocation.fromNamespaceAndPath("traveloptics", "aqua_spell_power")
+        );
+
+        float product = 1.0f;
+        int validAttributes = 0;
+
+        // Collect attribute values and calculate product
+        for (ResourceLocation attrId : spellPowerAttributes) {
+            Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(attrId);
+
+            if (attribute != null) {
+                double value = player.getAttributeValue(attribute);
+                product *= value;
+                validAttributes++;
+
+                TalentsMod.LOGGER.debug("Attribute {} = {}", attrId, value);
+            } else {
+                TalentsMod.LOGGER.warn("Attribute not found: {}", attrId);
+            }
+        }
+
+        // If no valid attributes found, return default
+        if (validAttributes == 0) {
+            TalentsMod.LOGGER.warn("No valid spell power attributes found for player {}", player.getName().getString());
+            return 0;
+        }
+
+        // Calculate geometric mean: nth root of the product
+        double geometricMean = Math.pow(product, 1.0 / validAttributes);
+
+        TalentsMod.LOGGER.debug("Elemental mastery for {}: {} (based on {} attributes)",
+            player.getName().getString(), geometricMean, validAttributes);
+
+        return (float)geometricMean;
+    }
+
+    /**
+     * Calculates elemental mastery with a custom attribute list.
+     * Useful for testing or specialized calculations.
+     *
+     * @param player The player to calculate mastery for
+     * @param attributes Custom list of attribute IDs to include
+     * @return The geometric mean of the specified attributes
+     */
+    public double calculateElementalMastery(ServerPlayer player, List<ResourceLocation> attributes) {
+        double product = 1.0;
+        int validAttributes = 0;
+
+        for (ResourceLocation attrId : attributes) {
+            Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(attrId);
+
+            if (attribute != null) {
+                double value = player.getAttributeValue(attribute);
+                double safeValue = Math.max(1.0, value);
+                product *= safeValue;
+                validAttributes++;
+            }
+        }
+
+        return validAttributes > 0 ? Math.pow(product, 1.0 / validAttributes) : 1.0;
+    }
+
+    /**
+     * Sends a chat message to the attacker with damage calculation details.
+     *
+     * @param attacker The player who triggered the reaction
+     * @param reaction The reaction type
+     * @param mastery The elemental mastery value
+     * @param multiplier The damage multiplier
+     * @param finalDamage The final calculated damage
+     * @param target The target entity
+     */
+    private void sendDamageChatMessage(ServerPlayer attacker, ElementalReaction reaction,
+                                       float mastery, float multiplier, float finalDamage,
+                                       LivingEntity target) {
+        Component message = Component.literal("")
+            .append(Component.literal("Elemental Reaction: ")
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF6B6B"))))
+            .append(Component.literal(reaction.name())
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FFD93D")).withBold(true)))
+            .append(Component.literal("\n"))
+
+            .append(Component.literal("Mastery: ")
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#6BCB77"))))
+            .append(Component.literal(String.format("%.2f", mastery))
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#4D96FF"))))
+            .append(Component.literal(" | "))
+
+            .append(Component.literal("Multiplier: ")
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#6BCB77"))))
+            .append(Component.literal(String.format("%.2f", multiplier))
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#4D96FF"))))
+            .append(Component.literal("\n"))
+
+            .append(Component.literal("Final Damage: ")
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF6B6B"))))
+            .append(Component.literal(String.format("%.2f", finalDamage))
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#FF0000")).withBold(true)))
+            .append(Component.literal(" to "))
+
+            .append(Component.literal(target.getName().getString())
+                .setStyle(Style.EMPTY.withColor(TextColor.parseColor("#AAAAAA"))));
+
+        attacker.sendSystemMessage(message);
     }
 }

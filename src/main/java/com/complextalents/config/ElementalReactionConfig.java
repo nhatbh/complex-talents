@@ -14,8 +14,34 @@ public class ElementalReactionConfig {
     public static ForgeConfigSpec.BooleanValue enableElementalSystem;
     public static ForgeConfigSpec.BooleanValue enableFriendlyFireProtection;
     public static ForgeConfigSpec.BooleanValue enableParticleEffects;
+    public static ForgeConfigSpec.EnumValue<ParticleQuality> particleQuality;
     public static ForgeConfigSpec.BooleanValue enableSoundEffects;
     public static ForgeConfigSpec.BooleanValue enableDebugLogging;
+
+    public enum ParticleQuality {
+        LOW(0.25),
+        MEDIUM(0.5),
+        HIGH(1.0),
+        ULTRA(1.5);
+
+        private final double multiplier;
+
+        ParticleQuality(double multiplier) {
+            this.multiplier = multiplier;
+        }
+
+        public double getMultiplier() {
+            return multiplier;
+        }
+
+        public int scale(int baseCount) {
+            return (int) Math.max(1, baseCount * multiplier);
+        }
+
+        public double scale(double baseValue) {
+            return baseValue * multiplier;
+        }
+    }
 
     // ===== Mastery Scaling Constants =====
     public static ForgeConfigSpec.DoubleValue generalMasteryScaling;
@@ -23,6 +49,11 @@ public class ElementalReactionConfig {
 
     // ===== Stack Settings =====
     public static ForgeConfigSpec.IntValue stackDecayTicks;
+    /**
+     * @deprecated Stacking has been removed. Only one stack per element is allowed.
+     * This config option is kept for backwards compatibility but has no effect.
+     */
+    @Deprecated
     public static ForgeConfigSpec.IntValue maxStackCount;
 
     static {
@@ -44,6 +75,14 @@ public class ElementalReactionConfig {
         enableParticleEffects = BUILDER
             .comment("Show particle effects for reactions and stacks")
             .define("enableParticles", true);
+
+        particleQuality = BUILDER
+            .comment("Particle quality setting - affects particle count and visual density")
+            .comment("LOW: 25% particles (best performance)")
+            .comment("MEDIUM: 50% particles (balanced)")
+            .comment("HIGH: 100% particles (default, recommended)")
+            .comment("ULTRA: 150% particles (maximum visual fidelity)")
+            .defineEnum("particleQuality", ParticleQuality.HIGH);
 
         enableSoundEffects = BUILDER
             .comment("Play sound effects for reactions")
@@ -78,8 +117,9 @@ public class ElementalReactionConfig {
             .defineInRange("decayTicks", 300, 20, 6000);
 
         maxStackCount = BUILDER
-            .comment("Maximum stacks per element on an entity")
-            .defineInRange("maxStacks", 2, 1, 10);
+            .comment("[DEPRECATED - Stacking removed] Maximum stacks per element on an entity")
+            .comment("This option has no effect. Only one stack per element is allowed.")
+            .defineInRange("maxStacks", 1, 1, 10);
 
         BUILDER.pop();
 

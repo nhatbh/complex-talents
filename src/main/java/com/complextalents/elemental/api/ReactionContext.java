@@ -23,6 +23,7 @@ public class ReactionContext {
     private final ElementType triggeringElement;
     private final ElementType existingElement;
     private final float damageMultiplier;
+    private final float elementalMastery;
     private final ServerLevel level;
 
     // Additional context data that strategies might need
@@ -39,6 +40,7 @@ public class ReactionContext {
         this.triggeringElement = builder.triggeringElement;
         this.existingElement = builder.existingElement;
         this.damageMultiplier = builder.damageMultiplier;
+        this.elementalMastery = builder.elementalMastery;
         this.level = builder.level;
         this.additionalData = new HashMap<>(builder.additionalData);
     }
@@ -70,6 +72,10 @@ public class ReactionContext {
 
     public ServerLevel getLevel() {
         return level;
+    }
+
+    public float getElementalMastery() {
+        return elementalMastery;
     }
 
     /**
@@ -168,6 +174,7 @@ public class ReactionContext {
         private ElementType triggeringElement;
         private ElementType existingElement;
         private float damageMultiplier;
+        private float elementalMastery;
         private ServerLevel level;
         private final Map<String, Object> additionalData = new HashMap<>();
 
@@ -203,6 +210,11 @@ public class ReactionContext {
 
         public Builder level(ServerLevel level) {
             this.level = level;
+            return this;
+        }
+
+        public Builder elementalMastery(float mastery) {
+            this.elementalMastery = mastery;
             return this;
         }
 
