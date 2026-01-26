@@ -320,14 +320,23 @@ public class ReactionRegistry {
      * Registers all default reaction strategies.
      */
     private void registerDefaultReactions() {
-        // Register our five reaction implementations
+        // Register original five reaction implementations
         register(ElementalReaction.MELT, new MeltReaction());
         register(ElementalReaction.VAPORIZE, new VaporizeReaction());
         register(ElementalReaction.OVERLOADED, new OverloadReaction());
         register(ElementalReaction.BURNING, new BurningReaction());
         register(ElementalReaction.VOIDFIRE, new VoidfireReaction());
 
-        TalentsMod.LOGGER.info("Registered 5 default elemental reaction strategies");
+        // Register new Ice reactions
+        register(ElementalReaction.FREEZE, new FreezeReaction());
+        register(ElementalReaction.SUPERCONDUCT, new SuperconductReaction());
+        register(ElementalReaction.PERMAFROST, new PermafrostReaction());
+        register(ElementalReaction.FRACTURE, new FractureReaction());
+
+        // Register Aqua reactions
+        register(ElementalReaction.ELECTRO_CHARGED, new ElectroChargedReaction());
+
+        TalentsMod.LOGGER.info("Registered 10 default elemental reaction strategies");
     }
 
     /**

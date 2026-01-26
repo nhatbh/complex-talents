@@ -5,43 +5,41 @@ import com.complextalents.elemental.api.IReactionStrategy;
 import com.complextalents.elemental.api.ReactionContext;
 import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.network.PacketHandler;
-import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
+import com.complextalents.network.elemental.SpawnFractureReactionPacket;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Voidfire Reaction (Fire + Ender)
- * Deals 2.5 hearts damage and applies marked for death effect
+ * Fracture Reaction (Ice + Ender)
+ * Deals 0.5 hearts damage and shatters target's defenses.
  */
-public class VoidfireReaction implements IReactionStrategy {
+public class FractureReaction implements IReactionStrategy {
 
-    private static final int MARKED_DURATION_TICKS = 80; // 4 seconds
+    private static final int FRACTURE_DURATION_TICKS = 600; // 30 seconds max
 
     @Override
     public void execute(ReactionContext context) {
         LivingEntity target = context.getTarget();
         float damage = calculateDamage(context);
 
-        // Apply damage
         DamageSource damageSource = target.level().damageSources().magic();
         target.hurt(damageSource, damage);
 
-        // Apply marked for death effect
-        MobEffectInstance markedEffect = new MobEffectInstance(
-            ElementalEffects.MARKED_FOR_DEATH.get(),
-            MARKED_DURATION_TICKS,
+        MobEffectInstance fractureEffect = new MobEffectInstance(
+            ElementalEffects.FRACTURE.get(),
+            FRACTURE_DURATION_TICKS,
             0,
             false,
             true,
             true
         );
-        target.addEffect(markedEffect);
+        target.addEffect(fractureEffect);
 
         // Send particle effect packet to nearby clients
         PacketHandler.sendToNearby(
-            new SpawnVoidfireReactionPacket(target.position()),
+            new SpawnFractureReactionPacket(target.position()),
             context.getLevel(),
             target.position()
         );
@@ -51,7 +49,7 @@ public class VoidfireReaction implements IReactionStrategy {
     public float calculateDamage(ReactionContext context) {
         float mastery = context.getElementalMastery();
         float multiplier = context.getDamageMultiplier();
-        return 5.0f * mastery * multiplier;
+        return 1.0f * mastery * multiplier;
     }
 
     @Override
@@ -61,7 +59,7 @@ public class VoidfireReaction implements IReactionStrategy {
 
     @Override
     public ElementalReaction getReactionType() {
-        return ElementalReaction.VOIDFIRE;
+        return ElementalReaction.FRACTURE;
     }
 
     @Override

@@ -11,4 +11,13 @@ public enum ElementalReaction {
     OVERLOADED,
     BURNING,
     VOIDFIRE,
+
+    // Ice Reactions
+    FREEZE,        // Ice + Aqua - Encases in ice, physical hits deal 2.5x damage
+    SUPERCONDUCT,  // Ice + Lightning - Armor corrosion, reduces armor by 50%
+    PERMAFROST,    // Ice + Nature - Roots target, prevents movement
+    FRACTURE,      // Ice + Ender - Shatter defenses, sets armor to 0 for 3 hits
+
+    // Aqua Reactions
+    ELECTRO_CHARGED, // Aqua + Lightning - Chain lightning that zaps 3 nearby enemies
 }

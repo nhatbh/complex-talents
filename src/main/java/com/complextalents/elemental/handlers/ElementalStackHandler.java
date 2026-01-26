@@ -9,7 +9,7 @@ import com.complextalents.elemental.events.ElementStackAppliedEvent;
 import com.complextalents.elemental.events.ElementalDamageEvent;
 import com.complextalents.elemental.events.ElementalStackRemovedEvent;
 import com.complextalents.network.PacketHandler;
-import com.complextalents.network.SpawnParticlesPacket;
+import com.complextalents.network.elemental.SpawnElementFXPacket;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -73,7 +73,7 @@ public class ElementalStackHandler {
                 // Spawn particle effects for stack refresh
                 if (target.level() instanceof ServerLevel) {
                     Vec3 particlePos = target.position().add(0, target.getBbHeight() / 2, 0);
-                    SpawnParticlesPacket packet = new SpawnParticlesPacket(particlePos, element, 1);
+                    SpawnElementFXPacket packet = new SpawnElementFXPacket(particlePos, element, 1);
                     PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target), packet);
                 }
                 return;
@@ -96,7 +96,7 @@ public class ElementalStackHandler {
             // Spawn particle effects for stack application
             if (target.level() instanceof ServerLevel) {
                 Vec3 particlePos = target.position().add(0, target.getBbHeight() / 2, 0);
-                SpawnParticlesPacket packet = new SpawnParticlesPacket(particlePos, element, 1);
+                SpawnElementFXPacket packet = new SpawnElementFXPacket(particlePos, element, 1);
                 PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target), packet);
             }
 
@@ -264,7 +264,7 @@ public class ElementalStackHandler {
                         ElementType element = stackEntry.getKey();
 
                         // Spawn continuous particle effect (always count of 1)
-                        SpawnParticlesPacket packet = new SpawnParticlesPacket(particlePos, element, 1);
+                        SpawnElementFXPacket packet = new SpawnElementFXPacket(particlePos, element, 1);
                         PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), packet);
                     }
                 }

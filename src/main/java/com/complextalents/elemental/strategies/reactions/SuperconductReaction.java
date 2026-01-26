@@ -5,19 +5,19 @@ import com.complextalents.elemental.api.IReactionStrategy;
 import com.complextalents.elemental.api.ReactionContext;
 import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.network.PacketHandler;
-import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
+import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Voidfire Reaction (Fire + Ender)
- * Deals 2.5 hearts damage and applies marked for death effect
+ * Superconduct Reaction (Ice + Lightning)
+ * Deals 0.5 hearts damage and reduces target's armor by 50% (Armor Shred).
  */
-public class VoidfireReaction implements IReactionStrategy {
+public class SuperconductReaction implements IReactionStrategy {
 
-    private static final int MARKED_DURATION_TICKS = 80; // 4 seconds
+    private static final int ARMOR_SHRED_DURATION_TICKS = 120; // 6 seconds
 
     @Override
     public void execute(ReactionContext context) {
@@ -28,20 +28,21 @@ public class VoidfireReaction implements IReactionStrategy {
         DamageSource damageSource = target.level().damageSources().magic();
         target.hurt(damageSource, damage);
 
-        // Apply marked for death effect
-        MobEffectInstance markedEffect = new MobEffectInstance(
-            ElementalEffects.MARKED_FOR_DEATH.get(),
-            MARKED_DURATION_TICKS,
+        // Apply Superconduct effect for armor shred
+        // The effect handles the -50% armor modifier via attribute modifiers
+        MobEffectInstance superconductEffect = new MobEffectInstance(
+            ElementalEffects.SUPERCONDUCT.get(),
+            ARMOR_SHRED_DURATION_TICKS,
             0,
             false,
             true,
             true
         );
-        target.addEffect(markedEffect);
+        target.addEffect(superconductEffect);
 
         // Send particle effect packet to nearby clients
         PacketHandler.sendToNearby(
-            new SpawnVoidfireReactionPacket(target.position()),
+            new SpawnSuperconductReactionPacket(target.position()),
             context.getLevel(),
             target.position()
         );
@@ -49,9 +50,10 @@ public class VoidfireReaction implements IReactionStrategy {
 
     @Override
     public float calculateDamage(ReactionContext context) {
+        // Base damage: 0.5 hearts = 1.0 damage
         float mastery = context.getElementalMastery();
         float multiplier = context.getDamageMultiplier();
-        return 5.0f * mastery * multiplier;
+        return 1.0f * mastery * multiplier;
     }
 
     @Override
@@ -61,7 +63,7 @@ public class VoidfireReaction implements IReactionStrategy {
 
     @Override
     public ElementalReaction getReactionType() {
-        return ElementalReaction.VOIDFIRE;
+        return ElementalReaction.SUPERCONDUCT;
     }
 
     @Override

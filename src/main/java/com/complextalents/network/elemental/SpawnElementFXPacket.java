@@ -1,8 +1,9 @@
-package com.complextalents.network;
+package com.complextalents.network.elemental;
 
-import com.complextalents.elemental.ElementFX;
 import com.complextalents.elemental.ElementType;
 import com.complextalents.elemental.ElementalReaction;
+import com.complextalents.elemental.client.renderers.reactions.ElementFXRenderer;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.Level;
@@ -16,7 +17,7 @@ import java.util.function.Supplier;
  * Network packet for spawning particle effects on the client
  * Sent from server when element stacks are applied or reactions trigger
  */
-public class SpawnParticlesPacket {
+public class SpawnElementFXPacket {
     public enum ParticleType {
         ELEMENT_STACK,
         REACTION
@@ -28,7 +29,7 @@ public class SpawnParticlesPacket {
     private final int extraData; // Stack count for ELEMENT_STACK, unused for REACTION
 
     // Constructor for element stack particles
-    public SpawnParticlesPacket(Vec3 position, ElementType element, int stackCount) {
+    public SpawnElementFXPacket(Vec3 position, ElementType element, int stackCount) {
         this.type = ParticleType.ELEMENT_STACK;
         this.position = position;
         this.dataString = element.name();
@@ -36,7 +37,7 @@ public class SpawnParticlesPacket {
     }
 
     // Constructor for reaction particles
-    public SpawnParticlesPacket(Vec3 position, ElementalReaction reaction) {
+    public SpawnElementFXPacket(Vec3 position, ElementalReaction reaction) {
         this.type = ParticleType.REACTION;
         this.position = position;
         this.dataString = reaction.name();
@@ -44,7 +45,7 @@ public class SpawnParticlesPacket {
     }
 
     // Decode constructor
-    public SpawnParticlesPacket(FriendlyByteBuf buffer) {
+    public SpawnElementFXPacket(FriendlyByteBuf buffer) {
         this.type = buffer.readEnum(ParticleType.class);
         this.position = new Vec3(buffer.readDouble(), buffer.readDouble(), buffer.readDouble());
         this.dataString = buffer.readUtf();
@@ -60,8 +61,8 @@ public class SpawnParticlesPacket {
         buffer.writeInt(extraData);
     }
 
-    public static SpawnParticlesPacket decode(FriendlyByteBuf buffer) {
-        return new SpawnParticlesPacket(buffer);
+    public static SpawnElementFXPacket decode(FriendlyByteBuf buffer) {
+        return new SpawnElementFXPacket(buffer);
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -82,7 +83,7 @@ public class SpawnParticlesPacket {
             if (type == ParticleType.ELEMENT_STACK) {
                 ElementType element = ElementType.valueOf(dataString);
                 System.out.println("[Complex Talents] Spawning stack particles for element: " + element + " at " + position);
-                ElementFX.play(level, position, element, extraData);
+                ElementFXRenderer.play(level, position, element, extraData);
             } 
         } catch (Exception e) {
             System.err.println("[Complex Talents] ERROR spawning particles:");

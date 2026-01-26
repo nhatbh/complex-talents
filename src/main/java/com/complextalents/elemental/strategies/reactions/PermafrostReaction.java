@@ -5,43 +5,41 @@ import com.complextalents.elemental.api.IReactionStrategy;
 import com.complextalents.elemental.api.ReactionContext;
 import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.network.PacketHandler;
-import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
+import com.complextalents.network.elemental.SpawnPermafrostReactionPacket;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Voidfire Reaction (Fire + Ender)
- * Deals 2.5 hearts damage and applies marked for death effect
+ * Permafrost Reaction (Ice + Nature)
+ * Deals 0.5 hearts damage and roots the target.
  */
-public class VoidfireReaction implements IReactionStrategy {
+public class PermafrostReaction implements IReactionStrategy {
 
-    private static final int MARKED_DURATION_TICKS = 80; // 4 seconds
+    private static final int PERMAFROST_DURATION_TICKS = 40; // 2 seconds
 
     @Override
     public void execute(ReactionContext context) {
         LivingEntity target = context.getTarget();
         float damage = calculateDamage(context);
 
-        // Apply damage
         DamageSource damageSource = target.level().damageSources().magic();
         target.hurt(damageSource, damage);
 
-        // Apply marked for death effect
-        MobEffectInstance markedEffect = new MobEffectInstance(
-            ElementalEffects.MARKED_FOR_DEATH.get(),
-            MARKED_DURATION_TICKS,
+        MobEffectInstance permafrostEffect = new MobEffectInstance(
+            ElementalEffects.PERMAFROST.get(),
+            PERMAFROST_DURATION_TICKS,
             0,
             false,
             true,
             true
         );
-        target.addEffect(markedEffect);
+        target.addEffect(permafrostEffect);
 
         // Send particle effect packet to nearby clients
         PacketHandler.sendToNearby(
-            new SpawnVoidfireReactionPacket(target.position()),
+            new SpawnPermafrostReactionPacket(target.position()),
             context.getLevel(),
             target.position()
         );
@@ -51,7 +49,7 @@ public class VoidfireReaction implements IReactionStrategy {
     public float calculateDamage(ReactionContext context) {
         float mastery = context.getElementalMastery();
         float multiplier = context.getDamageMultiplier();
-        return 5.0f * mastery * multiplier;
+        return 1.0f * mastery * multiplier;
     }
 
     @Override
@@ -61,7 +59,7 @@ public class VoidfireReaction implements IReactionStrategy {
 
     @Override
     public ElementalReaction getReactionType() {
-        return ElementalReaction.VOIDFIRE;
+        return ElementalReaction.PERMAFROST;
     }
 
     @Override

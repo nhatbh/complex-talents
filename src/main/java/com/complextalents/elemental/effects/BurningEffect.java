@@ -1,6 +1,5 @@
 package com.complextalents.elemental.effects;
 
-import com.complextalents.elemental.ElementFX;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.LivingEntity;
@@ -38,10 +37,6 @@ public class BurningEffect extends MobEffect {
         // Apply fire damage
         entity.hurt(entity.level().damageSources().onFire(), damage);
 
-        // Spawn particle effects for visual feedback
-        if (entity.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            ElementFX.spawnEmbers(serverLevel, entity.position(), 3);
-        }
     }
 
     @Override

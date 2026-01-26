@@ -1,4 +1,4 @@
-package com.complextalents.network;
+package com.complextalents.network.elemental;
 
 import com.complextalents.elemental.ElementalReaction;
 import net.minecraft.ChatFormatting;
