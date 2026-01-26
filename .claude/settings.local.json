@@ -8,7 +8,17 @@
       "Bash(./gradlew classes:*)",
       "Bash(gradlew.bat build:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(ls:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(./gradlew:*)",
+      "Bash(api)",
+      "Bash(registry \")",
+      "Bash(dir:*)",
+      "Bash(for file in *.java)",
+      "Bash(do mv \"$file\" \"../strategies/reactions/\")",
+      "Bash(done)",
+      "Bash(do sed -i 's/package com.complextalents.elemental.reactions;/package com.complextalents.elemental.strategies.reactions;/' \"$file\")"
     ]
   }
 }

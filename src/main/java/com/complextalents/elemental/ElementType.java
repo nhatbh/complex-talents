@@ -1,7 +1,5 @@
 package com.complextalents.elemental;
 
-import net.minecraft.ChatFormatting;
-
 public enum ElementType {
     FIRE,
     AQUA,
@@ -26,29 +24,15 @@ public enum ElementType {
     public ElementalReaction getReactionWith(ElementType other) {
         if (!canReactWith(other)) return null;
 
-        // Handle Ender special cases
-        if (this == ENDER) {
-            return switch (other) {
-                case FIRE -> ElementalReaction.SINGULARITY;
-                case AQUA -> ElementalReaction.DECREPIT_GRASP;
-                case LIGHTNING -> ElementalReaction.RIFT_PULL;
-                case ICE -> ElementalReaction.FRACTURE;
-                case NATURE -> ElementalReaction.WITHERING_SEED;
-                default -> null;
-            };
+        // Handle Ender special cases - only VOIDFIRE is implemented
+        if (this == ENDER && other == FIRE) {
+            return ElementalReaction.VOIDFIRE;
+        }
+        if (this == FIRE && other == ENDER) {
+            return ElementalReaction.VOIDFIRE;
         }
 
-        if (other == ENDER) {
-            return switch (this) {
-                case FIRE -> ElementalReaction.SINGULARITY;
-                case AQUA -> ElementalReaction.DECREPIT_GRASP;
-                case LIGHTNING -> ElementalReaction.RIFT_PULL;
-                case ICE -> ElementalReaction.FRACTURE;
-                case NATURE -> ElementalReaction.WITHERING_SEED;
-                default -> null;
-            };
-        }
-
+        // Only return reactions that have strategy implementations
         return switch (this) {
             case FIRE -> switch (other) {
                 case AQUA -> ElementalReaction.VAPORIZE;
@@ -59,73 +43,21 @@ public enum ElementType {
             };
             case AQUA -> switch (other) {
                 case FIRE -> ElementalReaction.VAPORIZE;
-                case ICE -> ElementalReaction.FROZEN;
-                case LIGHTNING -> ElementalReaction.ELECTRO_CHARGED;
-                case NATURE -> ElementalReaction.BLOOM;
-                default -> null;
+                default -> null; // Other Aqua reactions not implemented yet
             };
             case ICE -> switch (other) {
                 case FIRE -> ElementalReaction.MELT;
-                case AQUA -> ElementalReaction.FROZEN;
-                case LIGHTNING -> ElementalReaction.SUPERCONDUCT;
-                default -> null;
+                default -> null; // Other Ice reactions not implemented yet
             };
             case LIGHTNING -> switch (other) {
                 case FIRE -> ElementalReaction.OVERLOADED;
-                case AQUA -> ElementalReaction.ELECTRO_CHARGED;
-                case ICE -> ElementalReaction.SUPERCONDUCT;
-                case NATURE -> ElementalReaction.HYPERBLOOM; // Lightning on Bloom cores
-                default -> null;
+                default -> null; // Other Lightning reactions not implemented yet
             };
             case NATURE -> switch (other) {
                 case FIRE -> ElementalReaction.BURNING;
-                case AQUA -> ElementalReaction.BLOOM;
-                case LIGHTNING -> ElementalReaction.HYPERBLOOM;
-                default -> null;
+                default -> null; // Other Nature reactions not implemented yet
             };
             default -> null;
-        };
-    }
-
-    /**
-     * Get the display name for this element
-     */
-    public String getDisplayName() {
-        return switch (this) {
-            case FIRE -> "Fire";
-            case AQUA -> "Aqua";
-            case LIGHTNING -> "Lightning";
-            case ICE -> "Ice";
-            case NATURE -> "Nature";
-            case ENDER -> "Ender";
-        };
-    }
-
-    /**
-     * Get the chat color for this element
-     */
-    public ChatFormatting getChatColor() {
-        return switch (this) {
-            case FIRE -> ChatFormatting.RED;
-            case AQUA -> ChatFormatting.BLUE;
-            case LIGHTNING -> ChatFormatting.YELLOW;
-            case ICE -> ChatFormatting.AQUA;
-            case NATURE -> ChatFormatting.GREEN;
-            case ENDER -> ChatFormatting.DARK_PURPLE;
-        };
-    }
-
-    /**
-     * Get the particle color as RGB values (0-1 range)
-     */
-    public float[] getParticleRGB() {
-        return switch (this) {
-            case FIRE -> new float[]{1.0f, 0.3f, 0.0f};      // Orange-red
-            case AQUA -> new float[]{0.0f, 0.5f, 1.0f};      // Light blue
-            case LIGHTNING -> new float[]{1.0f, 1.0f, 0.0f};  // Yellow
-            case ICE -> new float[]{0.7f, 0.9f, 1.0f};       // Ice blue
-            case NATURE -> new float[]{0.2f, 0.8f, 0.2f};    // Green
-            case ENDER -> new float[]{0.5f, 0.0f, 0.8f};     // Purple
         };
     }
 }

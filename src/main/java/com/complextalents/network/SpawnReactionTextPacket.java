@@ -157,19 +157,7 @@ public class SpawnReactionTextPacket {
             case VAPORIZE -> "§b"; // Aqua
             case MELT -> "§6"; // Gold
             case OVERLOADED -> "§e"; // Yellow
-            case ELECTRO_CHARGED -> "§d"; // Light purple
-            case FROZEN -> "§b"; // Aqua
-            case SUPERCONDUCT -> "§3"; // Dark aqua
             case BURNING -> "§c"; // Red
-            case BLOOM -> "§a"; // Green
-            case HYPERBLOOM -> "§e"; // Yellow
-            case BURGEON -> "§6"; // Gold
-            case UNSTABLE_WARD -> "§5"; // Dark purple
-            case RIFT_PULL -> "§5"; // Dark purple
-            case SINGULARITY -> "§1"; // Dark blue
-            case FRACTURE -> "§f"; // White
-            case WITHERING_SEED -> "§4"; // Dark red
-            case DECREPIT_GRASP -> "§8"; // Dark gray
             default -> throw new IllegalArgumentException("Unexpected value: " + reaction);
         };
     }

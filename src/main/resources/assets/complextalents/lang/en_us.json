@@ -1,31 +1,5 @@
 {
-  "talent.complextalents.elemental_mastery.name": "Elemental Mastery",
-  "talent.complextalents.elemental_mastery.description": "Unlocks the power of elemental reactions. Increases all reaction damage by 10% per level.",
-  "talent.complextalents.pyro_specialist.name": "Pyro Specialist",
-  "talent.complextalents.pyro_specialist.description": "Master of flame and heat. Enhances Pyro-based reactions (Vaporize, Melt, Burning, Overloaded).",
-  "talent.complextalents.hydro_specialist.name": "Hydro Specialist",
-  "talent.complextalents.hydro_specialist.description": "Master of water and rain. Enhances Hydro-based reactions (Vaporize, Frozen, Electro-Charged, Bloom).",
-  "talent.complextalents.cryo_specialist.name": "Cryo Specialist",
-  "talent.complextalents.cryo_specialist.description": "Master of ice and frost. Enhances Cryo-based reactions (Melt, Frozen, Superconduct).",
-  "talent.complextalents.electro_specialist.name": "Electro Specialist",
-  "talent.complextalents.electro_specialist.description": "Master of lightning and spark. Enhances Electro-based reactions (Overloaded, Electro-Charged, Superconduct, Aggravate).",
-  "talent.complextalents.dendro_specialist.name": "Dendro Specialist",
-  "talent.complextalents.dendro_specialist.description": "Master of nature and life. Enhances Dendro-based reactions (Burning, Bloom, Aggravate).",
-  "talent.complextalents.anemo_specialist.name": "Anemo Specialist",
-  "talent.complextalents.anemo_specialist.description": "Master of wind and air. Enhances Anemo reactions (Swirl).",
-
-  "gui.complextalents.title": "Talents",
-  "gui.done": "Done",
-
-  "overlay.complextalents.title": "Active Talents",
-
   "key.categories.complextalents": "Complex Talents",
-  "key.complextalents.activate_talent_1": "Activate Talent 1",
-  "key.complextalents.activate_talent_2": "Activate Talent 2",
-  "key.complextalents.activate_talent_3": "Activate Talent 3",
-  "key.complextalents.activate_talent_4": "Activate Talent 4",
-  "key.complextalents.activate_talent_5": "Activate Talent 5",
-  "key.complextalents.open_talent_screen": "Open Talent Screen",
   "key.complextalents.toggle_combat_mode": "Toggle Combat Mode",
 
   "reaction.complextalents.vaporize": "Vaporize",
@@ -46,13 +20,5 @@
   "element.complextalents.electro": "Electro",
   "element.complextalents.dendro": "Dendro",
   "element.complextalents.anemo": "Anemo",
-  "element.complextalents.geo": "Geo",
-
-  "command.talent.list.success": "Your talents:",
-  "command.talent.list.empty": "You have no talents unlocked.",
-  "command.granttalent.success": "Granted talent %s at level %d to %s",
-  "command.granttalent.not_talent": "%s does not have talent %s",
-  "command.revoketalent.success": "Revoked talent %s from %s",
-  "command.listtalents.success": "%s's talents:",
-  "command.listtalents.empty": "%s has no talents unlocked."
+  "element.complextalents.geo": "Geo"
 }

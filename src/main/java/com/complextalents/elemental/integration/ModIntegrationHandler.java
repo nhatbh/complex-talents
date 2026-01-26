@@ -1,7 +1,6 @@
 package com.complextalents.elemental.integration;
 
 import com.complextalents.TalentsMod;
-import net.minecraftforge.fml.ModList;
 
 public class ModIntegrationHandler {
     private static boolean isIronSpellbooksLoaded = false;

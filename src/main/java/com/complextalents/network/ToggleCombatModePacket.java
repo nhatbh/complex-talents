@@ -1,7 +1,6 @@
 package com.complextalents.network;
 
 import com.complextalents.TalentsMod;
-import com.complextalents.capability.TalentsCapabilities;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -10,6 +9,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class ToggleCombatModePacket {
+    private static boolean combatModeEnabled = false;
 
     public ToggleCombatModePacket() {
         // Empty constructor - no data needed
@@ -32,21 +32,18 @@ public class ToggleCombatModePacket {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
-                player.getCapability(TalentsCapabilities.PLAYER_TALENTS).ifPresent(talents -> {
-                    boolean newState = talents.toggleCombatMode();
+                // Simple toggle without talent system
+                combatModeEnabled = !combatModeEnabled;
 
-                    // Notify player
-                    if (newState) {
-                        player.sendSystemMessage(Component.literal("§6§lCombat Mode: §a§lENABLED"));
-                        player.sendSystemMessage(Component.literal("§7Hotbar keys 1-4 now activate talents"));
-                    } else {
-                        player.sendSystemMessage(Component.literal("§6§lCombat Mode: §c§lDISABLED"));
-                        player.sendSystemMessage(Component.literal("§7Hotbar keys 1-4 restored to normal"));
-                    }
+                // Notify player
+                if (combatModeEnabled) {
+                    player.sendSystemMessage(Component.literal("§6§lCombat Mode: §a§lENABLED"));
+                } else {
+                    player.sendSystemMessage(Component.literal("§6§lCombat Mode: §c§lDISABLED"));
+                }
 
-                    TalentsMod.LOGGER.debug("Player {} toggled Combat Mode to {}",
-                        player.getName().getString(), newState);
-                });
+                TalentsMod.LOGGER.debug("Player {} toggled Combat Mode to {}",
+                    player.getName().getString(), combatModeEnabled);
             }
         });
         context.setPacketHandled(true);

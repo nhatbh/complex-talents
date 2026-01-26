@@ -20,18 +20,6 @@ public class PacketHandler {
 
     public static void register() {
         INSTANCE.registerMessage(packetId++,
-                SyncTalentsPacket.class,
-                SyncTalentsPacket::encode,
-                SyncTalentsPacket::decode,
-                SyncTalentsPacket::handle);
-
-        INSTANCE.registerMessage(packetId++,
-                TalentActivationPacket.class,
-                TalentActivationPacket::encode,
-                TalentActivationPacket::decode,
-                TalentActivationPacket::handle);
-
-        INSTANCE.registerMessage(packetId++,
                 SpawnParticlesPacket.class,
                 SpawnParticlesPacket::encode,
                 SpawnParticlesPacket::decode,
@@ -42,12 +30,6 @@ public class PacketHandler {
                 SpawnReactionTextPacket::encode,
                 SpawnReactionTextPacket::decode,
                 SpawnReactionTextPacket::handle);
-
-        INSTANCE.registerMessage(packetId++,
-                SyncBranchSelectionPacket.class,
-                SyncBranchSelectionPacket::encode,
-                SyncBranchSelectionPacket::new,
-                SyncBranchSelectionPacket::handle);
 
         INSTANCE.registerMessage(packetId++,
                 ToggleCombatModePacket.class,

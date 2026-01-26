@@ -3,8 +3,6 @@ package com.complextalents.elemental.integration;
 import com.complextalents.TalentsMod;
 import com.complextalents.elemental.ElementalStackManager;
 import com.complextalents.elemental.ElementType;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.common.MinecraftForge;
@@ -155,7 +153,7 @@ public class IronSpellbooksIntegration {
             // Apply elemental stack to target with spell damage
             TalentsMod.LOGGER.info("[SPELL DAMAGE DEBUG] Applying elemental stack - Element: {}, Damage: {}, Target: {}, Caster: {}",
                 element.name(), spellDamage, target.getName().getString(), caster.getName().getString());
-            ElementalStackManager.applyElementStack(target, element, caster, spellDamage);
+            ElementalStackManager.applyElementStack(target, element, caster);
 
         } catch (Exception e) {
             TalentsMod.LOGGER.debug("Error processing Iron's Spellbooks SpellDamageEvent: {}", e.getMessage(), e);
@@ -237,15 +235,10 @@ public class IronSpellbooksIntegration {
             );
         });
 
-        // Apply AQUA elemental stack with a small base damage value
-        // Using target as source means it won't trigger reactions (not a ServerPlayer)
-        // Other elements hitting this target will trigger reactions with the AQUA stack
-        float tokenDamage = 1.0f;
-
         TalentsMod.LOGGER.info("[WET EFFECT DEBUG] Applying passive AQUA stack - Target: {} (no caster)",
             target.getName().getString());
 
-        ElementalStackManager.applyElementStack(target, ElementType.AQUA, pseudoSource, tokenDamage);
+        ElementalStackManager.applyElementStack(target, ElementType.AQUA, pseudoSource);
     }
     /**
      * Maps Iron's Spellbooks school types to elemental types
@@ -270,14 +263,9 @@ public class IronSpellbooksIntegration {
             case "fire" -> ElementType.FIRE;
             case "ice" -> ElementType.ICE;
             case "lightning" -> ElementType.LIGHTNING;
-            case "evocation" -> ElementType.NATURE;  // Evocation mapped to Nature
             case "ender" -> ElementType.ENDER;
-            case "blood" -> ElementType.FIRE;  // Blood magic is hot-themed
-            case "holy" -> ElementType.ICE;    // Holy is purifying/cooling
-            case "eldritch" -> ElementType.ENDER;  // Eldritch is void/ender themed
             case "nature" -> ElementType.NATURE;
             case "aqua" -> ElementType.AQUA;  // Generic aqua school
-            case "none" -> null;
             default -> null;
         };
     }
