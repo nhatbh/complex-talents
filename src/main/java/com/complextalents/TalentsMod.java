@@ -1,7 +1,6 @@
 package com.complextalents;
 
 import com.complextalents.config.ElementalReactionConfig;
-import com.complextalents.elemental.attributes.MasteryAttributes;
 import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
@@ -29,9 +28,6 @@ public class TalentsMod {
 
         // Register common setup
         modEventBus.addListener(this::commonSetup);
-
-        // Register mastery attributes
-        MasteryAttributes.register(modEventBus);
 
         // Register custom status effects
         ElementalEffects.register(modEventBus);

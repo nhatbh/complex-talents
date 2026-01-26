@@ -50,6 +50,9 @@ public class ElementalStackHandler {
         LivingEntity source = event.getSource();
         ElementType element = event.getElement();
 
+        // Server-side only
+        if (target.level().isClientSide) return;
+
         // Validate inputs
         if (target == null || element == null) {
             TalentsMod.LOGGER.warn("Invalid ElementalDamageEvent: target={}, element={}", target, element);
@@ -144,6 +147,10 @@ public class ElementalStackHandler {
     @SubscribeEvent
     public static void onEntityDeath(LivingDeathEvent event) {
         LivingEntity entity = event.getEntity();
+
+        // Server-side only
+        if (entity.level().isClientSide) return;
+
         UUID entityId = entity.getUUID();
 
         // Fire removal events for all stacks before removing them

@@ -40,6 +40,9 @@ public class ElementalReactionHandler {
         LivingEntity source = event.getSource();
         ElementType newElement = event.getElement();
 
+        // Server-side only
+        if (target.level().isClientSide) return;
+
         // Only trigger reactions if source is a player
         if (!(source instanceof ServerPlayer player)) {
             return;

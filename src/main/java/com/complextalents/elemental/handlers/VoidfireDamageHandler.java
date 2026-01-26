@@ -18,6 +18,9 @@ public class VoidfireDamageHandler {
     public static void onLivingHurt(LivingHurtEvent event) {
         LivingEntity target = event.getEntity();
 
+        // Server-side only
+        if (target.level().isClientSide) return;
+
         // Check if target has "Marked for Death" effect
         if (target.hasEffect(ElementalEffects.MARKED_FOR_DEATH.get())) {
             float originalDamage = event.getAmount();

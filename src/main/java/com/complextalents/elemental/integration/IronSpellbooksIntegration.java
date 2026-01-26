@@ -44,6 +44,9 @@ public class IronSpellbooksIntegration {
             LivingEntity target = event.getEntity();
             if (target == null) return;
 
+            // Server-side only
+            if (target.level().isClientSide) return;
+
             LivingEntity caster = null;
             if (spellDamageSource.getEntity() instanceof LivingEntity) {
                 caster = (LivingEntity) spellDamageSource.getEntity();
