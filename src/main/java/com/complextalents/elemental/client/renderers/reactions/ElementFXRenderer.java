@@ -4,6 +4,7 @@ import com.complextalents.elemental.ElementType;
 import com.complextalents.util.IronParticleHelper;
 
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
@@ -29,7 +30,7 @@ public class ElementFXRenderer {
     }
 
     private static void playSound(Level level, Vec3 pos, ElementType element, int stackCount) {
-        float volume = 0.3f + (stackCount * 0.1f); // Louder for higher stacks
+        float volume = 0.2f; // Louder for higher stacks
         float pitch = 1.0f + (stackCount * 0.15f); // Higher pitch for higher stacks
 
         switch (element) {
@@ -57,7 +58,7 @@ public class ElementFXRenderer {
     private static void spawnFireParticles(Level level, Vec3 pos, int stackCount) {
         // Rising flames and embers
         ParticleOptions fireParticle = IronParticleHelper.getIronParticle("fire");
-        int particleCount = 8 + (stackCount * 3);
+        int particleCount = 3;
         for (int i = 0; i < particleCount; i++) {
             double offsetX = (level.random.nextDouble() - 0.5) * 0.6;
             double offsetZ = (level.random.nextDouble() - 0.5) * 0.6;
@@ -69,13 +70,12 @@ public class ElementFXRenderer {
 
     private static void spawnAquaParticles(Level level, Vec3 pos, int stackCount) {
         // Bubbling water effect
-        ParticleOptions acidBubbleParticle = IronParticleHelper.getIronParticle("acid_bubble");
-        int particleCount = 6 + (stackCount * 2);
+        int particleCount = 15;
         for (int i = 0; i < particleCount; i++) {
-            double offsetX = (level.random.nextDouble() - 0.5) * 0.7;
-            double offsetZ = (level.random.nextDouble() - 0.5) * 0.7;
-            level.addParticle(acidBubbleParticle,
-                pos.x + offsetX, pos.y + 0.1, pos.z + offsetZ,
+            double offsetX = 2*(level.random.nextDouble() - 0.5) * 0.7;
+            double offsetZ = 2*(level.random.nextDouble() - 0.5) * 0.7;
+            level.addParticle(ParticleTypes.SPLASH,
+                pos.x + offsetX, pos.y + 0.5, pos.z + offsetZ,
                 0, 0.12 + (stackCount * 0.015), 0);
         }
     }
@@ -83,7 +83,7 @@ public class ElementFXRenderer {
     private static void spawnIceParticles(Level level, Vec3 pos, int stackCount) {
         // Swirling snowflakes
         ParticleOptions snowflakeParticle = IronParticleHelper.getIronParticle("snowflake");
-        int particleCount = 10 + (stackCount * 3);
+        int particleCount = 3;
         double radius = 0.7 + (stackCount * 0.1);
         for (int i = 0; i < particleCount; i++) {
             double angle = (i * Math.PI * 2.0) / particleCount + (level.getGameTime() * 0.05);
@@ -99,7 +99,7 @@ public class ElementFXRenderer {
     private static void spawnLightningParticles(Level level, Vec3 pos, int stackCount) {
         // Electric arcs spiraling upward
         ParticleOptions electricityParticle = IronParticleHelper.getIronParticle("electricity");
-        int particleCount = 12 + (stackCount * 4);
+        int particleCount = 3;
         double height = 1.5 + (stackCount * 0.2);
         for (int i = 0; i < particleCount; i++) {
             double t = i / (double) particleCount;
@@ -116,15 +116,15 @@ public class ElementFXRenderer {
 
     private static void spawnNatureParticles(Level level, Vec3 pos, int stackCount) {
         // Floating fireflies orbiting
-        ParticleOptions fireflyParticle = IronParticleHelper.getIronParticle("firefly");
-        int particleCount = 8 + (stackCount * 3);
+        ParticleOptions acidBubbleParticle = IronParticleHelper.getIronParticle("acid_bubble");
+        int particleCount = 3;
         double radius = 0.8 + (stackCount * 0.1);
         for (int i = 0; i < particleCount; i++) {
             double angle = (i * Math.PI * 2.0) / particleCount + (level.getGameTime() * 0.08);
             double offsetX = Math.cos(angle) * radius;
             double offsetZ = Math.sin(angle) * radius;
             double offsetY = 0.3 + Math.sin(level.getGameTime() * 0.1 + i) * 0.3;
-            level.addParticle(fireflyParticle,
+            level.addParticle(acidBubbleParticle,
                 pos.x + offsetX, pos.y + offsetY, pos.z + offsetZ,
                 -Math.sin(angle) * 0.05, 0.02, Math.cos(angle) * 0.05);
         }
@@ -133,7 +133,7 @@ public class ElementFXRenderer {
     private static void spawnEnderParticles(Level level, Vec3 pos, int stackCount) {
         // Unstable void particles pulsing
         ParticleOptions unstableEnderParticle = IronParticleHelper.getIronParticle("unstable_ender");
-        int particleCount = 10 + (stackCount * 4);
+        int particleCount = 7;
         double pulseRadius = 0.5 + Math.sin(level.getGameTime() * 0.15) * 0.3;
         for (int i = 0; i < particleCount; i++) {
             double angle = level.random.nextDouble() * Math.PI * 2.0;

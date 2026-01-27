@@ -6,6 +6,7 @@ import com.complextalents.elemental.ElementStack;
 import com.complextalents.elemental.ElementalStackTracker;
 import com.complextalents.elemental.ElementType;
 import com.complextalents.elemental.events.ElementStackAppliedEvent;
+import com.complextalents.elemental.events.ElementStackPreAppliedEvent;
 import com.complextalents.elemental.events.ElementalDamageEvent;
 import com.complextalents.elemental.events.ElementalStackRemovedEvent;
 import com.complextalents.network.PacketHandler;
@@ -31,7 +32,7 @@ import java.util.UUID;
  * This is the first stage in the reaction chain.
  *
  * <p>Listens to: {@link ElementalDamageEvent}</p>
- * <p>Fires: {@link ElementStackAppliedEvent}</p>
+ * <p>Fires: {@link ElementStackPreAppliedEvent}, {@link ElementStackAppliedEvent}</p>
  *
  * <p>Also handles stack ticking, cleanup, and entity death/logout events.</p>
  */
@@ -58,6 +59,15 @@ public class ElementalStackHandler {
             TalentsMod.LOGGER.warn("Invalid ElementalDamageEvent: target={}, element={}", target, element);
             return;
         }
+        // Fire pre-application event (allows cancellation before stack is applied)
+        ElementStackPreAppliedEvent preEvent = new ElementStackPreAppliedEvent(target, source, element, 1);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(preEvent);
+
+        // Check if pre-event was canceled
+        if (preEvent.isCanceled()) {
+            TalentsMod.LOGGER.debug("Element stack application canceled by pre-event handler for entity {}", target.getUUID());
+            return;
+        }
 
         try {
             UUID targetId = target.getUUID();
@@ -82,9 +92,15 @@ public class ElementalStackHandler {
                 return;
             }
 
-            // Fire the stack applied event (always with count of 1 since stacking is removed)
-            ElementStackAppliedEvent stackEvent = new ElementStackAppliedEvent(target, source, element, 1);
+            // Use the potentially modified stack count from the pre-event
+            int stackCount = preEvent.getStackCount();
+
+            // Fire the stack applied event (fires after stack is actually applied)
+            ElementStackAppliedEvent stackEvent = new ElementStackAppliedEvent(target, source, element, stackCount);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(stackEvent);
+
+            TalentsMod.LOGGER.info("AFTER_REACTION_CHECK: Element {} applied to {} (UUID: {}). Remaining stacks: {}",
+                element, target.getName().getString(), targetId, elements.keySet());
 
             // Check if event was canceled
             if (stackEvent.isCanceled()) {
@@ -95,6 +111,9 @@ public class ElementalStackHandler {
             // Create and add the new element stack
             ElementStack stack = new ElementStack(element, target, source);
             elements.put(element, stack);
+
+            TalentsMod.LOGGER.info("BEFORE_REACTION_CHECK: Applied {} stack to {} (UUID: {}). Current stacks: {}",
+                element, target.getName().getString(), targetId, elements.keySet());
 
             // Spawn particle effects for stack application
             if (target.level() instanceof ServerLevel) {

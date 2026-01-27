@@ -336,7 +336,10 @@ public class ReactionRegistry {
         // Register Aqua reactions
         register(ElementalReaction.ELECTRO_CHARGED, new ElectroChargedReaction());
 
-        TalentsMod.LOGGER.info("Registered 10 default elemental reaction strategies");
+        // Register Nature reactions
+        register(ElementalReaction.BLOOM, new BloomReaction());
+
+        TalentsMod.LOGGER.info("Registered 11 default elemental reaction strategies");
     }
 
     /**

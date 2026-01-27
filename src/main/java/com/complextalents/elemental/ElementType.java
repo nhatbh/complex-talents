@@ -51,6 +51,7 @@ public enum ElementType {
                 case FIRE -> ElementalReaction.VAPORIZE;
                 case ICE -> ElementalReaction.FREEZE;
                 case LIGHTNING -> ElementalReaction.ELECTRO_CHARGED;
+                case NATURE -> ElementalReaction.BLOOM;
                 default -> null;
             };
             case ICE -> switch (other) {
@@ -69,6 +70,7 @@ public enum ElementType {
             case NATURE -> switch (other) {
                 case FIRE -> ElementalReaction.BURNING;
                 case ICE -> ElementalReaction.PERMAFROST;
+                case AQUA -> ElementalReaction.BLOOM;
                 default -> null;
             };
             default -> null;

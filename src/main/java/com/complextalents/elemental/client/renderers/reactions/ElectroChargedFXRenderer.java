@@ -78,6 +78,6 @@ public class ElectroChargedFXRenderer {
         }
 
         // Play sound at both positions
-        SoundHelper.playStackedSound(level, source, SoundEvents.TRIDENT_THUNDER, 1, 0.8f, 1.2f);
+        SoundHelper.playStackedSound(level, source, SoundEvents.TRIDENT_THUNDER, 1, 0.3f, 1.2f);
     }
 }

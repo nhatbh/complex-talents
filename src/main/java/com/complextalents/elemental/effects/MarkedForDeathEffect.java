@@ -1,7 +1,11 @@
 package com.complextalents.elemental.effects;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.elemental.strategies.reactions.VoidfireReaction;
+import com.complextalents.util.TeamHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.LivingEntity;
@@ -126,6 +130,20 @@ public class MarkedForDeathEffect extends MobEffect {
         boolean hasTriggered = data.getBoolean(NBT_HAS_TRIGGERED);
 
         if (!hasTriggered && !entity.level().isClientSide) {
+            // Get the attacker username from NBT
+            String attackerUsername = VoidfireReaction.getAttackerUsername(entity);
+            ServerPlayer attacker = null;
+
+            // Retrieve the attacker from the level if username exists and server is available
+            if (attackerUsername != null && entity.getServer() != null) {
+                attacker = entity.getServer().getPlayerList().getPlayerByName(attackerUsername);
+            }
+
+            // Skip if the entity is an ally of the attacker
+            if (attacker != null && TeamHelper.isAlly(attacker, entity)) {
+                return;
+            }
+
             // Get accumulated damage
             float accumulatedDamage = data.getFloat(NBT_ACCUMULATED_DAMAGE);
 
@@ -151,9 +169,15 @@ public class MarkedForDeathEffect extends MobEffect {
                     wasCapped ? " [CAPPED]" : ""
                 );
 
-                // Apply the damage if entity is still alive
+                // Apply the damage if entity is still alive with player attribution
                 if (entity.isAlive()) {
-                    entity.hurt(entity.level().damageSources().magic(), finalDamage);
+                    DamageSource damageSource;
+                    if (attacker != null) {
+                        damageSource = entity.level().damageSources().playerAttack(attacker);
+                    } else {
+                        damageSource = entity.level().damageSources().magic();
+                    }
+                    entity.hurt(damageSource, finalDamage);
                 }
 
                 // Mark as triggered to prevent double-triggering
@@ -164,6 +188,7 @@ public class MarkedForDeathEffect extends MobEffect {
         // Clean up NBT data
         data.remove(NBT_ACCUMULATED_DAMAGE);
         data.remove(NBT_HAS_TRIGGERED);
+        VoidfireReaction.clearAttackerUsername(entity);
     }
 
     /**

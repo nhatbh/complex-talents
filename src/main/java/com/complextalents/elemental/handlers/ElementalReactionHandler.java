@@ -22,8 +22,12 @@ import java.util.UUID;
  * Handles elemental reaction triggering when ElementStackAppliedEvent is fired.
  * This is the second stage in the reaction chain.
  *
- * <p>Listens to: {@link ElementStackAppliedEvent}</p>
+ * <p>Listens to: {@link com.complextalents.elemental.events.ElementStackAppliedEvent}</p>
  * <p>Fires: {@link com.complextalents.elemental.events.ElementalReactionTriggeredEvent} (via ReactionRegistry)</p>
+ *
+ * <p>Note: This handler responds to the POST-application event. For preventing element
+ * application (e.g., for special entities like Nature Cores), use the
+ * {@link com.complextalents.elemental.events.ElementStackPreAppliedEvent} in a separate handler.</p>
  */
 @Mod.EventBusSubscriber(modid = TalentsMod.MODID)
 public class ElementalReactionHandler {
@@ -51,6 +55,9 @@ public class ElementalReactionHandler {
         UUID targetId = target.getUUID();
         Map<ElementType, ElementStack> elements = ElementalStackTracker.getEntityStacks(targetId);
 
+        TalentsMod.LOGGER.info("REACTION_CHECK_START: Checking reactions for {} (UUID: {}). Applied element: {}. Existing stacks: {}",
+            target.getName().getString(), targetId, newElement, elements != null ? elements.keySet() : "null");
+
         if (elements == null || elements.isEmpty()) {
             return;
         }
@@ -77,10 +84,16 @@ public class ElementalReactionHandler {
                 target, reaction, newElement, existingElement, player, 1.0f
             );
 
+            TalentsMod.LOGGER.info("REACTION_EXECUTED: {} reaction on {} (UUID: {}). Reaction executed: {}. Existing element: {}, New element: {}",
+                reaction, target.getName().getString(), targetId, executed, existingElement, newElement);
+
             // If reaction was executed and it consumes stacks, remove the existing element
             if (executed) {
                 IReactionStrategy strategy = ReactionRegistry.getInstance().getStrategy(reaction);
                 if (strategy != null && strategy.consumesStacks()) {
+                    TalentsMod.LOGGER.info("CONSUMING_STACK: Removing {} stack from {} (UUID: {}) after {} reaction. Stacks before removal: {}",
+                        existingElement, target.getName().getString(), targetId, reaction, elements.keySet());
+
                     // Fire the stack removed event before removing
                     ElementalStackRemovedEvent removedEvent = new ElementalStackRemovedEvent(
                         target, existingElement, ElementalStackRemovedEvent.RemovalReason.REACTION_CONSUMED
@@ -88,8 +101,12 @@ public class ElementalReactionHandler {
                     net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(removedEvent);
 
                     elements.remove(existingElement);
-                    TalentsMod.LOGGER.debug("Consumed {} stack after {} reaction",
-                        existingElement, reaction);
+                    TalentsMod.LOGGER.info("STACK_CONSUMED: Removed {} stack. Remaining stacks: {}",
+                        existingElement, elements.keySet());
+                } else {
+                    TalentsMod.LOGGER.info("STRATEGY_INFO: Reaction {} has strategy: {}, Consumes stacks: {}",
+                        reaction, strategy != null ? strategy.getClass().getSimpleName() : "null",
+                        strategy != null ? strategy.consumesStacks() : "N/A");
                 }
             }
 

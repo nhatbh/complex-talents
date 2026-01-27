@@ -1,5 +1,9 @@
 package com.complextalents.elemental.effects;
 
+import com.complextalents.elemental.strategies.reactions.BurningReaction;
+import com.complextalents.util.TeamHelper;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.LivingEntity;
@@ -30,13 +34,32 @@ public class BurningEffect extends MobEffect {
             return;
         }
 
+        // Get the attacker username from NBT
+        String attackerUsername = BurningReaction.getAttackerUsername(entity);
+        ServerPlayer attacker = null;
+
+        // Retrieve the attacker from the level if username exists and server is available
+        if (attackerUsername != null && entity.getServer() != null) {
+            attacker = entity.getServer().getPlayerList().getPlayerByName(attackerUsername);
+        }
+
+        // Skip if the entity with the effect is an ally of the attacker
+        if (attacker != null && TeamHelper.isAlly(attacker, entity)) {
+            return;
+        }
+
         // Calculate damage: base * (amplifier + 1)
         // Amplifier 0 = 0.5 damage, Amplifier 1 = 1.0 damage, Amplifier 2 = 1.5 damage, etc.
         float damage = BASE_DAMAGE_PER_TICK * (amplifier + 1);
 
-        // Apply fire damage
-        entity.hurt(entity.level().damageSources().onFire(), damage);
-
+        // Apply fire damage with player attribution
+        DamageSource damageSource;
+        if (attacker != null) {
+            damageSource = entity.level().damageSources().playerAttack(attacker);
+        } else {
+            damageSource = entity.level().damageSources().onFire();
+        }
+        entity.hurt(damageSource, damage);
     }
 
     @Override
@@ -44,5 +67,13 @@ public class BurningEffect extends MobEffect {
         // Apply damage every second (20 ticks)
         // This makes the damage more readable and less spammy than every tick
         return duration % 20 == 0;
+    }
+
+    @Override
+    public void removeAttributeModifiers(LivingEntity entity, net.minecraft.world.entity.ai.attributes.AttributeMap attributeMap, int amplifier) {
+        super.removeAttributeModifiers(entity, attributeMap, amplifier);
+
+        // Clean up NBT data when effect is removed
+        BurningReaction.clearAttackerUsername(entity);
     }
 }

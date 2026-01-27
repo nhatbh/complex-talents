@@ -6,6 +6,7 @@ import com.complextalents.elemental.api.ReactionContext;
 import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
+import com.complextalents.util.TeamHelper;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -24,8 +25,18 @@ public class SuperconductReaction implements IReactionStrategy {
         LivingEntity target = context.getTarget();
         float damage = calculateDamage(context);
 
-        // Apply damage
-        DamageSource damageSource = target.level().damageSources().magic();
+        // Check if target is an ally of the attacker - skip damage and effects if so
+        if (context.getAttacker() != null && TeamHelper.isAlly(context.getAttacker(), target)) {
+            return;
+        }
+
+        // Apply damage with player attribution
+        DamageSource damageSource;
+        if (context.getAttacker() != null) {
+            damageSource = target.level().damageSources().playerAttack(context.getAttacker());
+        } else {
+            damageSource = target.level().damageSources().magic();
+        }
         target.hurt(damageSource, damage);
 
         // Apply Superconduct effect for armor shred

@@ -1,12 +1,15 @@
 package com.complextalents.network;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.network.elemental.SpawnBloomReactionPacket;
 import com.complextalents.network.elemental.SpawnBurningReactionPacket;
 import com.complextalents.network.elemental.SpawnElectroChargedReactionPacket;
 import com.complextalents.network.elemental.SpawnElementFXPacket;
 import com.complextalents.network.elemental.SpawnFractureReactionPacket;
 import com.complextalents.network.elemental.SpawnFreezeReactionPacket;
 import com.complextalents.network.elemental.SpawnMeltReacionPacket;
+import com.complextalents.network.elemental.SpawnNatureCoreExplosionPacket;
+import com.complextalents.network.elemental.SpawnNatureCoreParticlePacket;
 import com.complextalents.network.elemental.SpawnOverloadReactionPacket;
 import com.complextalents.network.elemental.SpawnPermafrostReactionPacket;
 import com.complextalents.network.elemental.SpawnReactionTextPacket;
@@ -112,6 +115,24 @@ public class PacketHandler {
                 SpawnElectroChargedReactionPacket::encode,
                 SpawnElectroChargedReactionPacket::decode,
                 SpawnElectroChargedReactionPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnBloomReactionPacket.class,
+                SpawnBloomReactionPacket::encode,
+                SpawnBloomReactionPacket::decode,
+                SpawnBloomReactionPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnNatureCoreParticlePacket.class,
+                SpawnNatureCoreParticlePacket::encode,
+                SpawnNatureCoreParticlePacket::decode,
+                SpawnNatureCoreParticlePacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnNatureCoreExplosionPacket.class,
+                SpawnNatureCoreExplosionPacket::encode,
+                SpawnNatureCoreExplosionPacket::decode,
+                SpawnNatureCoreExplosionPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

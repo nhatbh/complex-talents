@@ -20,4 +20,7 @@ public enum ElementalReaction {
 
     // Aqua Reactions
     ELECTRO_CHARGED, // Aqua + Lightning - Chain lightning that zaps 3 nearby enemies
+
+    // Nature Reactions
+    BLOOM,           // Aqua + Nature - Spawns Nature Core that explodes with Fire/Lightning
 }
