@@ -28,6 +28,9 @@ public class ElementalEffects {
     // Aqua reaction effects
     public static final RegistryObject<MobEffect> ELECTRO_CHARGED = EFFECTS.register("electro_charged", () -> new ElectroChargedEffect(MobEffectCategory.HARMFUL, 0x00CED1));
 
+    // Lightning + Nature reaction effect
+    public static final RegistryObject<MobEffect> UNSTABLE_BIO_ENERGY = EFFECTS.register("unstable_bio_energy", () -> new UnstableBioEnergyEffect(MobEffectCategory.HARMFUL, 0x32CD32));
+
     public static void register(IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered custom mob effects for Elemental System");

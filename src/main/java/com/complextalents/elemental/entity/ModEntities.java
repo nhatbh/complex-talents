@@ -24,6 +24,24 @@ public class ModEntities {
                 .fireImmune()
                 .build("nature_core"));
 
+    public static final RegistryObject<EntityType<SpringPotionEntity>> SPRING_POTION =
+        ENTITY_TYPES.register("spring_potion",
+            () -> EntityType.Builder.of(SpringPotionEntity::new, MobCategory.MISC)
+                .sized(0.6f, 0.8f)
+                .clientTrackingRange(8)
+                .updateInterval(1)
+                .fireImmune()
+                .build("spring_potion"));
+
+    public static final RegistryObject<EntityType<BlackHoleEntity>> BLACK_HOLE =
+        ENTITY_TYPES.register("black_hole",
+            () -> EntityType.Builder.of(BlackHoleEntity::new, MobCategory.MISC)
+                .sized(0.8f, 0.8f) // Slightly larger for visibility
+                .clientTrackingRange(8)
+                .updateInterval(1) // Update every tick for accurate lifetime tracking
+                .fireImmune()
+                .build("black_hole"));
+
     public static void register(IEventBus modEventBus) {
         ENTITY_TYPES.register(modEventBus);
 

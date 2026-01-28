@@ -37,6 +37,18 @@ public enum ElementType {
         if (this == ICE && other == ENDER) {
             return ElementalReaction.FRACTURE;
         }
+        if (this == ENDER && other == AQUA) {
+            return ElementalReaction.SPRING;
+        }
+        if (this == AQUA && other == ENDER) {
+            return ElementalReaction.SPRING;
+        }
+        if (this == ENDER && other == LIGHTNING) {
+            return ElementalReaction.FLUX;
+        }
+        if (this == LIGHTNING && other == ENDER) {
+            return ElementalReaction.FLUX;
+        }
 
         // Return reactions that have strategy implementations
         return switch (this) {
@@ -65,6 +77,7 @@ public enum ElementType {
                 case FIRE -> ElementalReaction.OVERLOADED;
                 case ICE -> ElementalReaction.SUPERCONDUCT;
                 case AQUA -> ElementalReaction.ELECTRO_CHARGED;
+                case NATURE -> ElementalReaction.OVERGROWTH;
                 default -> null;
             };
             case NATURE -> switch (other) {

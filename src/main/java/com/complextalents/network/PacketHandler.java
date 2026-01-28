@@ -2,17 +2,21 @@ package com.complextalents.network;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.network.elemental.SpawnBloomReactionPacket;
+import com.complextalents.network.elemental.SpawnBlackHoleParticlePacket;
 import com.complextalents.network.elemental.SpawnBurningReactionPacket;
 import com.complextalents.network.elemental.SpawnElectroChargedReactionPacket;
 import com.complextalents.network.elemental.SpawnElementFXPacket;
+import com.complextalents.network.elemental.SpawnFluxReactionPacket;
 import com.complextalents.network.elemental.SpawnFractureReactionPacket;
 import com.complextalents.network.elemental.SpawnFreezeReactionPacket;
 import com.complextalents.network.elemental.SpawnMeltReacionPacket;
 import com.complextalents.network.elemental.SpawnNatureCoreExplosionPacket;
 import com.complextalents.network.elemental.SpawnNatureCoreParticlePacket;
+import com.complextalents.network.elemental.SpawnOvergrowthReactionPacket;
 import com.complextalents.network.elemental.SpawnOverloadReactionPacket;
 import com.complextalents.network.elemental.SpawnPermafrostReactionPacket;
 import com.complextalents.network.elemental.SpawnReactionTextPacket;
+import com.complextalents.network.elemental.SpawnSpringReactionPacket;
 import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
@@ -133,6 +137,30 @@ public class PacketHandler {
                 SpawnNatureCoreExplosionPacket::encode,
                 SpawnNatureCoreExplosionPacket::decode,
                 SpawnNatureCoreExplosionPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnSpringReactionPacket.class,
+                SpawnSpringReactionPacket::encode,
+                SpawnSpringReactionPacket::decode,
+                SpawnSpringReactionPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnFluxReactionPacket.class,
+                SpawnFluxReactionPacket::encode,
+                SpawnFluxReactionPacket::decode,
+                SpawnFluxReactionPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnBlackHoleParticlePacket.class,
+                SpawnBlackHoleParticlePacket::encode,
+                SpawnBlackHoleParticlePacket::decode,
+                SpawnBlackHoleParticlePacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                SpawnOvergrowthReactionPacket.class,
+                SpawnOvergrowthReactionPacket::encode,
+                SpawnOvergrowthReactionPacket::decode,
+                SpawnOvergrowthReactionPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

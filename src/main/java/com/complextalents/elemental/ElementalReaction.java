@@ -20,7 +20,12 @@ public enum ElementalReaction {
 
     // Aqua Reactions
     ELECTRO_CHARGED, // Aqua + Lightning - Chain lightning that zaps 3 nearby enemies
+    SPRING,          // Aqua + Ender - Spawns buff potion on pickup
 
     // Nature Reactions
     BLOOM,           // Aqua + Nature - Spawns Nature Core that explodes with Fire/Lightning
+
+    // Lightning Reactions
+    FLUX,            // Lightning + Ender - Spawns Black Hole singularity that pulls entities and implodes
+    OVERGROWTH,      // Lightning + Nature - Afflicts Unstable Bio-energy, target explodes on death
 }

@@ -1,7 +1,9 @@
 package com.complextalents.client.renderer;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.elemental.client.renderers.entities.BlackHoleRenderer;
 import com.complextalents.elemental.client.renderers.entities.NatureCoreRenderer;
+import com.complextalents.elemental.client.renderers.entities.SpringPotionRenderer;
 import com.complextalents.elemental.entity.ModEntities;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -17,6 +19,8 @@ public class ModEntityRenderers {
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.NATURE_CORE.get(), NatureCoreRenderer::new);
+        event.registerEntityRenderer(ModEntities.SPRING_POTION.get(), SpringPotionRenderer::new);
+        event.registerEntityRenderer(ModEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
         TalentsMod.LOGGER.info("Registering entity renderers for elemental entities");
     }
 }
