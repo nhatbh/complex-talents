@@ -5,6 +5,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -16,10 +18,12 @@ public class SkillDataSyncPacket {
 
     private final UUID playerUuid;
     private final ResourceLocation[] skillSlots;
+    private final Map<ResourceLocation, Integer> skillLevels;
 
-    public SkillDataSyncPacket(UUID playerUuid, ResourceLocation[] skillSlots) {
+    public SkillDataSyncPacket(UUID playerUuid, ResourceLocation[] skillSlots, Map<ResourceLocation, Integer> skillLevels) {
         this.playerUuid = playerUuid;
         this.skillSlots = skillSlots;
+        this.skillLevels = skillLevels != null ? skillLevels : new HashMap<>();
     }
 
     /**
@@ -28,15 +32,21 @@ public class SkillDataSyncPacket {
     public static SkillDataSyncPacket decode(FriendlyByteBuf buffer) {
         UUID uuid = buffer.readUUID();
         ResourceLocation[] slots = new ResourceLocation[4];
+        Map<ResourceLocation, Integer> levels = new HashMap<>();
+
         for (int i = 0; i < 4; i++) {
             boolean hasSkill = buffer.readBoolean();
             if (hasSkill) {
                 slots[i] = buffer.readResourceLocation();
+                int level = buffer.readVarInt();
+                if (level > 1) {
+                    levels.put(slots[i], level);
+                }
             } else {
                 slots[i] = null;
             }
         }
-        return new SkillDataSyncPacket(uuid, slots);
+        return new SkillDataSyncPacket(uuid, slots, levels);
     }
 
     /**
@@ -49,6 +59,7 @@ public class SkillDataSyncPacket {
             buffer.writeBoolean(hasSkill);
             if (hasSkill) {
                 buffer.writeResourceLocation(skillSlots[i]);
+                buffer.writeVarInt(skillLevels.getOrDefault(skillSlots[i], 1));
             }
         }
     }
@@ -59,7 +70,7 @@ public class SkillDataSyncPacket {
     public void handle(Supplier<NetworkEvent.Context> context) {
         context.get().enqueueWork(() -> {
             // Update client-side data
-            ClientSkillData.syncFromServer(skillSlots);
+            ClientSkillData.syncFromServer(skillSlots, skillLevels);
         });
         context.get().setPacketHandled(true);
     }

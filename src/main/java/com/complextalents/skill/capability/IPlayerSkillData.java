@@ -152,4 +152,32 @@ public interface IPlayerSkillData {
      * Clear all data (respawn/death).
      */
     void clear();
+
+    /**
+     * Get the skill level for a specific skill.
+     * Default is 1 if the skill is assigned but no level is set.
+     *
+     * @param skillId The skill ID
+     * @return The skill level (1 or higher)
+     */
+    int getSkillLevel(ResourceLocation skillId);
+
+    /**
+     * Set the skill level for a specific skill.
+     * The skill must be assigned to a slot.
+     *
+     * @param skillId The skill ID
+     * @param level The skill level (must be >= 1)
+     * @throws IllegalArgumentException if level < 1
+     */
+    void setSkillLevel(ResourceLocation skillId, int level);
+
+    /**
+     * Reset a skill's level to the default (1).
+     *
+     * @param skillId The skill ID
+     */
+    default void resetSkillLevel(ResourceLocation skillId) {
+        setSkillLevel(skillId, 1);
+    }
 }

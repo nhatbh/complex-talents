@@ -27,6 +27,8 @@ public class BuiltSkill implements Skill {
     private final boolean allowSelfTarget;
     private final boolean targetAllyOnly;
     private final boolean targetPlayerOnly;
+    private final int maxLevel;
+    private final java.util.Map<String, double[]> scaledStats;
 
     private final BiConsumer<ExecutionContext, Object> activeHandler;
     private final Consumer<Object> passiveHandler;
@@ -54,6 +56,8 @@ public class BuiltSkill implements Skill {
         this.allowSelfTarget = builder.isAllowSelfTarget();
         this.targetAllyOnly = builder.isTargetAllyOnly();
         this.targetPlayerOnly = builder.isTargetPlayerOnly();
+        this.maxLevel = builder.getMaxLevel();
+        this.scaledStats = builder.getScaledStats();
         this.minChannelTime = builder.getMinChannelTime();
         this.maxChannelTime = builder.getMaxChannelTime();
         this.activeHandler = builder.getActiveHandler();
@@ -160,6 +164,31 @@ public class BuiltSkill implements Skill {
     }
 
     @Override
+    public int getMaxLevel() {
+        return maxLevel;
+    }
+
+    /**
+     * Get a scaled stat value for a given skill level.
+     * Clamps to the last value if level exceeds array length.
+     *
+     * @param statName The name of the stat
+     * @param level The skill level (1-based)
+     * @return The resolved stat value, or 0 if stat not found
+     */
+    public double getScaledStat(String statName, int level) {
+        double[] values = scaledStats.get(statName);
+        if (values == null || values.length == 0) {
+            return 0.0;
+        }
+
+        // Clamp to valid range: level 1 uses index 0, level N uses index N-1
+        // If level exceeds array length, use the last value
+        int index = Math.min(Math.max(level - 1, 0), values.length - 1);
+        return values[index];
+    }
+
+    @Override
     public void executeChanneled(ExecutionContext context, double channelTime) {
         if (channeledHandler != null) {
             channeledHandler.handle(context, context.player().get(), channelTime);
@@ -197,6 +226,8 @@ public class BuiltSkill implements Skill {
                 ", passiveCooldown=" + passiveCooldown +
                 ", resourceCost=" + resourceCost +
                 ", toggleable=" + toggleable +
+                ", maxLevel=" + maxLevel +
+                ", scaledStats=" + scaledStats.keySet() +
                 '}';
     }
 }

@@ -44,6 +44,12 @@ public interface Skill {
     double getMaxRange();
 
     /**
+     * Maximum level for this skill.
+     * Default is 1, meaning the skill cannot be leveled up.
+     */
+    int getMaxLevel();
+
+    /**
      * Cooldown in seconds for the active component
      * For hybrid skills, this is the active cooldown only
      */
@@ -141,21 +147,47 @@ public interface Skill {
 
     /**
      * Context object passed to skills during execution.
+     * Contains player, target, skill reference, and skill level for stat resolution.
      */
     record ExecutionContext(
             ServerPlayerWrapper player,
-            ResolvedTargetWrapper target
+            ResolvedTargetWrapper target,
+            ResourceLocation skillId,
+            int skillLevel
     ) {
         /**
          * Create an execution context.
          *
          * @param player The server player casting the skill
          * @param target The resolved target data
+         * @param skillId The ID of the skill being executed
+         * @param skillLevel The player's level for this skill
          */
         public ExecutionContext {
             if (player == null) {
                 throw new IllegalArgumentException("Player cannot be null");
             }
+            if (skillId == null) {
+                throw new IllegalArgumentException("Skill ID cannot be null");
+            }
+            if (skillLevel < 1) {
+                throw new IllegalArgumentException("Skill level must be at least 1");
+            }
+        }
+
+        /**
+         * Get a scaled stat value for this skill level.
+         * Uses the skill's scaled stat configuration to resolve the value.
+         *
+         * @param statName The name of the stat (e.g., "damage", "duration")
+         * @return The resolved stat value, or 0 if not found
+         */
+        public double getStat(String statName) {
+            var skill = com.complextalents.skill.SkillRegistry.getInstance().getSkill(skillId);
+            if (skill instanceof BuiltSkill builtSkill) {
+                return builtSkill.getScaledStat(statName, skillLevel);
+            }
+            return 0.0;
         }
     }
 

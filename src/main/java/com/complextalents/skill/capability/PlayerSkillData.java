@@ -34,6 +34,9 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
     // Toggle states: skillId -> isActive
     private final Set<ResourceLocation> activeToggles = new HashSet<>();
 
+    // Skill levels: skillId -> level (default 1)
+    private final Map<ResourceLocation, Integer> skillLevels = new HashMap<>();
+
     public PlayerSkillData(ServerPlayer player) {
         this.player = player;
     }
@@ -197,7 +200,7 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
     @Override
     public void sync() {
         // Send sync packet to client
-        PacketHandler.sendTo(new SkillDataSyncPacket(player.getUUID(), getAssignedSlots()), player);
+        PacketHandler.sendTo(new SkillDataSyncPacket(player.getUUID(), getAssignedSlots(), new HashMap<>(skillLevels)), player);
     }
 
     @Override
@@ -206,6 +209,56 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         activeCooldowns.clear();
         passiveCooldowns.clear();
         activeToggles.clear();
+        skillLevels.clear();
+        sync();
+    }
+
+    @Override
+    public int getSkillLevel(ResourceLocation skillId) {
+        // Check if skill is assigned to any slot
+        boolean isAssigned = false;
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            if (skillId.equals(skillSlots[i])) {
+                isAssigned = true;
+                break;
+            }
+        }
+
+        if (!isAssigned) {
+            return 1; // Skill not assigned, return default
+        }
+
+        // Return stored level or default to 1
+        return skillLevels.getOrDefault(skillId, 1);
+    }
+
+    @Override
+    public void setSkillLevel(ResourceLocation skillId, int level) {
+        if (level < 1) {
+            throw new IllegalArgumentException("Skill level must be at least 1, got: " + level);
+        }
+
+        // Validate skill is assigned
+        boolean isAssigned = false;
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            if (skillId.equals(skillSlots[i])) {
+                isAssigned = true;
+                break;
+            }
+        }
+
+        if (!isAssigned) {
+            throw new IllegalArgumentException("Cannot set level for unassigned skill: " + skillId);
+        }
+
+        // Validate against skill's max level
+        Skill skill = SkillRegistry.getInstance().getSkill(skillId);
+        if (skill != null && level > skill.getMaxLevel()) {
+            throw new IllegalArgumentException("Level " + level + " exceeds max level " +
+                skill.getMaxLevel() + " for skill: " + skillId);
+        }
+
+        skillLevels.put(skillId, level);
         sync();
     }
 
@@ -232,6 +285,16 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
             togglesList.add(StringTag.valueOf(toggle.toString()));
         }
         tag.put("activeToggles", togglesList);
+
+        // Serialize skill levels
+        ListTag levelsList = new ListTag();
+        for (var entry : skillLevels.entrySet()) {
+            CompoundTag levelTag = new CompoundTag();
+            levelTag.putString("skill", entry.getKey().toString());
+            levelTag.putInt("level", entry.getValue());
+            levelsList.add(levelTag);
+        }
+        tag.put("skillLevels", levelsList);
 
         // Note: Cooldowns are not persisted as they reset on respawn/death
         // This is intentional - players shouldn't keep cooldowns after death
@@ -260,6 +323,20 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
 
         // Deserialize active toggles (but don't restore them - safer to reset on respawn)
         // Players need to manually reactivate toggles after death/respawn
+
+        // Deserialize skill levels
+        if (tag.contains("skillLevels")) {
+            ListTag levelsList = tag.getList("skillLevels", 10); // 10 = COMPOUND
+            for (int i = 0; i < levelsList.size(); i++) {
+                CompoundTag levelTag = levelsList.getCompound(i);
+                String skillStr = levelTag.getString("skill");
+                int level = levelTag.getInt("level");
+                ResourceLocation skillId = ResourceLocation.tryParse(skillStr);
+                if (skillId != null && level >= 1) {
+                    skillLevels.put(skillId, level);
+                }
+            }
+        }
     }
 
     /**

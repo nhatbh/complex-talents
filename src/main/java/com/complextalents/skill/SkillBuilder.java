@@ -24,6 +24,8 @@ public class SkillBuilder {
     private boolean allowSelfTarget = false;
     private boolean targetAllyOnly = false;
     private boolean targetPlayerOnly = false;
+    private int maxLevel = 1;
+    private final java.util.Map<String, double[]> scaledStats = new java.util.HashMap<>();
 
     // Execution handlers
     private BiConsumer<Skill.ExecutionContext, Object> activeHandler;
@@ -210,6 +212,40 @@ public class SkillBuilder {
     }
 
     /**
+     * Set the maximum level for this skill.
+     * Default is 1, meaning the skill cannot be leveled up.
+     *
+     * @param maxLevel The maximum level (must be >= 1)
+     * @return this builder
+     * @throws IllegalArgumentException if maxLevel < 1
+     */
+    public SkillBuilder setMaxLevel(int maxLevel) {
+        if (maxLevel < 1) {
+            throw new IllegalArgumentException("Max level must be at least 1, got: " + maxLevel);
+        }
+        this.maxLevel = maxLevel;
+        return this;
+    }
+
+    /**
+     * Add a scaled stat that varies by skill level.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the skill level exceeds the array length, the last value is used.
+     *
+     * @param name The stat name (e.g., "damage", "duration", "range")
+     * @param values Array of values per level (must have at least one value)
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public SkillBuilder scaledStat(String name, double[] values) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled stat values must have at least one element");
+        }
+        this.scaledStats.put(name, values);
+        return this;
+    }
+
+    /**
      * Register the channeled execution handler.
      * This is called for channeling skills with the channel time as a parameter.
      * The handler receives the Skill.ExecutionContext, the raw ServerPlayer, and the channel time in seconds.
@@ -257,6 +293,8 @@ public class SkillBuilder {
     BiConsumer<Skill.ExecutionContext, Object> getActiveHandler() { return activeHandler; }
     Consumer<Object> getPassiveHandler() { return passiveHandler; }
     ChanneledHandler getChanneledHandler() { return channeledHandler; }
+    int getMaxLevel() { return maxLevel; }
+    java.util.Map<String, double[]> getScaledStats() { return new java.util.HashMap<>(scaledStats); }
 
     private ResourceLocation parseResourceLocation(String resourceType) {
         if (resourceType == null || resourceType.isEmpty()) {

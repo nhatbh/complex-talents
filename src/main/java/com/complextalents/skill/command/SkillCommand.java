@@ -46,13 +46,22 @@ public class SkillCommand {
                                     .executes(ctx -> assignSkill(
                                             ctx.getSource(),
                                             IntegerArgumentType.getInteger(ctx, "slot") - 1,
-                                            ResourceLocationArgument.getId(ctx, "skillId")
+                                            ResourceLocationArgument.getId(ctx, "skillId"),
+                                            1 // Default level
                                     ))
+                                    .then(Commands.argument("level", IntegerArgumentType.integer(1, 100))
+                                            .executes(ctx -> assignSkill(
+                                                    ctx.getSource(),
+                                                    IntegerArgumentType.getInteger(ctx, "slot") - 1,
+                                                    ResourceLocationArgument.getId(ctx, "skillId"),
+                                                    IntegerArgumentType.getInteger(ctx, "level")
+                                            ))
+                                    )
                             )
                     );
         }
 
-        private static int assignSkill(CommandSourceStack src, int slotIndex, ResourceLocation skillId) {
+        private static int assignSkill(CommandSourceStack src, int slotIndex, ResourceLocation skillId, int level) {
             if (!(src.getEntity() instanceof ServerPlayer player)) {
                 src.sendFailure(Component.literal("This command can only be used by players"));
                 return 0;
@@ -64,10 +73,18 @@ public class SkillCommand {
                 return 0;
             }
 
+            if (level > skill.getMaxLevel()) {
+                src.sendFailure(Component.literal("Level " + level + " exceeds max level " +
+                    skill.getMaxLevel() + " for " + skill.getDisplayName().getString()));
+                return 0;
+            }
+
             player.getCapability(SkillDataProvider.SKILL_DATA).ifPresent(data -> {
                 data.setSkillInSlot(slotIndex, skillId);
+                data.setSkillLevel(skillId, level);
+                String levelText = level > 1 ? " (level " + level + ")" : "";
                 src.sendSuccess(() -> Component.literal("Assigned " + skill.getDisplayName().getString() +
-                        " to slot " + (slotIndex + 1)), true);
+                        levelText + " to slot " + (slotIndex + 1)), true);
             });
 
             return 1;
@@ -119,10 +136,12 @@ public class SkillCommand {
                     if (skillId != null) {
                         Skill skill = SkillRegistry.getInstance().getSkill(skillId);
                         String name = skill != null ? skill.getDisplayName().getString() : skillId.toString();
+                        String levelText = (skill != null && skill.getMaxLevel() > 1) ?
+                                " \u00A7b[Lvl " + data.getSkillLevel(skillId) + "/" + skill.getMaxLevel() + "]" : "";
                         String toggleInfo = (skill != null && skill.isToggleable() &&
                                 data.isToggleActive(skillId)) ? " \u00A7a[ON]" : "";
                         final int slotNum = slot;
-                        src.sendSuccess(() -> Component.literal("  Slot " + (slotNum + 1) + ": \u00A7a" + name + toggleInfo), false);
+                        src.sendSuccess(() -> Component.literal("  Slot " + (slotNum + 1) + ": \u00A7a" + name + levelText + toggleInfo), false);
                     } else {
                         final int slotNum = slot;
                         src.sendSuccess(() -> Component.literal("  Slot " + (slotNum + 1) + ": \u00A77(empty)"), false);
@@ -147,12 +166,14 @@ public class SkillCommand {
             for (Skill skill : skills) {
                 String nature = skill.getNature().name();
                 String toggle = skill.isToggleable() ? " \u00A7b[TOGGLE]" : "";
+                String levelInfo = skill.getMaxLevel() > 1 ?
+                        " \u00A7b[Max Lvl: " + skill.getMaxLevel() + "]" : "";
                 String cooldown = skill.getActiveCooldown() > 0 ?
                         String.format(" \u00A77[%.1fs CD]", skill.getActiveCooldown()) : "";
                 String cost = skill.getResourceCost() > 0 ?
                         String.format(" \u00A7b[%.0f %s]", skill.getResourceCost(),
                                 skill.getResourceType() != null ? skill.getResourceType().getPath() : "resource") : "";
-                src.sendSuccess(() -> Component.literal("  - " + skill.getId() + toggle + cooldown + cost +
+                src.sendSuccess(() -> Component.literal("  - " + skill.getId() + toggle + cooldown + cost + levelInfo +
                         " \u00A77(" + nature + ")"), false);
             }
 

@@ -3,6 +3,8 @@ package com.complextalents.skill.server;
 import com.complextalents.skill.BuiltSkill;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.SkillRegistry;
+import com.complextalents.skill.capability.IPlayerSkillData;
+import com.complextalents.skill.capability.SkillDataProvider;
 import com.complextalents.skill.event.ResolvedTargetData;
 import com.complextalents.skill.event.SkillExecuteEvent;
 import net.minecraft.resources.ResourceLocation;
@@ -56,14 +58,21 @@ public class SkillExecutionHandler {
 
     /**
      * Create an execution context from a SkillExecuteEvent.
+     * Includes the skill ID and player's skill level for stat resolution.
      */
     private static Skill.ExecutionContext createExecutionContext(SkillExecuteEvent event) {
         ServerPlayer player = event.getPlayer();
         ResolvedTargetData targetData = event.getTargetData();
+        ResourceLocation skillId = event.getSkillId();
+
+        // Get player's skill level from capability
+        int skillLevel = player.getCapability(SkillDataProvider.SKILL_DATA)
+                .map(data -> data.getSkillLevel(skillId))
+                .orElse(1);
 
         Skill.ServerPlayerWrapper playerWrapper = new Skill.ServerPlayerWrapper(player);
         Skill.ResolvedTargetWrapper targetWrapper = new Skill.ResolvedTargetWrapper(targetData);
 
-        return new Skill.ExecutionContext(playerWrapper, targetWrapper);
+        return new Skill.ExecutionContext(playerWrapper, targetWrapper, skillId, skillLevel);
     }
 }
