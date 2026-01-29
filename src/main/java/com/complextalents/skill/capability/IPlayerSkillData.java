@@ -180,4 +180,33 @@ public interface IPlayerSkillData {
     default void resetSkillLevel(ResourceLocation skillId) {
         setSkillLevel(skillId, 1);
     }
+
+    /**
+     * Get the currently active form skill ID.
+     *
+     * @return The form skill ID, or null if no form is active
+     */
+    @Nullable
+    ResourceLocation getActiveForm();
+
+    /**
+     * Set the currently active form skill ID.
+     *
+     * @param formSkillId The form skill ID, or null to clear
+     */
+    void setActiveForm(@Nullable ResourceLocation formSkillId);
+
+    /**
+     * Get the expiration game time for the active form.
+     *
+     * @return The game time when the form expires, or 0 if no form
+     */
+    long getFormExpiration();
+
+    /**
+     * Set the expiration game time for the active form.
+     *
+     * @param expirationTime The game time when the form expires
+     */
+    void setFormExpiration(long expirationTime);
 }

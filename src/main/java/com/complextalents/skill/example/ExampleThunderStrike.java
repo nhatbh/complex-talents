@@ -11,13 +11,21 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Example ACTIVE skill: Thunder Strike
+ * Example ACTIVE skill: Thunder Strike (with levels!)
  * - Targeting: ENTITY (must target a living entity)
+ * - Max Level: 5
  * - Cooldown: 6 seconds
  * - Resource: 25 mana
  * - Effect: Summons a lightning bolt to strike the targeted entity
+ * - Scaled stats:
+ *   - damage: 5, 8, 12, 18, 25 (extra magic damage)
+ *   - knockback: 0.5, 0.7, 0.9, 1.2, 1.5 (knockback strength)
+ *   - radius: 1, 1, 2, 2, 3 (additional chain lightning targets)
  *
- * Usage: /skill assign 1 complextalents:thunder_strike
+ * Usage:
+ * - /skill assign 1 complextalents:thunder_strike 1 (level 1 - default)
+ * - /skill assign 1 complextalents:thunder_strike 3 (level 3)
+ * - /skill assign 1 complextalents:thunder_strike 5 (max level)
  */
 public class ExampleThunderStrike {
 
@@ -37,10 +45,19 @@ public class ExampleThunderStrike {
                 .minChannelTime(0.5)
                 .allowSelfTarget(true)
                 .resourceCost(25.0, "mana")
+                .setMaxLevel(5)
+                .scaledStat("damage", new double[]{5.0, 8.0, 12.0, 18.0, 25.0})
+                .scaledStat("knockback", new double[]{0.5, 0.7, 0.9, 1.2, 1.5})
+                .scaledStat("radius", new double[]{1, 1, 2, 2, 3})
                 .onActive((context, rawPlayer) -> {
                     var player = context.player().getAs(net.minecraft.server.level.ServerPlayer.class);
                     var targetData = context.target().getAs(com.complextalents.skill.event.ResolvedTargetData.class);
                     ServerLevel level = player.serverLevel();
+
+                    // Get scaled stats based on player's skill level
+                    double damage = context.getStat("damage");
+                    double knockbackStrength = context.getStat("knockback");
+                    double chainRadius = context.getStat("radius");
 
                     // Get the targeted entity
                     Entity targetEntity = targetData.getTargetEntity();
@@ -67,23 +84,37 @@ public class ExampleThunderStrike {
                             SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.NEUTRAL, 1.0f, 1.0f);
 
                     // Apply additional damage if target is a living entity
-                    // (Lightning bolt does damage, but we add extra for the skill)
                     if (targetEntity instanceof LivingEntity livingTarget) {
-                        // Deal 5 magic damage (ignores some armor)
-                        livingTarget.hurt(level.damageSources().magic(), 5.0f);
+                        // Deal damage based on skill level
+                        livingTarget.hurt(level.damageSources().magic(), (float) damage);
 
-                        // Knockback effect
+                        // Knockback effect based on skill level
                         Vec3 knockback = player.position().subtract(targetEntity.position()).normalize()
-                                .scale(-0.5); // Push away from caster
-                        livingTarget.knockback(0.5f, knockback.x, knockback.z);
+                                .scale(-knockbackStrength);
+                        livingTarget.knockback((float) knockbackStrength, knockback.x, knockback.z);
+
+                        // Chain lightning to nearby entities at higher levels
+                        if (chainRadius > 1) {
+                            for (Entity nearby : level.getEntitiesOfClass(LivingEntity.class,
+                                    livingTarget.getBoundingBox().inflate(chainRadius))) {
+                                if (nearby != livingTarget && nearby != player) {
+                                    // Create small lightning effect
+                                    level.playSound(null, nearby.getX(), nearby.getY(), nearby.getZ(),
+                                            SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.NEUTRAL, 0.5f, 1.5f);
+                                    nearby.hurt(level.damageSources().magic(), (float) (damage * 0.5));
+                                }
+                            }
+                        }
                     }
 
-                    // Feedback message
+                    // Feedback message with level info
+                    int skillLevel = context.skillLevel();
                     if (wasAlive) {
                         player.sendSystemMessage(
                                 net.minecraft.network.chat.Component.literal(
-                                        "\u00A7b[Thunder Strike] " + "\u00A7eStruck " + entityName
-                                                + " with lightning!"
+                                        "\u00A7b[Thunder Strike Lvl " + skillLevel + "] " +
+                                                "\u00A7eStruck " + entityName + " for " +
+                                                String.format("%.1f", damage) + " damage!"
                                 ),
                                 true
                         );

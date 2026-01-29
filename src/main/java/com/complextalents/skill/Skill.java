@@ -146,14 +146,28 @@ public interface Skill {
     boolean hasActiveHandler();
 
     /**
+     * Check if this skill can be cast by the player in the current context.
+     * This runs any custom validation registered via SkillBuilder.validate().
+     * <p>
+     * Returns true by default for skills without custom validation.
+     *
+     * @param context The execution context containing player and target data
+     * @return true if the skill can be cast, false otherwise
+     */
+    default boolean canCast(ExecutionContext context) {
+        return true;
+    }
+
+    /**
      * Context object passed to skills during execution.
-     * Contains player, target, skill reference, and skill level for stat resolution.
+     * Contains player, target, skill reference, skill level, and channel time for stat resolution.
      */
     record ExecutionContext(
             ServerPlayerWrapper player,
             ResolvedTargetWrapper target,
             ResourceLocation skillId,
-            int skillLevel
+            int skillLevel,
+            double channelTime
     ) {
         /**
          * Create an execution context.
@@ -162,6 +176,7 @@ public interface Skill {
          * @param target The resolved target data
          * @param skillId The ID of the skill being executed
          * @param skillLevel The player's level for this skill
+         * @param channelTime The channel time in seconds (0 for instant skills)
          */
         public ExecutionContext {
             if (player == null) {
@@ -173,6 +188,20 @@ public interface Skill {
             if (skillLevel < 1) {
                 throw new IllegalArgumentException("Skill level must be at least 1");
             }
+            if (channelTime < 0) {
+                throw new IllegalArgumentException("Channel time cannot be negative");
+            }
+        }
+
+        /**
+         * Get the channel time for this skill execution.
+         * For instant skills, this returns 0.
+         * For channeled skills, this returns the channel duration in seconds.
+         *
+         * @return The channel time in seconds
+         */
+        public double channelTime() {
+            return channelTime;
         }
 
         /**

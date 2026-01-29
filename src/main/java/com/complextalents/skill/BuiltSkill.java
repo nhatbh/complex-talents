@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -33,6 +34,7 @@ public class BuiltSkill implements Skill {
     private final BiConsumer<ExecutionContext, Object> activeHandler;
     private final Consumer<Object> passiveHandler;
     private final SkillBuilder.ChanneledHandler channeledHandler;
+    private final BiFunction<ExecutionContext, Object, Boolean> validationHandler;
 
     // Channeling properties
     private final double minChannelTime;
@@ -63,6 +65,7 @@ public class BuiltSkill implements Skill {
         this.activeHandler = builder.getActiveHandler();
         this.passiveHandler = builder.getPassiveHandler();
         this.channeledHandler = builder.getChanneledHandler();
+        this.validationHandler = builder.getValidationHandler();
     }
 
     @Override
@@ -198,6 +201,22 @@ public class BuiltSkill implements Skill {
     @Override
     public boolean hasActiveHandler() {
         return activeHandler != null;
+    }
+
+    @Override
+    public boolean canCast(ExecutionContext context) {
+        if (validationHandler != null) {
+            Boolean result = validationHandler.apply(context, context.player().get());
+            return result != null && result;
+        }
+        return true;
+    }
+
+    /**
+     * Check if this skill has a validation handler.
+     */
+    public boolean hasValidationHandler() {
+        return validationHandler != null;
     }
 
     /**

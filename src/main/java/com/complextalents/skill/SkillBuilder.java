@@ -4,6 +4,7 @@ import com.complextalents.targeting.TargetType;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -31,6 +32,9 @@ public class SkillBuilder {
     private BiConsumer<Skill.ExecutionContext, Object> activeHandler;
     private Consumer<Object> passiveHandler;
     private ChanneledHandler channeledHandler;
+
+    // Validation handler (runs before cast to check if skill can be used)
+    private BiFunction<Skill.ExecutionContext, Object, Boolean> validationHandler;
 
     // Channeling properties
     private double minChannelTime = 0.0;
@@ -256,6 +260,41 @@ public class SkillBuilder {
     }
 
     /**
+     * Register a validation handler that runs before the skill is cast.
+     * This allows custom conditions to be checked before skill execution.
+     * <p>
+     * The validation handler receives the Skill.ExecutionContext and the raw ServerPlayer.
+     * It should return {@code true} if the skill can be cast, or {@code false} to cancel the cast.
+     * <p>
+     * Example use cases:
+     * <ul>
+     *   <li>Checking if player is in a specific biome</li>
+     *   <li>Checking if player is holding a required item</li>
+     *   <li>Checking time of day or weather conditions</li>
+     *   <li>Checking player health or other status</li>
+     * </ul>
+     *
+     * <pre>{@code
+     * SkillBuilder.create("modid", "fireball")
+     *     .validate((context, player) -> {
+     *         // Cannot cast underwater
+     *         if (player.isInWater()) return false;
+     *         // Must have item in hand
+     *         return !player.getMainHandItem().isEmpty();
+     *     })
+     *     .onActive((context, player) -> { ... })
+     *     .register();
+     * }</pre>
+     *
+     * @param handler The validation handler that returns true if casting is allowed
+     * @return this builder
+     */
+    public SkillBuilder validate(BiFunction<Skill.ExecutionContext, Object, Boolean> handler) {
+        this.validationHandler = handler;
+        return this;
+    }
+
+    /**
      * Build the skill and return a BuiltSkill instance.
      * Call SkillRegistry.register() with the result to register it.
      */
@@ -293,6 +332,7 @@ public class SkillBuilder {
     BiConsumer<Skill.ExecutionContext, Object> getActiveHandler() { return activeHandler; }
     Consumer<Object> getPassiveHandler() { return passiveHandler; }
     ChanneledHandler getChanneledHandler() { return channeledHandler; }
+    BiFunction<Skill.ExecutionContext, Object, Boolean> getValidationHandler() { return validationHandler; }
     int getMaxLevel() { return maxLevel; }
     java.util.Map<String, double[]> getScaledStats() { return new java.util.HashMap<>(scaledStats); }
 

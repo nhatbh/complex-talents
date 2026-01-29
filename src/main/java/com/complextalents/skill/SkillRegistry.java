@@ -251,6 +251,7 @@ public class SkillRegistry {
         com.complextalents.skill.example.ExampleChanneledFireball.register();
         com.complextalents.skill.example.ExampleSkyFireball.register();
         com.complextalents.skill.example.ExampleThunderStrike.register();
+        com.complextalents.skill.example.ExampleElementalOverloadForm.register();
 
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }

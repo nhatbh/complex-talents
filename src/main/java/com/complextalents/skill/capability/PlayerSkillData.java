@@ -37,6 +37,10 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
     // Skill levels: skillId -> level (default 1)
     private final Map<ResourceLocation, Integer> skillLevels = new HashMap<>();
 
+    // Form tracking
+    private ResourceLocation activeForm = null;
+    private long formExpiration = 0;  // Game time when form expires
+
     public PlayerSkillData(ServerPlayer player) {
         this.player = player;
     }
@@ -195,6 +199,15 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
                 }
             }
         }
+
+        // Check form expiration
+        if (activeForm != null) {
+            long currentTime = player.level().getGameTime();
+            if (currentTime >= formExpiration) {
+                // Form expired - deactivate via SkillFormManager
+                com.complextalents.skill.form.SkillFormManager.deactivateForm(player);
+            }
+        }
     }
 
     @Override
@@ -210,6 +223,8 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         passiveCooldowns.clear();
         activeToggles.clear();
         skillLevels.clear();
+        activeForm = null;
+        formExpiration = 0;
         sync();
     }
 
@@ -262,6 +277,27 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         sync();
     }
 
+    @Override
+    public ResourceLocation getActiveForm() {
+        return activeForm;
+    }
+
+    @Override
+    public void setActiveForm(ResourceLocation formSkillId) {
+        this.activeForm = formSkillId;
+        sync();
+    }
+
+    @Override
+    public long getFormExpiration() {
+        return formExpiration;
+    }
+
+    @Override
+    public void setFormExpiration(long expirationTime) {
+        this.formExpiration = expirationTime;
+    }
+
     // NBT serialization for persistence
     @Override
     public CompoundTag serializeNBT() {
@@ -295,6 +331,12 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
             levelsList.add(levelTag);
         }
         tag.put("skillLevels", levelsList);
+
+        // Serialize active form (for logout/login persistence)
+        if (activeForm != null) {
+            tag.putString("activeForm", activeForm.toString());
+            tag.putLong("formExpiration", formExpiration);
+        }
 
         // Note: Cooldowns are not persisted as they reset on respawn/death
         // This is intentional - players shouldn't keep cooldowns after death
@@ -337,6 +379,10 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
                 }
             }
         }
+
+        // Deserialize active form (but don't restore on respawn - players must reactivate)
+        // This is intentional: forms should not persist through death
+        // If we wanted to restore after logout/login but not death, we'd need a flag
     }
 
     /**

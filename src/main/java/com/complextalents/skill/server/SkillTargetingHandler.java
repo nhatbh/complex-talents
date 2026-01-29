@@ -1,12 +1,17 @@
 package com.complextalents.skill.server;
 
 import com.complextalents.skill.*;
+import com.complextalents.skill.capability.IPlayerSkillData;
+import com.complextalents.skill.capability.SkillDataProvider;
 import com.complextalents.skill.event.*;
+import com.complextalents.skill.form.SkillFormManager;
+import com.complextalents.skill.form.SkillFormRegistry;
 import com.complextalents.targeting.TargetType;
 import com.complextalents.targeting.TargetingSnapshot;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 
 /**
@@ -69,6 +74,42 @@ public class SkillTargetingHandler {
             return;
         }
         player.sendSystemMessage(Component.literal("§7[DEBUG] §aRequest stage PASSED"));
+
+        // Check if this is a form skill
+        if (SkillFormRegistry.getInstance().isFormSkill(skillId)) {
+            player.sendSystemMessage(Component.literal("§7[DEBUG] §dForm skill detected - handling form activation"));
+            IPlayerSkillData data = player.getCapability(SkillDataProvider.SKILL_DATA).orElse(null);
+            if (data != null) {
+                // Create a self-targeted data for form skills (they don't need targeting)
+                Vec3 playerPos = player.position();
+                Vec3 lookDir = player.getLookAngle();
+                ResolvedTargetData selfTarget = new ResolvedTargetData(
+                        player, player, playerPos, lookDir, true, true, 0.0
+                );
+
+                if (!data.isToggleActive(skillId)) {
+                    // Activate form
+                    if (SkillFormManager.activateForm(player, skillId)) {
+                        data.setToggleActive(skillId, true);
+                        // Send post-event for form activation
+                        SkillPostExecuteEvent postEvent = new SkillPostExecuteEvent(
+                                player, skillId, selfTarget, true
+                        );
+                        MinecraftForge.EVENT_BUS.post(postEvent);
+                    }
+                } else {
+                    // Deactivate form manually
+                    SkillFormManager.deactivateForm(player);
+                    data.setToggleActive(skillId, false);
+                    // Send post-event for form deactivation
+                    SkillPostExecuteEvent postEvent = new SkillPostExecuteEvent(
+                            player, skillId, selfTarget, true
+                    );
+                    MinecraftForge.EVENT_BUS.post(postEvent);
+                }
+            }
+            return;  // Don't proceed with normal cast flow
+        }
 
         // Stage 2: Target Resolution Event
         // Normalizes targeting data into guaranteed-valid form
