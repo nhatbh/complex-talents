@@ -6,6 +6,8 @@ import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
 import com.complextalents.elemental.registry.ReactionRegistry;
 import com.complextalents.network.PacketHandler;
+import com.complextalents.skill.SkillRegistry;
+import com.complextalents.skill.command.SkillCommand;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -51,6 +53,10 @@ public class TalentsMod {
         // Initialize mod integration (Iron's Spellbooks only - addons use main mod)
         ModIntegrationHandler.init();
         LOGGER.info("Mod integration initialized");
+
+        // Initialize skill registry
+        SkillRegistry.getInstance().initialize();
+        LOGGER.info("Skill registry initialized");
     }
 
     @SubscribeEvent
@@ -60,6 +66,10 @@ public class TalentsMod {
         // Initialize reaction registry with all registered reactions
         ReactionRegistry.getInstance().initialize();
         LOGGER.info("Reaction registry initialized");
+
+        // Register skill commands
+        SkillCommand.register(event.getServer().getCommands().getDispatcher());
+        LOGGER.info("Skill commands registered");
     }
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)

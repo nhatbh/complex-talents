@@ -18,7 +18,9 @@
       "Bash(for file in *.java)",
       "Bash(do mv \"$file\" \"../strategies/reactions/\")",
       "Bash(done)",
-      "Bash(do sed -i 's/package com.complextalents.elemental.reactions;/package com.complextalents.elemental.strategies.reactions;/' \"$file\")"
+      "Bash(do sed -i 's/package com.complextalents.elemental.reactions;/package com.complextalents.elemental.strategies.reactions;/' \"$file\")",
+      "Bash(del:*)",
+      "Bash(javac:*)"
     ]
   }
 }

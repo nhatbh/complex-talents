@@ -1,6 +1,9 @@
 package com.complextalents.network;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.targeting.network.SkillUsePacket;
+import com.complextalents.skill.network.SkillCastPacket;
+import com.complextalents.skill.network.SkillDataSyncPacket;
 import com.complextalents.network.elemental.SpawnBloomReactionPacket;
 import com.complextalents.network.elemental.SpawnBlackHoleParticlePacket;
 import com.complextalents.network.elemental.SpawnBurningReactionPacket;
@@ -161,6 +164,27 @@ public class PacketHandler {
                 SpawnOvergrowthReactionPacket::encode,
                 SpawnOvergrowthReactionPacket::decode,
                 SpawnOvergrowthReactionPacket::handle);
+
+        // Targeting system packets
+        INSTANCE.registerMessage(packetId++,
+                SkillUsePacket.class,
+                SkillUsePacket::encode,
+                SkillUsePacket::decode,
+                SkillUsePacket::handle);
+
+        // Skill casting packets
+        INSTANCE.registerMessage(packetId++,
+                SkillCastPacket.class,
+                SkillCastPacket::encode,
+                SkillCastPacket::decode,
+                SkillCastPacket::handle);
+
+        // Skill data sync packet
+        INSTANCE.registerMessage(packetId++,
+                SkillDataSyncPacket.class,
+                SkillDataSyncPacket::encode,
+                SkillDataSyncPacket::decode,
+                SkillDataSyncPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

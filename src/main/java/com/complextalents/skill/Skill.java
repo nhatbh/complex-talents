@@ -1,0 +1,179 @@
+package com.complextalents.skill;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Base interface for all skills.
+ * All skills must implement this interface to be registered.
+ */
+public interface Skill {
+
+    /**
+     * Unique identifier for this skill (e.g., "complextalents:fireball")
+     */
+    ResourceLocation getId();
+
+    /**
+     * The nature of this skill (passive, active, both, toggle)
+     */
+    SkillNature getNature();
+
+    /**
+     * The targeting type for the active component
+     */
+    TargetingType getTargetingType();
+
+    /**
+     * Display name for this skill (translatable)
+     * Format: skill.{namespace}.{path}
+     */
+    Component getDisplayName();
+
+    /**
+     * Description for this skill (translatable)
+     * Format: skill.{namespace}.{path}.desc
+     */
+    Component getDescription();
+
+    /**
+     * Maximum range for targeting (blocks)
+     */
+    double getMaxRange();
+
+    /**
+     * Cooldown in seconds for the active component
+     * For hybrid skills, this is the active cooldown only
+     */
+    double getActiveCooldown();
+
+    /**
+     * Cooldown in seconds for the passive trigger
+     * Only used for hybrid skills with passive cooldowns
+     */
+    double getPassiveCooldown();
+
+    /**
+     * Resource cost for active cast (mana, energy, etc.)
+     * Returns 0 if no resource cost
+     */
+    double getResourceCost();
+
+    /**
+     * Resource ID for cost (e.g., "irons_spellbooks:mana")
+     * Returns null if no resource cost
+     */
+    @Nullable ResourceLocation getResourceType();
+
+    /**
+     * Whether this skill can be toggled
+     * Only applies when nature == TOGGLE
+     */
+    boolean isToggleable();
+
+    /**
+     * Resource cost per tick while toggled on
+     */
+    double getToggleCostPerTick();
+
+    /**
+     * Minimum channel time in seconds.
+     * Returns 0 if this skill doesn't require channeling.
+     */
+    double getMinChannelTime();
+
+    /**
+     * Maximum channel time in seconds.
+     * Returns 0 if this skill doesn't use channeling.
+     */
+    double getMaxChannelTime();
+
+    /**
+     * Check if this skill uses channeling.
+     */
+    boolean isChanneling();
+
+    /**
+     * Execute the active effect of this skill.
+     * Called by SkillExecutionHandler during SkillExecuteEvent.
+     *
+     * @param context The execution context containing player and target data
+     */
+    void executeActive(ExecutionContext context);
+
+    /**
+     * Execute the channeled effect with given duration.
+     * Only called for channeling skills.
+     *
+     * @param context The execution context containing player and target data
+     * @param channelTime The channel time in seconds
+     */
+    void executeChanneled(ExecutionContext context, double channelTime);
+
+    /**
+     * Check if this skill has an active execution handler.
+     */
+    boolean hasActiveHandler();
+
+    /**
+     * Context object passed to skills during execution.
+     */
+    record ExecutionContext(
+            ServerPlayerWrapper player,
+            ResolvedTargetWrapper target
+    ) {
+        /**
+         * Create an execution context.
+         *
+         * @param player The server player casting the skill
+         * @param target The resolved target data
+         */
+        public ExecutionContext {
+            if (player == null) {
+                throw new IllegalArgumentException("Player cannot be null");
+            }
+        }
+    }
+
+    /**
+     * Wrapper for ServerPlayer to avoid direct dependency in interface.
+     * This allows the interface to remain clean while still providing access.
+     */
+    class ServerPlayerWrapper {
+        private final Object player;
+
+        public ServerPlayerWrapper(Object player) {
+            this.player = player;
+        }
+
+        public Object get() {
+            return player;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T getAs(Class<T> type) {
+            return (T) player;
+        }
+    }
+
+    /**
+     * Wrapper for ResolvedTargetData to avoid circular dependencies.
+     */
+    class ResolvedTargetWrapper {
+        private final Object targetData;
+
+        public ResolvedTargetWrapper(Object targetData) {
+            this.targetData = targetData;
+        }
+
+        public Object get() {
+            return targetData;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T getAs(Class<T> type) {
+            return (T) targetData;
+        }
+    }
+}
