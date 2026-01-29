@@ -1,5 +1,6 @@
 package com.complextalents.skill;
 
+import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
@@ -15,7 +16,7 @@ public class BuiltSkill implements Skill {
 
     private final ResourceLocation id;
     private final SkillNature nature;
-    private final TargetingType targetingType;
+    private final TargetType targetingType;
     private final double maxRange;
     private final double activeCooldown;
     private final double passiveCooldown;
@@ -23,6 +24,9 @@ public class BuiltSkill implements Skill {
     private final ResourceLocation resourceType;
     private final boolean toggleable;
     private final double toggleCostPerTick;
+    private final boolean allowSelfTarget;
+    private final boolean targetAllyOnly;
+    private final boolean targetPlayerOnly;
 
     private final BiConsumer<ExecutionContext, Object> activeHandler;
     private final Consumer<Object> passiveHandler;
@@ -47,6 +51,9 @@ public class BuiltSkill implements Skill {
         this.resourceType = builder.getResourceType();
         this.toggleable = builder.isToggleable();
         this.toggleCostPerTick = builder.getToggleCostPerTick();
+        this.allowSelfTarget = builder.isAllowSelfTarget();
+        this.targetAllyOnly = builder.isTargetAllyOnly();
+        this.targetPlayerOnly = builder.isTargetPlayerOnly();
         this.minChannelTime = builder.getMinChannelTime();
         this.maxChannelTime = builder.getMaxChannelTime();
         this.activeHandler = builder.getActiveHandler();
@@ -65,7 +72,7 @@ public class BuiltSkill implements Skill {
     }
 
     @Override
-    public TargetingType getTargetingType() {
+    public TargetType getTargetingType() {
         return targetingType;
     }
 
@@ -108,6 +115,21 @@ public class BuiltSkill implements Skill {
     @Override
     public boolean isToggleable() {
         return toggleable;
+    }
+
+    @Override
+    public boolean allowsSelfTarget() {
+        return allowSelfTarget;
+    }
+
+    @Override
+    public boolean targetsAllyOnly() {
+        return targetAllyOnly;
+    }
+
+    @Override
+    public boolean targetsPlayerOnly() {
+        return targetPlayerOnly;
     }
 
     @Override

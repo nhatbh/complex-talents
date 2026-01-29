@@ -1,5 +1,6 @@
 package com.complextalents.skill;
 
+import com.complextalents.targeting.TargetType;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.function.BiConsumer;
@@ -12,7 +13,7 @@ import java.util.function.Consumer;
 public class SkillBuilder {
     private ResourceLocation id;
     private SkillNature nature = SkillNature.ACTIVE;
-    private TargetingType targetingType = TargetingType.NONE;
+    private TargetType targetingType = TargetType.NONE;
     private double maxRange = 32.0;
     private double activeCooldown = 0.0;
     private double passiveCooldown = 0.0;
@@ -20,6 +21,9 @@ public class SkillBuilder {
     private ResourceLocation resourceType;
     private boolean toggleable = false;
     private double toggleCostPerTick = 0.0;
+    private boolean allowSelfTarget = false;
+    private boolean targetAllyOnly = false;
+    private boolean targetPlayerOnly = false;
 
     // Execution handlers
     private BiConsumer<Skill.ExecutionContext, Object> activeHandler;
@@ -74,7 +78,7 @@ public class SkillBuilder {
     /**
      * Set the targeting type for the active component.
      */
-    public SkillBuilder targeting(TargetingType type) {
+    public SkillBuilder targeting(TargetType type) {
         this.targetingType = type;
         return this;
     }
@@ -169,6 +173,43 @@ public class SkillBuilder {
     }
 
     /**
+     * Set whether this skill allows targeting the caster.
+     * When true, the player can target themselves with ENTITY targeting.
+     * When false, the player cannot target themselves.
+     *
+     * @param allow true if self-targeting is allowed
+     * @return this builder
+     */
+    public SkillBuilder allowSelfTarget(boolean allow) {
+        this.allowSelfTarget = allow;
+        return this;
+    }
+
+    /**
+     * Set whether this skill can only target allies.
+     * When true, non-allies will be filtered out during targeting.
+     *
+     * @param allyOnly true if only allies can be targeted
+     * @return this builder
+     */
+    public SkillBuilder targetAllyOnly(boolean allyOnly) {
+        this.targetAllyOnly = allyOnly;
+        return this;
+    }
+
+    /**
+     * Set whether this skill can only target players.
+     * When true, mobs and other non-player entities will be filtered out.
+     *
+     * @param playerOnly true if only players can be targeted
+     * @return this builder
+     */
+    public SkillBuilder targetPlayerOnly(boolean playerOnly) {
+        this.targetPlayerOnly = playerOnly;
+        return this;
+    }
+
+    /**
      * Register the channeled execution handler.
      * This is called for channeling skills with the channel time as a parameter.
      * The handler receives the Skill.ExecutionContext, the raw ServerPlayer, and the channel time in seconds.
@@ -200,7 +241,7 @@ public class SkillBuilder {
     // Package-private getters for BuiltSkill
     ResourceLocation getId() { return id; }
     SkillNature getNature() { return nature; }
-    TargetingType getTargetingType() { return targetingType; }
+    TargetType getTargetingType() { return targetingType; }
     double getMaxRange() { return maxRange; }
     double getActiveCooldown() { return activeCooldown; }
     double getPassiveCooldown() { return passiveCooldown; }
@@ -208,6 +249,9 @@ public class SkillBuilder {
     ResourceLocation getResourceType() { return resourceType; }
     boolean isToggleable() { return toggleable; }
     double getToggleCostPerTick() { return toggleCostPerTick; }
+    boolean isAllowSelfTarget() { return allowSelfTarget; }
+    boolean isTargetAllyOnly() { return targetAllyOnly; }
+    boolean isTargetPlayerOnly() { return targetPlayerOnly; }
     double getMinChannelTime() { return minChannelTime; }
     double getMaxChannelTime() { return maxChannelTime; }
     BiConsumer<Skill.ExecutionContext, Object> getActiveHandler() { return activeHandler; }

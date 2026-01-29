@@ -2,6 +2,7 @@ package com.complextalents.skill.example;
 
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.capability.SkillDataProvider;
+import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,7 +10,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -34,7 +34,7 @@ public class ExampleFlameStrikeHybrid {
     public static void register() {
         SkillBuilder.create("complextalents", "flame_strike")
                 .nature(com.complextalents.skill.SkillNature.BOTH)
-                .targeting(com.complextalents.skill.TargetingType.ENTITY)
+                .targeting(TargetType.ENTITY)
                 .maxRange(5.0)
                 .activeCooldown(5.0)
                 .passiveCooldown(10.0)

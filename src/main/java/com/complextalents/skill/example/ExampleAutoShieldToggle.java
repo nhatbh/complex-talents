@@ -2,6 +2,7 @@ package com.complextalents.skill.example;
 
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.capability.SkillDataProvider;
+import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,7 +35,7 @@ public class ExampleAutoShieldToggle {
     public static void register() {
         SkillBuilder.create("complextalents", "auto_shield")
                 .nature(com.complextalents.skill.SkillNature.ACTIVE)
-                .targeting(com.complextalents.skill.TargetingType.NONE)
+                .targeting(TargetType.NONE)
                 .activeCooldown(1.0)
                 .resourceCost(10.0, "mana")
                 .toggleable(true)

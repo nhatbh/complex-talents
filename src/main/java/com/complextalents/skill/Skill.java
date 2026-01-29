@@ -1,5 +1,6 @@
 package com.complextalents.skill;
 
+import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
@@ -23,7 +24,7 @@ public interface Skill {
     /**
      * The targeting type for the active component
      */
-    TargetingType getTargetingType();
+    TargetType getTargetingType();
 
     /**
      * Display name for this skill (translatable)
@@ -71,6 +72,28 @@ public interface Skill {
      * Only applies when nature == TOGGLE
      */
     boolean isToggleable();
+
+    /**
+     * Whether this skill allows targeting the caster.
+     * Only applies when using ENTITY targeting.
+     * When true, the player can target themselves.
+     * When false, the player cannot target themselves.
+     */
+    boolean allowsSelfTarget();
+
+    /**
+     * Whether this skill can only target allies.
+     * Only applies when using ENTITY targeting.
+     * When true, non-allies will be filtered out.
+     */
+    boolean targetsAllyOnly();
+
+    /**
+     * Whether this skill can only target players.
+     * Only applies when using ENTITY targeting.
+     * When true, mobs and other non-player entities will be filtered out.
+     */
+    boolean targetsPlayerOnly();
 
     /**
      * Resource cost per tick while toggled on

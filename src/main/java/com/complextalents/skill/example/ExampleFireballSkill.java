@@ -1,6 +1,7 @@
 package com.complextalents.skill.example;
 
 import com.complextalents.skill.SkillBuilder;
+import com.complextalents.targeting.TargetType;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.projectile.SmallFireball;
@@ -25,7 +26,7 @@ public class ExampleFireballSkill {
     public static void register() {
         SkillBuilder.create("complextalents", "fireball")
                 .nature(com.complextalents.skill.SkillNature.ACTIVE)
-                .targeting(com.complextalents.skill.TargetingType.DIRECTION)
+                .targeting(TargetType.DIRECTION)
                 .maxRange(32.0)
                 .activeCooldown(3.0)
                 .resourceCost(20.0, "mana")

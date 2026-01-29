@@ -2,6 +2,7 @@ package com.complextalents.skill.server;
 
 import com.complextalents.skill.*;
 import com.complextalents.skill.event.*;
+import com.complextalents.targeting.TargetType;
 import com.complextalents.targeting.TargetingSnapshot;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -45,7 +46,7 @@ public class SkillTargetingHandler {
 
         // Get skill nature and targeting type (placeholder - integrate with your skill registry)
         SkillNature nature = getSkillNature(skillId);
-        TargetingType targetingType = getTargetingType(skillId);
+        TargetType targetingType = getTargetingType(skillId);
 
         player.sendSystemMessage(Component.literal("§7[DEBUG] §9Nature: " + nature + " | TargetingType: " + targetingType));
 
@@ -87,6 +88,13 @@ public class SkillTargetingHandler {
                 (targetData.isSelfTarget() ? "SELF" : (targetData.hasEntity() ? targetData.getTargetEntity().getName().getString() : "NONE")) +
                 " | Ally: " + targetData.isAlly() +
                 " | Dist: " + String.format("%.1f", targetData.getDistance())));
+
+        // Validate: ENTITY-targeted skills must have an entity target
+        if (targetingType == TargetType.ENTITY && !targetData.hasEntity()) {
+            player.sendSystemMessage(Component.literal("§c[DEBUG] Cast CANCELED: No entity target for ENTITY-targeted skill"));
+            sendCastFailure(player, skillId, "No target");
+            return;
+        }
 
         // Stage 3: Pre-Execute Event
         // Final validation gate: ally protection, area restrictions, conditional failures
@@ -147,7 +155,7 @@ public class SkillTargetingHandler {
     /**
      * Get the targeting type for a given skill ID.
      */
-    private static TargetingType getTargetingType(ResourceLocation skillId) {
+    private static TargetType getTargetingType(ResourceLocation skillId) {
         return SkillRegistry.getInstance().getTargetingType(skillId);
     }
 

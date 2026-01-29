@@ -1,6 +1,7 @@
 package com.complextalents.skill;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.targeting.TargetType;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -165,9 +166,9 @@ public class SkillRegistry {
      * @param skillId The skill ID
      * @return The targeting type, or NONE if not found
      */
-    public TargetingType getTargetingType(ResourceLocation skillId) {
+    public TargetType getTargetingType(ResourceLocation skillId) {
         Skill skill = getSkill(skillId);
-        return skill != null ? skill.getTargetingType() : TargetingType.NONE;
+        return skill != null ? skill.getTargetingType() : TargetType.NONE;
     }
 
     /**
@@ -248,6 +249,8 @@ public class SkillRegistry {
         com.complextalents.skill.example.ExampleFlameStrikeHybrid.register();
         com.complextalents.skill.example.ExampleAutoShieldToggle.register();
         com.complextalents.skill.example.ExampleChanneledFireball.register();
+        com.complextalents.skill.example.ExampleSkyFireball.register();
+        com.complextalents.skill.example.ExampleThunderStrike.register();
 
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }

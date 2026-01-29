@@ -2,6 +2,7 @@ package com.complextalents.skill.example;
 
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.event.SkillExecuteEvent;
+import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -30,7 +31,7 @@ public class ExampleChanneledFireball {
     public static void register() {
         SkillBuilder.create("complextalents", "charged_fireball")
                 .nature(com.complextalents.skill.SkillNature.ACTIVE)
-                .targeting(com.complextalents.skill.TargetingType.DIRECTION)
+                .targeting(TargetType.DIRECTION)
                 .maxRange(32.0)
                 .minChannelTime(0.5)  // Min 0.5 seconds (client enforces)
                 .maxChannelTime(3.0)  // Max 3 seconds (client enforces)

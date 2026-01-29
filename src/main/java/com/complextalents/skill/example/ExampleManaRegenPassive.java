@@ -2,6 +2,7 @@ package com.complextalents.skill.example;
 
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.capability.SkillDataProvider;
+import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,7 +28,7 @@ public class ExampleManaRegenPassive {
     public static void register() {
         SkillBuilder.create("complextalents", "mana_regen_passive")
                 .nature(com.complextalents.skill.SkillNature.PASSIVE)
-                .targeting(com.complextalents.skill.TargetingType.NONE)
+                .targeting(TargetType.NONE)
                 // No active handler - passive effects are event-driven
                 .register();
 

@@ -96,6 +96,47 @@ public class TargetingSnapshot {
     }
 
     /**
+     * Create a minimal snapshot for skills with no targeting (NONE type).
+     * Uses the player's position and look direction.
+     *
+     * @param eyePosition The player's eye position
+     * @param lookAngle The player's look angle
+     * @param position The player's position
+     * @return A minimal targeting snapshot
+     */
+    public static TargetingSnapshot createMinimal(Vec3 eyePosition, Vec3 lookAngle, Vec3 position) {
+        return new TargetingSnapshot(
+                eyePosition,
+                lookAngle,
+                position,
+                -1,      // no entity
+                false,   // no entity
+                true,    // player is ally to self
+                0.0,     // no distance
+                EnumSet.of(TargetType.DIRECTION)
+        );
+    }
+
+    /**
+     * Create an empty snapshot with default zero values.
+     * Used as a fallback when no valid targeting data exists.
+     *
+     * @return An empty targeting snapshot
+     */
+    public static TargetingSnapshot createEmpty() {
+        return new TargetingSnapshot(
+                Vec3.ZERO,
+                new Vec3(0, 1, 0),
+                Vec3.ZERO,
+                -1,
+                false,
+                false,
+                0,
+                EnumSet.of(TargetType.DIRECTION)
+        );
+    }
+
+    /**
      * Write this snapshot to a packet buffer.
      *
      * @param buffer The buffer to write to

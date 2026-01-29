@@ -1,7 +1,8 @@
 package com.complextalents.skill.event;
 
-import com.complextalents.skill.TargetingType;
+import com.complextalents.targeting.TargetType;
 import com.complextalents.targeting.TargetingSnapshot;
+import com.complextalents.util.EntityValidationHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +36,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public class TargetResolutionEvent extends SkillEvent {
 
-    private final TargetingType targetingType;
+    private final TargetType targetingType;
     private final TargetingSnapshot snapshot;
     private final ResolvedTargetData resolvedTarget;
 
@@ -48,7 +49,7 @@ public class TargetResolutionEvent extends SkillEvent {
      * @param snapshot The client-provided targeting snapshot (client authoritative)
      */
     public TargetResolutionEvent(ServerPlayer player, ResourceLocation skillId,
-                                  TargetingType targetingType, TargetingSnapshot snapshot) {
+                                  TargetType targetingType, TargetingSnapshot snapshot) {
         super(player, skillId);
         this.targetingType = targetingType;
         this.snapshot = snapshot;
@@ -58,7 +59,7 @@ public class TargetResolutionEvent extends SkillEvent {
     /**
      * @return The skill's targeting type
      */
-    public TargetingType getTargetingType() {
+    public TargetType getTargetingType() {
         return targetingType;
     }
 
@@ -139,8 +140,8 @@ public class TargetResolutionEvent extends SkillEvent {
                 boolean isSelfTarget = false;
 
                 if (snapshot.hasEntity()) {
-                    Entity hitEntity = player.level().getEntity(snapshot.getTargetEntityId());
-                    if (hitEntity != null && hitEntity.isAlive()) {
+                    Entity hitEntity = EntityValidationHelper.validateEntity(player.level(), snapshot.getTargetEntityId());
+                    if (hitEntity != null) {
                         targetEntity = hitEntity;
                         isAlly = snapshot.isAlly();
                         isSelfTarget = (hitEntity == player);

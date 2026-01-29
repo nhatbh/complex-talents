@@ -1,6 +1,7 @@
 package com.complextalents.targeting.client;
 
 import com.complextalents.targeting.*;
+import com.complextalents.util.AllyHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -79,7 +80,7 @@ public class ClientTargetingResolver {
                         hasEntity = true;
                         targetPosition = hitPos;
                         distance = hitDistance;
-                        isAlly = isAlly(player, hit);
+                        isAlly = AllyHelper.isAlly(player, hit);
 
                         resolvedTypes.add(TargetType.ENTITY);
                         resolvedTypes.add(TargetType.POSITION);
@@ -87,8 +88,8 @@ public class ClientTargetingResolver {
                 }
             }
 
-            // Apply fallback to self if enabled and no entity was found
-            if (!hasEntity && request.isFallbackToSelf()) {
+            // Target yourself if there is no target
+            if (!hasEntity && request.isTargetSelfAllowed()) {
                 targetEntityId = player.getId();
                 hasEntity = true;
                 targetPosition = player.position();
@@ -119,7 +120,7 @@ public class ClientTargetingResolver {
     ) {
         Player localPlayer = minecraft.player;
         if (localPlayer == null) {
-            return createEmptySnapshot();
+            return TargetingSnapshot.createEmpty();
         }
 
         return resolve(TargetingRequest.builder(localPlayer)
@@ -192,29 +193,20 @@ public class ClientTargetingResolver {
                 return false;
             }
 
-            boolean ally = isAlly(player, entity);
+            // Filter by player-only if enabled
+            if (request.isTargetPlayerOnly() && !(entity instanceof Player)) {
+                return false;
+            }
+
+            boolean ally = AllyHelper.isAlly(player, entity);
+
+            // Filter by ally-only if enabled
+            if (request.isTargetAllyOnly() && !ally) {
+                return false;
+            }
+
             return request.getRelationFilter().matches(ally);
         };
-    }
-
-    private boolean isAlly(Player player, Entity entity) {
-        if (player.getTeam() != null && entity instanceof LivingEntity living) {
-            if (living.getTeam() != null) {
-                return player.getTeam() == living.getTeam();
-            }
-        }
-
-        if (entity instanceof net.minecraft.world.entity.TamableAnimal tamable) {
-            return tamable.isTame()
-                    && tamable.getOwnerUUID() != null
-                    && tamable.getOwnerUUID().equals(player.getUUID());
-        }
-
-        if (entity instanceof Player otherPlayer) {
-            return player.isAlliedTo(otherPlayer);
-        }
-
-        return false;
     }
 
     private boolean hasLineOfSight(
@@ -234,18 +226,5 @@ public class ClientTargetingResolver {
         return result.getType() == HitResult.Type.MISS
                 || result.getLocation().distanceTo(start)
                 >= end.distanceTo(start) - 0.1;
-    }
-
-    private TargetingSnapshot createEmptySnapshot() {
-        return new TargetingSnapshot(
-                Vec3.ZERO,
-                new Vec3(0, 1, 0),
-                Vec3.ZERO,
-                -1,
-                false,
-                false,
-                0,
-                EnumSet.of(TargetType.DIRECTION)
-        );
     }
 }

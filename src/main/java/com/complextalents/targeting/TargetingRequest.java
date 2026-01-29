@@ -22,7 +22,8 @@ public class TargetingRequest {
     private final boolean requireLineOfSight;
     private final double entitySearchRadius;
     private final boolean targetSelfAllowed;
-    private final boolean fallbackToSelf;
+    private final boolean targetAllyOnly;
+    private final boolean targetPlayerOnly;
 
     private TargetingRequest(Builder builder) {
         this.player = builder.player;
@@ -32,7 +33,8 @@ public class TargetingRequest {
         this.requireLineOfSight = builder.requireLineOfSight;
         this.entitySearchRadius = builder.entitySearchRadius;
         this.targetSelfAllowed = builder.targetSelfAllowed;
-        this.fallbackToSelf = builder.fallbackToSelf;
+        this.targetAllyOnly = builder.targetAllyOnly;
+        this.targetPlayerOnly = builder.targetPlayerOnly;
     }
 
     /**
@@ -97,10 +99,17 @@ public class TargetingRequest {
     }
 
     /**
-     * @return Whether entity targeting should fall back to self when no valid target is found
+     * @return Whether only allies can be targeted
      */
-    public boolean isFallbackToSelf() {
-        return fallbackToSelf;
+    public boolean isTargetAllyOnly() {
+        return targetAllyOnly;
+    }
+
+    /**
+     * @return Whether only players can be targeted
+     */
+    public boolean isTargetPlayerOnly() {
+        return targetPlayerOnly;
     }
 
     /**
@@ -114,7 +123,8 @@ public class TargetingRequest {
         private boolean requireLineOfSight = true;
         private double entitySearchRadius = 2.0;
         private boolean targetSelfAllowed = false;
-        private boolean fallbackToSelf = true;
+        private boolean targetAllyOnly = false;
+        private boolean targetPlayerOnly = false;
 
         private Builder(Player player) {
             this.player = player;
@@ -203,15 +213,26 @@ public class TargetingRequest {
         }
 
         /**
-         * Set whether entity targeting should fall back to self when no valid target is found.
-         * When true and no entity is hit, the targeting will fall back to the player.
-         * When false and no entity is hit, the snapshot will have no entity.
+         * Set whether only allies can be targeted.
+         * When true, non-allies will be filtered out.
          *
-         * @param fallback true if fallback to self is enabled
+         * @param allyOnly true if only allies can be targeted
          * @return this builder
          */
-        public Builder fallbackToSelf(boolean fallback) {
-            this.fallbackToSelf = fallback;
+        public Builder targetAllyOnly(boolean allyOnly) {
+            this.targetAllyOnly = allyOnly;
+            return this;
+        }
+
+        /**
+         * Set whether only players can be targeted.
+         * When true, non-player entities (mobs) will be filtered out.
+         *
+         * @param playerOnly true if only players can be targeted
+         * @return this builder
+         */
+        public Builder targetPlayerOnly(boolean playerOnly) {
+            this.targetPlayerOnly = playerOnly;
             return this;
         }
 

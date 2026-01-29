@@ -167,10 +167,10 @@ public class ClientInputHandler {
         // Display feedback
         SkillCastingClient.displayCastFeedback(validatedTime);
 
-        // Resolve targeting and send cast packet with channel time
+        // Resolve targeting using skill's configuration and send cast packet with channel time
         PacketHandler.sendToServer(new SkillCastPacket(
                 skillId, slotIndex, (int) (validatedTime * 1000),
-                SkillCastingClient.resolveTargeting(skill.getTargetingType())
+                SkillCastingClient.resolveTargeting(skill)
         ));
     }
 
