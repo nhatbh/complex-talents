@@ -2,9 +2,11 @@ package com.complextalents.passive.capability;
 
 import com.complextalents.passive.PassiveStackDef;
 import com.complextalents.passive.PassiveStackRegistry;
+import com.complextalents.passive.events.PassiveStackChangeEvent;
 import com.complextalents.passive.network.PassiveStackSyncPacket;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,9 +50,11 @@ public class PassiveStackData implements IPassiveStackData {
             passiveStacks.put(stackTypeName, clampedCount);
         }
 
-        // Only sync if value changed
+        // Only sync and fire event if value changed
         if (oldValue != clampedCount) {
             sync();
+            MinecraftForge.EVENT_BUS.post(new PassiveStackChangeEvent(
+                player, stackTypeName, oldValue, clampedCount, PassiveStackChangeEvent.ChangeType.SET));
         }
     }
 
@@ -65,6 +69,8 @@ public class PassiveStackData implements IPassiveStackData {
         if (!passiveStacks.isEmpty()) {
             passiveStacks.clear();
             sync();
+            MinecraftForge.EVENT_BUS.post(new PassiveStackChangeEvent(
+                player, PassiveStackChangeEvent.ChangeType.RESET));
         }
     }
 

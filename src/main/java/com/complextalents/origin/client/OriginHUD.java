@@ -3,21 +3,30 @@ package com.complextalents.origin.client;
 import com.complextalents.TalentsMod;
 import com.complextalents.origin.Origin;
 import com.complextalents.origin.OriginRegistry;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
  * Renders the origin resource bar above the hotbar.
- * Mirrors ChannelHUD pattern.
+ * Uses RegisterGuiOverlaysEvent for optimal performance - called exactly once per frame
+ * instead of being called for every overlay and filtering.
  *
- * <p>FPS Optimization: Early exit when no origin is active minimizes performance impact.</p>
+ * <p>Performance optimizations:
+ * <ul>
+ * <li>Uses RegisterGuiOverlaysEvent - Forge calls directly once per frame</li>
+ * <li>Caches text strings - only updates when values change</li>
+ * <li>Avoids String.format - uses direct casting</li>
+ * <li>Avoids Component allocation - draws strings directly</li>
+ * </ul>
  */
-@Mod.EventBusSubscriber(modid = TalentsMod.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = TalentsMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class OriginHUD {
 
     private static final int BAR_WIDTH = 91;   // Same width as hotbar slot
@@ -25,30 +34,48 @@ public class OriginHUD {
     private static final int HOTBAR_OFFSET_Y = 52;  // Position above hotbar (above channel bar)
     private static final int TEXT_OFFSET_Y = 62;    // Position of resource name text
 
+    // Cache for default resource text - only rebuild when values change
+    private static String cachedResourceText = "";
+    private static String cachedResourceName = "";
+    private static double lastResourceValue = -1;
+    private static double lastResourceMax = -1;
+    private static int cachedResourceTextWidth = 0;
+
     /**
-     * Render the origin resource bar overlay.
+     * Register the origin HUD overlay with Forge.
+     * Called once during mod initialization on the client.
      *
-     * <p>Called once per frame after vanilla overlays are rendered.</p>
-     *
-     * @param event The render overlay event
+     * @param event The register overlays event
      */
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+    public static void registerOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAbove(
+                VanillaGuiOverlay.HOTBAR.id(),
+                "origin_bar",
+                OriginHUD::render
+        );
+    }
+
+    /**
+     * Render the origin HUD overlay.
+     * Called exactly once per frame by Forge, after the hotbar is rendered.
+     *
+     * @param gui The Forge GUI instance
+     * @param graphics The GUI graphics context
+     * @param partialTick Partial tick time
+     * @param width Screen width
+     * @param height Screen height
+     */
+    public static void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int width, int height) {
         // Early exit if no origin is active - minimal performance impact
         if (!ClientOriginData.hasOrigin()) {
             return;
         }
 
-        Minecraft minecraft = Minecraft.getInstance();
-
         // Don't render if a screen is open
-        if (minecraft.screen != null) {
+        if (Minecraft.getInstance().screen != null) {
             return;
         }
-
-        GuiGraphics graphics = event.getGuiGraphics();
-        int screenWidth = graphics.guiWidth();
-        int screenHeight = graphics.guiHeight();
 
         // Get the player's origin
         Origin origin = OriginRegistry.getInstance().getOrigin(ClientOriginData.getOriginId());
@@ -59,9 +86,9 @@ public class OriginHUD {
         // Use custom renderer if provided, otherwise use default
         OriginRenderer renderer = origin.getRenderer();
         if (renderer != null) {
-            renderer.renderHUD(graphics, screenWidth, screenHeight);
+            renderer.renderHUD(graphics, width, height);
         } else {
-            renderDefaultResourceBar(graphics, screenWidth, screenHeight);
+            renderDefaultResourceBar(graphics, width, height);
         }
     }
 
@@ -86,20 +113,25 @@ public class OriginHUD {
         double fillRatio = resourceMax > 0 ? resourceValue / resourceMax : 0;
         int filledWidth = (int) (BAR_WIDTH * Math.min(1.0, Math.max(0.0, fillRatio)));
 
-        // Draw background (dark gray with transparency)
-        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x88000000);
+        // Enable blending for transparency
+        RenderSystem.enableBlend();
 
-        // Draw filled portion (resource color with alpha)
-        int fillColor = (0xFF << 24) | (resourceColor & 0x00FFFFFF);
+        // Draw background (dark gray with 60% opacity)
+        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x99000000);
+
+        // Draw filled portion (resource color with 60% opacity)
+        int fillColor = (0x99 << 24) | (resourceColor & 0x00FFFFFF);
         if (filledWidth > 0) {
             graphics.fill(x, y, x + filledWidth, y + BAR_HEIGHT, fillColor);
         }
 
-        // Draw border
-        graphics.fill(x, y, x + BAR_WIDTH, y + 1, 0xFFFFFFFF); // Top
-        graphics.fill(x, y + BAR_HEIGHT - 1, x + BAR_WIDTH, y + BAR_HEIGHT, 0xFFFFFFFF); // Bottom
-        graphics.fill(x, y, x + 1, y + BAR_HEIGHT, 0xFFFFFFFF); // Left
-        graphics.fill(x + BAR_WIDTH - 1, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0xFFFFFFFF); // Right
+        // Draw border (60% opacity)
+        graphics.fill(x, y, x + BAR_WIDTH, y + 1, 0x99FFFFFF); // Top
+        graphics.fill(x, y + BAR_HEIGHT - 1, x + BAR_WIDTH, y + BAR_HEIGHT, 0x99FFFFFF); // Bottom
+        graphics.fill(x, y, x + 1, y + BAR_HEIGHT, 0x99FFFFFF); // Left
+        graphics.fill(x + BAR_WIDTH - 1, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x99FFFFFF); // Right
+
+        RenderSystem.disableBlend();
 
         // Draw resource name and value
         renderResourceText(graphics, screenWidth, resourceValue, resourceMax);
@@ -107,6 +139,7 @@ public class OriginHUD {
 
     /**
      * Render the resource name and value text.
+     * Uses cached text - only rebuilds string when values actually change.
      *
      * @param graphics The GUI graphics context
      * @param screenWidth The screen width
@@ -120,30 +153,34 @@ public class OriginHUD {
         }
 
         String resourceName = resourceType.getName();
-        String valueText = String.format("%.0f/%.0f", value, max);
-        String fullText = resourceName + ": " + valueText;
+
+        // Only rebuild text string when values or name change
+        if (value != lastResourceValue || max != lastResourceMax || !resourceName.equals(cachedResourceName)) {
+            lastResourceValue = value;
+            lastResourceMax = max;
+            cachedResourceName = resourceName;
+
+            // Use direct casting instead of String.format - 10-20x faster
+            cachedResourceText = resourceName + ": " + (int)value + "/" + (int)max;
+
+            Minecraft minecraft = Minecraft.getInstance();
+            cachedResourceTextWidth = minecraft.font.width(cachedResourceText);
+        }
 
         int textY = graphics.guiHeight() - TEXT_OFFSET_Y;
-        int textColor = 0xFFFFFF;
-
-        // Get Minecraft instance for font
-        Minecraft minecraft = Minecraft.getInstance();
-
-        // Render centered text
-        Component textComponent = Component.literal(fullText);
-        int textWidth = minecraft.font.width(textComponent);
         int scaledWidth = (int) (screenWidth / 0.75f);
 
         graphics.pose().pushPose();
         graphics.pose().scale(0.75f, 0.75f, 0.75f);
 
-        // Use draw method instead of renderComponent for simple text
+        // Draw cached string directly - no Component allocation
+        Minecraft minecraft = Minecraft.getInstance();
         graphics.drawString(
                 minecraft.font,
-                textComponent,
-                (scaledWidth - textWidth) / 2,
+                cachedResourceText,
+                (scaledWidth - cachedResourceTextWidth) / 2,
                 (int) (textY / 0.75f),
-                textColor
+                0x99FFFFFF
         );
 
         graphics.pose().popPose();

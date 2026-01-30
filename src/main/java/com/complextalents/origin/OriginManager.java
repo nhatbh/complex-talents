@@ -2,8 +2,10 @@ package com.complextalents.origin;
 
 import com.complextalents.origin.capability.IPlayerOriginData;
 import com.complextalents.origin.capability.OriginDataProvider;
+import com.complextalents.origin.events.OriginChangeEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -25,10 +27,20 @@ public class OriginManager {
      */
     public static void setOrigin(ServerPlayer player, ResourceLocation originId, int level) {
         player.getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(data -> {
+            ResourceLocation oldOriginId = data.getActiveOrigin();
+            int oldLevel = data.getOriginLevel();
+            int newLevel = Math.max(1, level);
+
             data.setActiveOrigin(originId);
-            data.setOriginLevel(Math.max(1, level));
+            data.setOriginLevel(newLevel);
             data.setResource(data.getResourceType().getMin());
             data.sync();
+
+            // Fire origin change event
+            OriginChangeEvent.ChangeType changeType = (oldOriginId == null)
+                ? OriginChangeEvent.ChangeType.SET
+                : OriginChangeEvent.ChangeType.SET;
+            MinecraftForge.EVENT_BUS.post(new OriginChangeEvent(player, originId, oldLevel, newLevel, changeType));
         });
     }
 
@@ -49,8 +61,14 @@ public class OriginManager {
      */
     public static void clearOrigin(ServerPlayer player) {
         player.getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(data -> {
+            int oldLevel = data.getOriginLevel();
+
             data.clear();
             data.sync();
+
+            // Fire origin change event
+            MinecraftForge.EVENT_BUS.post(new OriginChangeEvent(
+                player, null, oldLevel, 0, OriginChangeEvent.ChangeType.CLEAR));
         });
     }
 
@@ -115,8 +133,18 @@ public class OriginManager {
         player.getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(data -> {
             Origin origin = getOrigin(player);
             int maxLevel = origin != null ? origin.getMaxLevel() : 1;
-            data.setOriginLevel(Math.max(1, Math.min(level, maxLevel)));
+            int oldLevel = data.getOriginLevel();
+            int newLevel = Math.max(1, Math.min(level, maxLevel));
+
+            data.setOriginLevel(newLevel);
             data.sync();
+
+            // Fire origin change event if level actually changed
+            if (oldLevel != newLevel) {
+                ResourceLocation originId = data.getActiveOrigin();
+                MinecraftForge.EVENT_BUS.post(new OriginChangeEvent(
+                    player, originId, oldLevel, newLevel, OriginChangeEvent.ChangeType.LEVEL_CHANGE));
+            }
         });
     }
 

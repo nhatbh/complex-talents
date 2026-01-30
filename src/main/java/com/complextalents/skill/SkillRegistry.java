@@ -253,6 +253,9 @@ public class SkillRegistry {
         com.complextalents.skill.example.ExampleThunderStrike.register();
         com.complextalents.skill.example.ExampleElementalOverloadForm.register();
 
+        // Register High Priest skills
+        com.complextalents.impl.highpriest.skills.seraphsedge.SeraphsEdgeSkill.register();
+
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }
 }

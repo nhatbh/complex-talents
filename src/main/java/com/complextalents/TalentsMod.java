@@ -5,10 +5,13 @@ import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
 import com.complextalents.elemental.registry.ReactionRegistry;
+import com.complextalents.impl.highpriest.effect.HighPriestEffects;
+import com.complextalents.impl.highpriest.entity.HighPriestEntities;
+import com.complextalents.impl.highpriest.item.HighPriestItems;
+import com.complextalents.impl.highpriest.origin.HighPriestOrigin;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.origin.OriginRegistry;
 import com.complextalents.origin.command.OriginCommand;
-import com.complextalents.origin.example.ClericOrigin;
 import com.complextalents.origin.integration.OriginModIntegrationHandler;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.command.SkillCommand;
@@ -37,9 +40,14 @@ public class TalentsMod {
 
         // Register custom status effects
         ElementalEffects.register(modEventBus);
+        HighPriestEffects.register(modEventBus);
 
         // Register custom entities
         ModEntities.register(modEventBus);
+        HighPriestEntities.register(modEventBus);
+
+        // Register High Priest items (for model baking)
+        HighPriestItems.register(modEventBus);
 
         // Register network packets
         PacketHandler.register();
@@ -71,7 +79,8 @@ public class TalentsMod {
         LOGGER.info("Origin registry initialized");
 
         // Register example origins
-        ClericOrigin.register();
+        HighPriestOrigin.register();
+        HighPriestOrigin.initIntegration();
         LOGGER.info("Example origins registered");
     }
 

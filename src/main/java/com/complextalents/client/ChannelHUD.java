@@ -3,22 +3,28 @@ package com.complextalents.client;
 import com.complextalents.TalentsMod;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.client.SkillCastingClient;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
  * Renders the channeling progress bar when a player is channeling a skill.
+ * Uses RegisterGuiOverlaysEvent for optimal performance - called exactly once per frame
+ * instead of being called for every overlay and filtering.
  *
- * <p>FPS Optimization: Early exit when not channeling minimizes performance impact.</p>
- *
- * <p>The HUD renders once per frame during the Post event phase,
- * after vanilla overlays have been drawn.</p>
+ * <p>Performance optimizations:
+ * <ul>
+ * <li>Uses RegisterGuiOverlaysEvent - Forge calls directly once per frame</li>
+ * <li>Early exit when not channeling - minimal performance impact</li>
+ * </ul>
  */
-@Mod.EventBusSubscriber(modid = TalentsMod.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = TalentsMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ChannelHUD {
 
     private static final int BAR_WIDTH = 91;  // Same width as hotbar slot
@@ -26,14 +32,31 @@ public class ChannelHUD {
     private static final int HOTBAR_OFFSET_Y = 42;  // Position above hotbar
 
     /**
-     * Render the channel progress bar overlay.
+     * Register the channel HUD overlay with Forge.
+     * Called once during mod initialization on the client.
      *
-     * <p>Called once per frame after vanilla overlays are rendered.</p>
-     *
-     * @param event The render overlay event
+     * @param event The register overlays event
      */
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+    public static void registerOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAbove(
+                VanillaGuiOverlay.HOTBAR.id(),
+                "channel_bar",
+                ChannelHUD::render
+        );
+    }
+
+    /**
+     * Render the channel progress bar overlay.
+     * Called exactly once per frame by Forge, after the hotbar is rendered.
+     *
+     * @param gui The Forge GUI instance
+     * @param graphics The GUI graphics context
+     * @param partialTick Partial tick time
+     * @param width Screen width
+     * @param height Screen height
+     */
+    public static void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int width, int height) {
         // Early exit if not channeling - minimal performance impact
         if (!SkillCastingClient.isChanneling()) {
             return;
@@ -44,17 +67,13 @@ public class ChannelHUD {
             return;
         }
 
-        Minecraft minecraft = Minecraft.getInstance();
-
         // Don't render if a screen is open
-        if (minecraft.screen != null) {
+        if (Minecraft.getInstance().screen != null) {
             return;
         }
 
         double progress = SkillCastingClient.getChannelProgress();
         double maxChannelTime = skill.getMaxChannelTime();
-
-        GuiGraphics graphics = event.getGuiGraphics();
 
         renderChannelBar(graphics, progress, maxChannelTime);
     }
@@ -74,25 +93,30 @@ public class ChannelHUD {
         int x = (screenWidth - BAR_WIDTH) / 2;
         int y = screenHeight - HOTBAR_OFFSET_Y - BAR_HEIGHT - 2;
 
-        // Draw background (dark gray with transparency)
-        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x88000000);
+        // Enable blending for transparency
+        RenderSystem.enableBlend();
 
-        // Draw progress bar (color based on progress: yellow -> orange -> red)
+        // Draw background (dark gray with 60% opacity)
+        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x99000000);
+
+        // Draw progress bar (color based on progress: yellow -> orange -> red, 60% opacity)
         int color = getProgressColor(progress);
         int filledWidth = (int) (BAR_WIDTH * progress);
         if (filledWidth > 0) {
             graphics.fill(x, y, x + filledWidth, y + BAR_HEIGHT, color);
         }
 
-        // Draw border
-        graphics.fill(x, y, x + BAR_WIDTH, y + 1, 0xFFFFFFFF); // Top
-        graphics.fill(x, y + BAR_HEIGHT - 1, x + BAR_WIDTH, y + BAR_HEIGHT, 0xFFFFFFFF); // Bottom
-        graphics.fill(x, y, x + 1, y + BAR_HEIGHT, 0xFFFFFFFF); // Left
-        graphics.fill(x + BAR_WIDTH - 1, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0xFFFFFFFF); // Right
+        // Draw border (60% opacity)
+        graphics.fill(x, y, x + BAR_WIDTH, y + 1, 0x99FFFFFF); // Top
+        graphics.fill(x, y + BAR_HEIGHT - 1, x + BAR_WIDTH, y + BAR_HEIGHT, 0x99FFFFFF); // Bottom
+        graphics.fill(x, y, x + 1, y + BAR_HEIGHT, 0x99FFFFFF); // Left
+        graphics.fill(x + BAR_WIDTH - 1, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x99FFFFFF); // Right
+
+        RenderSystem.disableBlend();
     }
 
     /**
-     * Get the color for the progress bar based on progress.
+     * Get the color for the progress bar based on progress (60% opacity).
      * Yellow (start) -> Orange (middle) -> Red (full)
      *
      * @param progress The channel progress (0.0 to 1.0)
@@ -115,6 +139,6 @@ public class ChannelHUD {
             b = 0;
         }
 
-        return (0xFF << 24) | (r << 16) | (g << 8) | b;
+        return (0x99 << 24) | (r << 16) | (g << 8) | b;
     }
 }
