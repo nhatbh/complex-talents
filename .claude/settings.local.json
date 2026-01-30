@@ -20,7 +20,8 @@
       "Bash(done)",
       "Bash(do sed -i 's/package com.complextalents.elemental.reactions;/package com.complextalents.elemental.strategies.reactions;/' \"$file\")",
       "Bash(del:*)",
-      "Bash(javac:*)"
+      "Bash(javac:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

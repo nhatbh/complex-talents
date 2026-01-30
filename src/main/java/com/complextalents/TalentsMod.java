@@ -6,6 +6,10 @@ import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
 import com.complextalents.elemental.registry.ReactionRegistry;
 import com.complextalents.network.PacketHandler;
+import com.complextalents.origin.OriginRegistry;
+import com.complextalents.origin.command.OriginCommand;
+import com.complextalents.origin.example.ClericOrigin;
+import com.complextalents.origin.integration.OriginModIntegrationHandler;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.command.SkillCommand;
 import com.mojang.logging.LogUtils;
@@ -54,9 +58,21 @@ public class TalentsMod {
         ModIntegrationHandler.init();
         LOGGER.info("Mod integration initialized");
 
+        // Initialize origin module mod integration
+        OriginModIntegrationHandler.init();
+        LOGGER.info("Origin mod integration initialized");
+
         // Initialize skill registry
         SkillRegistry.getInstance().initialize();
         LOGGER.info("Skill registry initialized");
+
+        // Initialize origin registry
+        OriginRegistry.getInstance().initialize();
+        LOGGER.info("Origin registry initialized");
+
+        // Register example origins
+        ClericOrigin.register();
+        LOGGER.info("Example origins registered");
     }
 
     @SubscribeEvent
@@ -70,6 +86,10 @@ public class TalentsMod {
         // Register skill commands
         SkillCommand.register(event.getServer().getCommands().getDispatcher());
         LOGGER.info("Skill commands registered");
+
+        // Register origin commands
+        OriginCommand.register(event.getServer().getCommands().getDispatcher());
+        LOGGER.info("Origin commands registered");
     }
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)

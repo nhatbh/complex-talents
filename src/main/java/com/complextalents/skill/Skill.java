@@ -1,5 +1,6 @@
 package com.complextalents.skill;
 
+import com.complextalents.passive.PassiveOwner;
 import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -9,12 +10,34 @@ import org.jetbrains.annotations.Nullable;
  * Base interface for all skills.
  * All skills must implement this interface to be registered.
  */
-public interface Skill {
+public interface Skill extends PassiveOwner {
 
     /**
      * Unique identifier for this skill (e.g., "complextalents:fireball")
      */
     ResourceLocation getId();
+
+    /**
+     * Get the owner ID for passive stack registration.
+     * Implemented as part of PassiveOwner interface.
+     *
+     * @return The skill ID
+     */
+    @Override
+    default ResourceLocation getOwnerId() {
+        return getId();
+    }
+
+    /**
+     * Get the owner type for passive stack registration.
+     * Implemented as part of PassiveOwner interface.
+     *
+     * @return "skill"
+     */
+    @Override
+    default String getOwnerType() {
+        return "skill";
+    }
 
     /**
      * The nature of this skill (passive, active, both, toggle)
@@ -159,6 +182,27 @@ public interface Skill {
     }
 
     /**
+     * Get passive stack definitions for this skill.
+     * Returns map of stack name -> definition.
+     *
+     * @return Map of passive stack definitions (empty by default)
+     */
+    default java.util.Map<String, com.complextalents.passive.PassiveStackDef> getPassiveStacks() {
+        return java.util.Map.of();
+    }
+
+    /**
+     * Get a specific passive stack definition.
+     *
+     * @param stackName The stack type name
+     * @return The stack definition, or null if not found
+     */
+    @org.jetbrains.annotations.Nullable
+    default com.complextalents.passive.PassiveStackDef getPassiveStackDef(String stackName) {
+        return null;
+    }
+
+    /**
      * Context object passed to skills during execution.
      * Contains player, target, skill reference, skill level, and channel time for stat resolution.
      */
@@ -217,6 +261,63 @@ public interface Skill {
                 return builtSkill.getScaledStat(statName, skillLevel);
             }
             return 0.0;
+        }
+
+        // ========== Origin Integration ==========
+
+        /**
+         * Get the player's current passive stack count.
+         * Convenience method for skills that check passive stacks from origins or skills.
+         *
+         * @param stackTypeName The passive stack type name (e.g., "grace")
+         * @return Current stack count, or 0 if not found
+         */
+        public int getPassiveStacks(String stackTypeName) {
+            var player = player().getAs(net.minecraft.server.level.ServerPlayer.class);
+            return com.complextalents.passive.PassiveManager.getPassiveStacks(player, stackTypeName);
+        }
+
+        /**
+         * Check if player has at least a certain number of passive stacks.
+         *
+         * @param stackTypeName The passive stack type name
+         * @param threshold Minimum stacks required
+         * @return true if player has at least the threshold
+         */
+        public boolean hasPassiveStacks(String stackTypeName, int threshold) {
+            return getPassiveStacks(stackTypeName) >= threshold;
+        }
+
+        /**
+         * Check if player is at max stacks for a type.
+         *
+         * @param stackTypeName The passive stack type name
+         * @return true if at max stacks
+         */
+        public boolean isAtMaxPassiveStacks(String stackTypeName) {
+            var player = player().getAs(net.minecraft.server.level.ServerPlayer.class);
+            return com.complextalents.passive.PassiveManager.isAtMaxPassiveStacks(player, null, stackTypeName);
+        }
+
+        /**
+         * Get the player's origin resource value.
+         * Convenience method for skills that check origin resources.
+         *
+         * @return Current resource value
+         */
+        public double getResource() {
+            var player = player().getAs(net.minecraft.server.level.ServerPlayer.class);
+            return com.complextalents.origin.OriginManager.getResource(player);
+        }
+
+        /**
+         * Check if player has enough of their origin resource.
+         *
+         * @param amount Minimum resource required
+         * @return true if player has at least the amount
+         */
+        public boolean hasResource(double amount) {
+            return getResource() >= amount;
         }
     }
 

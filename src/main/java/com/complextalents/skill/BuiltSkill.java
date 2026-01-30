@@ -1,10 +1,12 @@
 package com.complextalents.skill;
 
+import com.complextalents.passive.PassiveStackDef;
 import com.complextalents.targeting.TargetType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -30,6 +32,7 @@ public class BuiltSkill implements Skill {
     private final boolean targetPlayerOnly;
     private final int maxLevel;
     private final java.util.Map<String, double[]> scaledStats;
+    private final java.util.Map<String, PassiveStackDef> passiveStacks;
 
     private final BiConsumer<ExecutionContext, Object> activeHandler;
     private final Consumer<Object> passiveHandler;
@@ -60,6 +63,7 @@ public class BuiltSkill implements Skill {
         this.targetPlayerOnly = builder.isTargetPlayerOnly();
         this.maxLevel = builder.getMaxLevel();
         this.scaledStats = builder.getScaledStats();
+        this.passiveStacks = builder.getPassiveStacks();
         this.minChannelTime = builder.getMinChannelTime();
         this.maxChannelTime = builder.getMaxChannelTime();
         this.activeHandler = builder.getActiveHandler();
@@ -233,6 +237,27 @@ public class BuiltSkill implements Skill {
      */
     public boolean hasPassiveHandler() {
         return passiveHandler != null;
+    }
+
+    /**
+     * Get passive stack definitions for this skill.
+     * Returns map of stack name -> definition.
+     *
+     * @return Map of passive stack definitions (empty by default)
+     */
+    public Map<String, PassiveStackDef> getPassiveStacks() {
+        return passiveStacks;
+    }
+
+    /**
+     * Get a specific passive stack definition.
+     *
+     * @param stackName The stack type name
+     * @return The stack definition, or null if not found
+     */
+    @Nullable
+    public PassiveStackDef getPassiveStackDef(String stackName) {
+        return passiveStacks.get(stackName);
     }
 
     @Override

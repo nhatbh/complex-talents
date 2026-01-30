@@ -1,5 +1,7 @@
 package com.complextalents.skill;
 
+import com.complextalents.passive.PassiveStackDef;
+import com.complextalents.passive.PassiveStackRegistry;
 import com.complextalents.targeting.TargetType;
 import net.minecraft.resources.ResourceLocation;
 
@@ -27,6 +29,7 @@ public class SkillBuilder {
     private boolean targetPlayerOnly = false;
     private int maxLevel = 1;
     private final java.util.Map<String, double[]> scaledStats = new java.util.HashMap<>();
+    private final java.util.Map<String, PassiveStackDef> passiveStacks = new java.util.HashMap<>();
 
     // Execution handlers
     private BiConsumer<Skill.ExecutionContext, Object> activeHandler;
@@ -295,6 +298,28 @@ public class SkillBuilder {
     }
 
     /**
+     * Add a passive stack type to this skill.
+     * <p>
+     * Passive stacks are tracked per-player and can be used for mechanics like:
+     * - Stacks that build up over time
+     * - Stacks gained/lost on events
+     * - Conditional effects based on stack count
+     * </p>
+     * <p>
+     * The skill's event handlers are responsible for all stack logic
+     * (generation, decay, triggers). This only defines the stack type.
+     * </p>
+     *
+     * @param stackName The unique name for this stack type (e.g., "heat", "charge")
+     * @param def       The stack definition with max stacks and display info
+     * @return this builder
+     */
+    public SkillBuilder passiveStack(String stackName, PassiveStackDef def) {
+        this.passiveStacks.put(stackName, def);
+        return this;
+    }
+
+    /**
      * Build the skill and return a BuiltSkill instance.
      * Call SkillRegistry.register() with the result to register it.
      */
@@ -304,12 +329,19 @@ public class SkillBuilder {
 
     /**
      * Build and register the skill in one step.
+     * Also registers passive stack definitions with the shared PassiveStackRegistry.
      *
      * @return The registered BuiltSkill instance
      */
     public BuiltSkill register() {
         BuiltSkill skill = build();
         SkillRegistry.getInstance().register(skill);
+
+        // Register passive stack definitions with shared registry
+        for (java.util.Map.Entry<String, PassiveStackDef> entry : passiveStacks.entrySet()) {
+            PassiveStackRegistry.register(skill, entry.getKey(), entry.getValue());
+        }
+
         return skill;
     }
 
@@ -335,6 +367,7 @@ public class SkillBuilder {
     BiFunction<Skill.ExecutionContext, Object, Boolean> getValidationHandler() { return validationHandler; }
     int getMaxLevel() { return maxLevel; }
     java.util.Map<String, double[]> getScaledStats() { return new java.util.HashMap<>(scaledStats); }
+    java.util.Map<String, PassiveStackDef> getPassiveStacks() { return new java.util.HashMap<>(passiveStacks); }
 
     private ResourceLocation parseResourceLocation(String resourceType) {
         if (resourceType == null || resourceType.isEmpty()) {

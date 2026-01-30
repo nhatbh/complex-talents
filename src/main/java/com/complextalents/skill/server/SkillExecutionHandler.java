@@ -1,5 +1,7 @@
 package com.complextalents.skill.server;
 
+import com.complextalents.origin.OriginManager;
+import com.complextalents.origin.ResourceType;
 import com.complextalents.skill.BuiltSkill;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.SkillRegistry;
@@ -8,6 +10,7 @@ import com.complextalents.skill.capability.SkillDataProvider;
 import com.complextalents.skill.event.ResolvedTargetData;
 import com.complextalents.skill.event.SkillExecuteEvent;
 import com.complextalents.skill.form.SkillFormManager;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -44,6 +47,25 @@ public class SkillExecutionHandler {
 
         ServerPlayer player = event.getPlayer();
 
+        // Validate resource cost (check against origin resource)
+        double cost = skill.getResourceCost();
+        ResourceLocation costResourceType = skill.getResourceType();
+        if (cost > 0 && costResourceType != null) {
+            // Get player's active origin resource type
+            ResourceType playerResource = OriginManager.getResourceType(player);
+            if (playerResource != null && playerResource.getId().equals(costResourceType)) {
+                // Skill costs origin resource - check player has enough
+                double currentResource = OriginManager.getResource(player);
+                if (currentResource < cost) {
+                    player.sendSystemMessage(Component.literal("\u00A7cNot enough " + playerResource.getName() + "!"));
+                    event.setCanceled(true);
+                    return;
+                }
+                // Consume resource after successful execution (handled after validation)
+            }
+            // TODO: Later integrate with Iron's Spellbooks mana for non-origin resources
+        }
+
         // Check for form enhancement - if this skill is in slots 0-2 and a form is active
         int slotIndex = findSlotForSkill(player, skillId);
         if (slotIndex >= 0 && slotIndex <= 2) {
@@ -76,6 +98,10 @@ public class SkillExecutionHandler {
                     }
 
                     enhancedSkill.executeActive(context);
+
+                    // Consume resource after successful execution
+                    consumeOriginResource(player, enhancedSkill);
+
                     return;  // Skip normal execution
                 }
             }
@@ -94,6 +120,9 @@ public class SkillExecutionHandler {
                 }
 
                 builtSkill.executeActive(context);
+
+                // Consume resource after successful execution
+                consumeOriginResource(player, builtSkill);
             } else {
                 // Skill has no handler registered
                 event.setCanceled(true);
@@ -173,5 +202,22 @@ public class SkillExecutionHandler {
                     return -1;
                 })
                 .orElse(-1);
+    }
+
+    /**
+     * Consume origin resource after successful skill execution.
+     *
+     * @param player The player casting the skill
+     * @param skill  The skill being cast
+     */
+    private static void consumeOriginResource(ServerPlayer player, Skill skill) {
+        double cost = skill.getResourceCost();
+        ResourceLocation costResourceType = skill.getResourceType();
+        if (cost > 0 && costResourceType != null) {
+            ResourceType playerResource = OriginManager.getResourceType(player);
+            if (playerResource != null && playerResource.getId().equals(costResourceType)) {
+                OriginManager.consumeResource(player, cost);
+            }
+        }
     }
 }

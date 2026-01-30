@@ -1,6 +1,8 @@
 package com.complextalents.network;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.origin.network.OriginDataSyncPacket;
+import com.complextalents.passive.network.PassiveStackSyncPacket;
 import com.complextalents.skill.network.SkillCastPacket;
 import com.complextalents.skill.network.SkillDataSyncPacket;
 import com.complextalents.network.elemental.SpawnBloomReactionPacket;
@@ -177,6 +179,20 @@ public class PacketHandler {
                 SkillDataSyncPacket::encode,
                 SkillDataSyncPacket::decode,
                 SkillDataSyncPacket::handle);
+
+        // Origin data sync packet
+        INSTANCE.registerMessage(packetId++,
+                OriginDataSyncPacket.class,
+                OriginDataSyncPacket::encode,
+                OriginDataSyncPacket::decode,
+                OriginDataSyncPacket::handle);
+
+        // Passive stack sync packet
+        INSTANCE.registerMessage(packetId++,
+                PassiveStackSyncPacket.class,
+                PassiveStackSyncPacket::encode,
+                PassiveStackSyncPacket::decode,
+                PassiveStackSyncPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }
