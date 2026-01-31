@@ -1,0 +1,24 @@
+{
+  "highpriest.sword_clang": {
+    "subtitle": "sounds.complextalents.highpriest.sword_clang",
+    "sounds": [
+      {
+        "name": "complextalents:sword_clang",
+        "stream": false
+      }
+    ]
+  },
+  "highpriest.sword_hit": {
+    "subtitle": "sounds.complextalents.highpriest.sword_hit",
+    "sounds": [
+      {
+        "name": "complextalents:sword_hit_1",
+        "stream": false
+      },
+      {
+        "name": "complextalents:sword_hit_2",
+        "stream": false
+      }
+    ]
+  }
+}

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -42,6 +43,16 @@ public class SeraphsBouncingSwordRenderer extends EntityRenderer<SeraphsBouncing
         float pitch = Mth.lerp(partialTicks, entity.prevPitchRender, entity.pitchRender);
         float roll = Mth.lerp(partialTicks, entity.prevRollRender, entity.rollRender);
 
+        // Guard against NaN/Infinity values that can accumulate after many hits
+        if (!Float.isFinite(yaw)) yaw = 0;
+        if (!Float.isFinite(pitch)) pitch = 0;
+        if (!Float.isFinite(roll)) roll = 0;
+
+        // Clamp rotations to safe ranges
+        yaw = Mth.wrapDegrees(yaw);
+        pitch = Mth.clamp(pitch, -90f, 90f);
+        roll = Mth.wrapDegrees(roll);
+
         // Apply in correct order
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
@@ -69,4 +80,10 @@ public class SeraphsBouncingSwordRenderer extends EntityRenderer<SeraphsBouncing
         // Item renderer uses atlas; this value is not actually used
         return ResourceLocation.withDefaultNamespace("textures/atlas/blocks.png");
     }
+
+    @Override
+    public boolean shouldRender(SeraphsBouncingSwordEntity entity, Frustum frustum, double camX, double camY, double camZ) {
+        return true; // disable frustum culling for testing
+    }
+
 }

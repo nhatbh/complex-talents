@@ -166,6 +166,13 @@ public class PacketHandler {
                 SpawnOvergrowthReactionPacket::decode,
                 SpawnOvergrowthReactionPacket::handle);
 
+        // Seraph's Bouncing Sword FX packet
+        INSTANCE.registerMessage(packetId++,
+                SpawnSeraphSwordFXPacket.class,
+                SpawnSeraphSwordFXPacket::encode,
+                SpawnSeraphSwordFXPacket::decode,
+                SpawnSeraphSwordFXPacket::handle);
+
         // Skill casting packets
         INSTANCE.registerMessage(packetId++,
                 SkillCastPacket.class,

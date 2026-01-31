@@ -20,5 +20,8 @@
   "element.complextalents.electro": "Electro",
   "element.complextalents.dendro": "Dendro",
   "element.complextalents.anemo": "Anemo",
-  "element.complextalents.geo": "Geo"
+  "element.complextalents.geo": "Geo",
+
+  "sounds.complextalents.highpriest.sword_clang": "Sword Clang",
+  "sounds.complextalents.highpriest.sword_hit": "Sword Hit"
 }

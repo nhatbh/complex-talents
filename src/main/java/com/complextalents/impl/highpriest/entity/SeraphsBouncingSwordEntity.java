@@ -1,9 +1,11 @@
 package com.complextalents.impl.highpriest.entity;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.network.PacketHandler;
+import com.complextalents.network.SpawnSeraphSwordFXPacket;
 import com.complextalents.util.AllyHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -127,6 +129,16 @@ public class SeraphsBouncingSwordEntity extends Projectile {
     public void tick() {
         super.tick();
 
+        // Guard against NaN/Infinity in position and velocity
+        Vec3 pos = this.position();
+        Vec3 vel = getDeltaMovement();
+        if (!Double.isFinite(pos.x) || !Double.isFinite(pos.y) || !Double.isFinite(pos.z) ||
+            !Double.isFinite(vel.x) || !Double.isFinite(vel.y) || !Double.isFinite(vel.z)) {
+            // Invalid state - discard to prevent crashes
+            this.discard();
+            return;
+        }
+
         // Update homing on both sides for proper rendering
         updateHoming();
 
@@ -143,10 +155,27 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         }
 
         // MOVE ENTITY - this is what Projectile doesn't do automatically
-        Vec3 vel = getDeltaMovement();
+        vel = getDeltaMovement();
         move(MoverType.SELF, vel);
 
         updateFacingFromVelocity();
+
+        // Guard rotation values against NaN/Infinity
+        if (!Float.isFinite(yawRender)) yawRender = 0;
+        if (!Float.isFinite(pitchRender)) pitchRender = 0;
+        if (!Float.isFinite(rollRender)) rollRender = 0;
+        if (!Float.isFinite(prevYawRender)) prevYawRender = 0;
+        if (!Float.isFinite(prevPitchRender)) prevPitchRender = 0;
+        if (!Float.isFinite(prevRollRender)) prevRollRender = 0;
+
+        // Flight trail FX - send packet every tick (server side only)
+        if (!level().isClientSide) {
+            PacketHandler.sendToNearby(
+                new SpawnSeraphSwordFXPacket(this.position(), vel, 0), // 0 = flight trail
+                (ServerLevel) level(),
+                this.position()
+            );
+        }
     }
 
     @Override
@@ -177,13 +206,26 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         Vec3 vel = getDeltaMovement();
         if (vel.lengthSqr() < 1.0E-6) return;
 
+        // Guard against NaN in velocity
+        if (!Double.isFinite(vel.x) || !Double.isFinite(vel.y) || !Double.isFinite(vel.z)) {
+            yawRender = prevYawRender = 0;
+            pitchRender = prevPitchRender = 0;
+            rollRender = prevRollRender = 0;
+            return;
+        }
+
         double horiz = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        if (horiz < 1.0E-6) horiz = 1.0E-6; // Prevent divide-by-zero
 
         float yaw = (float)(Mth.atan2(vel.x, vel.z) * (180F / Math.PI));
         float pitch = (float)(Mth.atan2(vel.y, horiz) * (180F / Math.PI));
 
+        // Clamp to safe ranges
+        yaw = Mth.wrapDegrees(yaw);
+        pitch = Mth.clamp(-pitch, -90f, 90f);
+
         yawRender = prevYawRender = yaw;
-        pitchRender = prevPitchRender = -pitch;
+        pitchRender = prevPitchRender = pitch;
         rollRender = prevRollRender = 0f;
     }
 
@@ -209,19 +251,30 @@ public class SeraphsBouncingSwordEntity extends Projectile {
 
         Vec3 currentVel = getDeltaMovement();
 
+        // FIX: Prevent processing if velocity is effectively zero (causes NaN on normalize)
+        if (currentVel.lengthSqr() < 1.0E-7) {
+            return;
+        }
+
+        // FIX: Guard against NaN in velocity before any calculations
+        if (!Double.isFinite(currentVel.x) || !Double.isFinite(currentVel.y) || !Double.isFinite(currentVel.z)) {
+            return;
+        }
+
         // Calculate direction to target center
         Vec3 toTarget = target.position()
                 .add(0, target.getBbHeight() * 0.5, 0)
                 .subtract(this.position());
 
-        // Check if target is too far
-        double distToTarget = toTarget.length();
-        if (distToTarget > 64) {
+        // FIX: Use lengthSqr for distance check and guard against NaN
+        double distToTargetSqr = toTarget.lengthSqr();
+        if (!Double.isFinite(distToTargetSqr) || distToTargetSqr > 64 * 64) {
             target = null;
             return;
         }
 
         Vec3 desiredDir = toTarget.normalize();
+        double distToTarget = Math.sqrt(distToTargetSqr);
 
         // Speed increases exponentially as distance decreases
         // Base speed + exponential bonus based on proximity
@@ -229,10 +282,12 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         float exponentialBonus = (float) Math.pow(proximityFactor, 3); // Cubic curve for dramatic acceleration
         float idealSpeed = HOMING_SPEED_BASE + exponentialBonus * (HOMING_SPEED_MAX - HOMING_SPEED_BASE);
 
-        // Calculate angle to target (in degrees)
-        float angleToTarget = (float) Math.toDegrees(Math.acos(
-                Mth.clamp(currentVel.normalize().dot(desiredDir), -1f, 1f)
-        ));
+        // FIX: Safe Dot Product for ACos - clamp strictly to prevent NaN
+        Vec3 currentVelNorm = currentVel.normalize();
+        double dot = currentVelNorm.dot(desiredDir);
+        dot = Mth.clamp(dot, -1.0, 1.0); // Strict clamp prevents NaN from acos
+
+        float angleToTarget = (float) Math.toDegrees(Math.acos(dot));
 
         // Turn rate decreases as speed increases, but we slow down for sharp turns
         float turnRate = TURN_RATE_BASE * (1f - exponentialBonus * 0.7f); // Faster = slower turn rate
@@ -247,35 +302,58 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         }
 
         // Blend current velocity toward desired direction (smooth turn)
-        Vec3 newVel = currentVel.normalize()
+        Vec3 newVel = currentVelNorm
                 .lerp(desiredDir, turnRate)
                 .normalize()
                 .scale(speed);
 
-        setDeltaMovement(newVel);
+        // FIX: Guard final velocity
+        if (Double.isFinite(newVel.x) && Double.isFinite(newVel.y) && Double.isFinite(newVel.z)) {
+            setDeltaMovement(newVel);
+        }
     }
 
     public void updateFacingFromVelocity() {
         Vec3 vel = getDeltaMovement();
 
+        // 1. Snapshot previous state BEFORE any modifications
         prevYawRender = yawRender;
         prevPitchRender = pitchRender;
         prevRollRender = rollRender;
 
-        if (vel.lengthSqr() < 1.0E-6) {
-            rollRender *= 0.9f;
+        // 2. Check for "Stop" or "NaN" conditions
+        double velSqr = vel.lengthSqr();
+        if (velSqr < 1.0E-5 || !Double.isFinite(vel.x) || !Double.isFinite(vel.y) || !Double.isFinite(vel.z)) {
+            // FIX: Do NOT reset to 0. Return early to keep the last known good rotation.
+            // This prevents the sword from snapping to looking at its feet when it hits something.
+
+            // Decay roll slowly for visual polish
+            rollRender = Mth.lerp(0.1f, rollRender, 0f);
             return;
         }
 
         double horiz = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        if (horiz < 1.0E-5) horiz = 1.0E-5; // Prevent divide-by-zero
 
-        yawRender = (float)(Mth.atan2(vel.x, vel.z) * (180F / Math.PI));
-        pitchRender = -(float)(Mth.atan2(vel.y, horiz) * (180F / Math.PI));
+        // 3. Calculate new rotations
+        float newYaw = (float)(Mth.atan2(vel.x, vel.z) * (180F / Math.PI));
+        float newPitch = (float)(Mth.atan2(vel.y, horiz) * (180F / Math.PI));
 
-        float yawDelta = Mth.wrapDegrees(yawRender - prevYawRender);
+        // 4. Sanitize Inputs (Yaw is 360, Pitch is -90 to 90)
+        this.yawRender = Mth.wrapDegrees(newYaw);
+        this.pitchRender = Mth.clamp(-newPitch, -90f, 90f);
+
+        // 5. Roll banking logic
+        float yawDelta = Mth.wrapDegrees(this.yawRender - this.prevYawRender);
         float targetRoll = Mth.clamp(yawDelta * 2.5f, -45f, 45f);
 
-        rollRender = Mth.lerp(0.25f, rollRender, targetRoll);
+        this.rollRender = Mth.lerp(0.2f, this.rollRender, targetRoll);
+
+        // 6. Sync to Vanilla Data
+        // This ensures that if your custom renderer fails, the hitbox/debug renderer
+        // and server-side logic still know which way it's facing.
+        this.setYRot(this.yawRender);
+        this.setXRot(this.pitchRender);
     }
 
     @Override
@@ -312,6 +390,15 @@ public class SeraphsBouncingSwordEntity extends Projectile {
             applyEnemyEffect(livingTarget, owner);
         }
 
+        // Entity hit FX - flash particle and hit sound
+        if (!level().isClientSide) {
+            PacketHandler.sendToNearby(
+                new SpawnSeraphSwordFXPacket(livingTarget.position(), null, 2), // 2 = entity hit
+                (ServerLevel) level(),
+                livingTarget.position()
+            );
+        }
+
         bounceCount++;
 
         // Check if we should continue bouncing
@@ -326,9 +413,27 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         if (nextTarget != null) {
             // Update target and continue
             target = nextTarget;
-            // Push the sword slightly away from current target to prevent getting stuck
-            Vec3 awayFromHit = this.position().subtract(livingTarget.position()).normalize().scale(0.5);
-            this.setPos(this.position().add(awayFromHit));
+
+            // FIX: Safe Separation Math - prevent NaN from normalize on zero vector
+            Vec3 toMob = this.position().subtract(livingTarget.position());
+            Vec3 awayFromHit;
+
+            // Check if length is too small to avoid dividing by zero (NaN)
+            if (toMob.lengthSqr() < 1.0E-7) {
+                // If inside the mob, pick a random upward direction to escape
+                awayFromHit = new Vec3(0, 1, 0).scale(0.5);
+            } else {
+                awayFromHit = toMob.normalize().scale(0.5);
+            }
+
+            Vec3 newPos = this.position().add(awayFromHit);
+
+            // FIX: Guard against NaN position before setting
+            if (Double.isFinite(newPos.x) && Double.isFinite(newPos.y) && Double.isFinite(newPos.z)) {
+                this.setPos(newPos);
+                // Ensure bounding box is updated after manual position change
+                this.setBoundingBox(this.makeBoundingBox());
+            }
         } else {
             // No valid target found - clear target but don't discard yet
             // The sword will continue flying and search again in ~0.5 seconds when homing re-enables
@@ -481,6 +586,13 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         // Bounce off the block and find a new target
         Vec3 currentVel = getDeltaMovement();
 
+        // FIX: Guard against NaN velocity before reflection
+        if (!Double.isFinite(currentVel.x) || !Double.isFinite(currentVel.y) || !Double.isFinite(currentVel.z)) {
+            // Reset to safe default velocity
+            setDeltaMovement(new Vec3(0, 0.5, 0));
+            return;
+        }
+
         // Reflect velocity based on the hit face
         Vec3 reflectedVel = switch (result.getDirection()) {
             case NORTH, SOUTH -> new Vec3(currentVel.x, currentVel.y, -currentVel.z);
@@ -488,13 +600,31 @@ public class SeraphsBouncingSwordEntity extends Projectile {
             case UP, DOWN -> new Vec3(currentVel.x, -currentVel.y, currentVel.z);
         };
 
-        setDeltaMovement(reflectedVel);
+        // FIX: Guard reflected velocity
+        if (Double.isFinite(reflectedVel.x) && Double.isFinite(reflectedVel.y) && Double.isFinite(reflectedVel.z)) {
+            setDeltaMovement(reflectedVel);
+        }
         hasImpulse = true;
 
         // Push slightly away from the block to prevent getting stuck
         Vec3 normal = new Vec3(result.getDirection().getNormal().getX(), result.getDirection().getNormal().getY(), result.getDirection().getNormal().getZ());
         Vec3 awayFromBlock = result.getLocation().add(normal.scale(0.1));
-        this.setPos(awayFromBlock);
+
+        // FIX: Guard against NaN position before setting
+        if (Double.isFinite(awayFromBlock.x) && Double.isFinite(awayFromBlock.y) && Double.isFinite(awayFromBlock.z)) {
+            this.setPos(awayFromBlock);
+            // Ensure bounding box is updated after manual position change
+            this.setBoundingBox(this.makeBoundingBox());
+        }
+
+        // Terrain collision FX - ember burst and clang sound
+        if (!level().isClientSide) {
+            PacketHandler.sendToNearby(
+                new SpawnSeraphSwordFXPacket(result.getLocation(), null, 1), // 1 = terrain hit
+                (ServerLevel) level(),
+                result.getLocation()
+            );
+        }
 
         // Find a new target
         target = findNextTarget();

@@ -1,6 +1,7 @@
 package com.complextalents.impl.highpriest.entity;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.impl.highpriest.sound.HighPriestSounds;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -35,6 +36,7 @@ public class HighPriestEntities {
 
     public static void register(IEventBus modEventBus) {
         ENTITY_TYPES.register(modEventBus);
+        HighPriestSounds.register(modEventBus);
         TalentsMod.LOGGER.info("Registered High Priest entity types");
     }
 }
