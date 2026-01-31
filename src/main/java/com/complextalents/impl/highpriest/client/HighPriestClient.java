@@ -28,4 +28,13 @@ public class HighPriestClient {
         );
         TalentsMod.LOGGER.info("Registered High Priest entity renderers");
     }
+
+    /**
+     * Client-side event handler for game tick events.
+     * Note: Covenant link animation is handled directly in CovenantLinkRenderer.
+     */
+    @Mod.EventBusSubscriber(modid = TalentsMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+    public static class ClientEvents {
+        // Covenant link ticks are handled via @SubscribeEvent in CovenantLinkRenderer
+    }
 }

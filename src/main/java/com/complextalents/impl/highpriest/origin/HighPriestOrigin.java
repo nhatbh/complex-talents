@@ -346,6 +346,8 @@ public class HighPriestOrigin {
      * Event handler for when player takes damage.
      * Lose Piety and ALL Grace stacks when hurt - punishment mechanic.
      * PassiveStackChangeEvent will handle attribute updates.
+     * <p>
+     * EXCEPTION: Players protected by Covenant of Protection do NOT lose resources.
      */
     @SubscribeEvent
     public static void onPlayerHurt(LivingDamageEvent event) {

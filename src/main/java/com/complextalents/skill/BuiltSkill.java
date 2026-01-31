@@ -27,10 +27,13 @@ public class BuiltSkill implements Skill {
     private final ResourceLocation resourceType;
     private final boolean toggleable;
     private final double toggleCostPerTick;
+    private final double toggleMaxDuration;
+    private final Consumer<Object> toggleOffHandler;
     private final boolean allowSelfTarget;
     private final boolean targetAllyOnly;
     private final boolean targetPlayerOnly;
     private final int maxLevel;
+    private final ResourceLocation icon;
     private final java.util.Map<String, double[]> scaledStats;
     private final java.util.Map<String, PassiveStackDef> passiveStacks;
 
@@ -58,10 +61,13 @@ public class BuiltSkill implements Skill {
         this.resourceType = builder.getResourceType();
         this.toggleable = builder.isToggleable();
         this.toggleCostPerTick = builder.getToggleCostPerTick();
+        this.toggleMaxDuration = builder.getToggleMaxDuration();
+        this.toggleOffHandler = builder.getToggleOffHandler();
         this.allowSelfTarget = builder.isAllowSelfTarget();
         this.targetAllyOnly = builder.isTargetAllyOnly();
         this.targetPlayerOnly = builder.isTargetPlayerOnly();
         this.maxLevel = builder.getMaxLevel();
+        this.icon = builder.getIcon();
         this.scaledStats = builder.getScaledStats();
         this.passiveStacks = builder.getPassiveStacks();
         this.minChannelTime = builder.getMinChannelTime();
@@ -146,6 +152,29 @@ public class BuiltSkill implements Skill {
     @Override
     public double getToggleCostPerTick() {
         return toggleCostPerTick;
+    }
+
+    @Override
+    public double getToggleMaxDuration() {
+        return toggleMaxDuration;
+    }
+
+    @Override
+    public boolean hasToggleOffHandler() {
+        return toggleOffHandler != null;
+    }
+
+    @Override
+    public void executeToggleOff(Object player) {
+        if (toggleOffHandler != null) {
+            toggleOffHandler.accept(player);
+        }
+    }
+
+    @Override
+    @Nullable
+    public ResourceLocation getIcon() {
+        return icon;
     }
 
     @Override

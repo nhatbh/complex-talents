@@ -126,6 +126,23 @@ public interface IPlayerSkillData {
     void setToggleActive(ResourceLocation skillId, boolean active);
 
     /**
+     * Get the game time when a toggle skill was activated.
+     *
+     * @param skillId The skill ID
+     * @return The game time when activated, or 0 if not active or not found
+     */
+    long getToggleActivationTime(ResourceLocation skillId);
+
+    /**
+     * Set the game time when a toggle skill was activated.
+     * This is called automatically by setToggleActive when setting to true.
+     *
+     * @param skillId The skill ID
+     * @param gameTime The game time when activated
+     */
+    void setToggleActivationTime(ResourceLocation skillId, long gameTime);
+
+    /**
      * Toggle a skill's state.
      *
      * @param skillId The skill ID

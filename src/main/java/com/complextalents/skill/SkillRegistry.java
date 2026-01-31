@@ -243,18 +243,9 @@ public class SkillRegistry {
     private void registerDefaultSkills() {
         TalentsMod.LOGGER.info("Registering example skills...");
 
-        // Register all example skills
-        com.complextalents.skill.example.ExampleFireballSkill.register();
-        com.complextalents.skill.example.ExampleManaRegenPassive.register();
-        com.complextalents.skill.example.ExampleFlameStrikeHybrid.register();
-        com.complextalents.skill.example.ExampleAutoShieldToggle.register();
-        com.complextalents.skill.example.ExampleChanneledFireball.register();
-        com.complextalents.skill.example.ExampleSkyFireball.register();
-        com.complextalents.skill.example.ExampleThunderStrike.register();
-        com.complextalents.skill.example.ExampleElementalOverloadForm.register();
-
         // Register High Priest skills
         com.complextalents.impl.highpriest.skills.seraphsedge.SeraphsEdgeSkill.register();
+        com.complextalents.impl.highpriest.skills.covenantofprotection.CovenantOfProtectionSkill.register();
 
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }

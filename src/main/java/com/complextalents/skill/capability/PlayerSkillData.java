@@ -3,6 +3,7 @@ package com.complextalents.skill.capability;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.SkillRegistry;
+import com.complextalents.skill.network.SkillCooldownSyncPacket;
 import com.complextalents.skill.network.SkillDataSyncPacket;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -33,6 +34,9 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
 
     // Toggle states: skillId -> isActive
     private final Set<ResourceLocation> activeToggles = new HashSet<>();
+
+    // Toggle activation times: skillId -> game time when activated
+    private final Map<ResourceLocation, Long> toggleActivationTimes = new HashMap<>();
 
     // Skill levels: skillId -> level (default 1)
     private final Map<ResourceLocation, Integer> skillLevels = new HashMap<>();
@@ -111,11 +115,13 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         long ticks = (long) (seconds * 20);
         long expiration = player.level().getGameTime() + ticks;
         activeCooldowns.put(skillId, expiration);
+        syncCooldowns();
     }
 
     @Override
     public void clearCooldown(ResourceLocation skillId) {
         activeCooldowns.remove(skillId);
+        syncCooldowns();
     }
 
     @Override
@@ -170,25 +176,70 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
     public void setToggleActive(ResourceLocation skillId, boolean active) {
         if (active) {
             activeToggles.add(skillId);
+            // Track activation time for max duration checking
+            toggleActivationTimes.put(skillId, player.level().getGameTime());
         } else {
             activeToggles.remove(skillId);
+            // Clear activation time when deactivated
+            toggleActivationTimes.remove(skillId);
         }
         sync();
     }
 
     @Override
+    public long getToggleActivationTime(ResourceLocation skillId) {
+        return toggleActivationTimes.getOrDefault(skillId, 0L);
+    }
+
+    @Override
+    public void setToggleActivationTime(ResourceLocation skillId, long gameTime) {
+        if (activeToggles.contains(skillId)) {
+            toggleActivationTimes.put(skillId, gameTime);
+        }
+    }
+
+    @Override
     public void tick() {
-        // Handle toggle skill resource consumption
+        long currentTime = player.level().getGameTime();
+
+        // Handle toggle skill resource consumption and max duration
         Iterator<ResourceLocation> toggleIterator = activeToggles.iterator();
         while (toggleIterator.hasNext()) {
             ResourceLocation toggleSkill = toggleIterator.next();
             Skill skill = SkillRegistry.getInstance().getSkill(toggleSkill);
 
-            if (skill != null && skill.getToggleCostPerTick() > 0) {
+            if (skill == null) {
+                continue;
+            }
+
+            // Check if max duration has been reached
+            if (skill.getToggleMaxDuration() > 0) {
+                Long activationTime = toggleActivationTimes.get(toggleSkill);
+                if (activationTime != null) {
+                    long durationTicks = (long) (skill.getToggleMaxDuration() * 20);
+                    if (currentTime >= activationTime + durationTicks) {
+                        // Max duration reached - turn off toggle and start cooldown
+                        toggleIterator.remove();
+                        toggleActivationTimes.remove(toggleSkill);
+                        if (skill.getActiveCooldown() > 0) {
+                            setCooldown(toggleSkill, skill.getActiveCooldown());
+                        }
+                        // Call toggle-off handler if present
+                        if (skill.hasToggleOffHandler()) {
+                            skill.executeToggleOff(player);
+                        }
+                        sync();
+                        continue;
+                    }
+                }
+            }
+
+            if (skill.getToggleCostPerTick() > 0) {
                 // Check if player has enough resources
                 if (!hasEnoughResource(skill)) {
                     // Turn off toggle if not enough resources
                     toggleIterator.remove();
+                    toggleActivationTimes.remove(toggleSkill);
                     player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                             "\u00A7cNot enough resources to sustain " + skill.getDisplayName().getString()
                     ));
@@ -202,7 +253,6 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
 
         // Check form expiration
         if (activeForm != null) {
-            long currentTime = player.level().getGameTime();
             if (currentTime >= formExpiration) {
                 // Form expired - deactivate via SkillFormManager
                 com.complextalents.skill.form.SkillFormManager.deactivateForm(player);
@@ -216,12 +266,20 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         PacketHandler.sendTo(new SkillDataSyncPacket(player.getUUID(), getAssignedSlots(), new HashMap<>(skillLevels)), player);
     }
 
+    /**
+     * Sync cooldown data to client.
+     */
+    private void syncCooldowns() {
+        PacketHandler.sendTo(new SkillCooldownSyncPacket(new HashMap<>(activeCooldowns), player.level().getGameTime()), player);
+    }
+
     @Override
     public void clear() {
         Arrays.fill(skillSlots, null);
         activeCooldowns.clear();
         passiveCooldowns.clear();
         activeToggles.clear();
+        toggleActivationTimes.clear();
         skillLevels.clear();
         activeForm = null;
         formExpiration = 0;
@@ -322,6 +380,13 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         }
         tag.put("activeToggles", togglesList);
 
+        // Serialize toggle activation times
+        CompoundTag activationTimesTag = new CompoundTag();
+        for (var entry : toggleActivationTimes.entrySet()) {
+            activationTimesTag.putLong(entry.getKey().toString(), entry.getValue());
+        }
+        tag.put("toggleActivationTimes", activationTimesTag);
+
         // Serialize skill levels
         ListTag levelsList = new ListTag();
         for (var entry : skillLevels.entrySet()) {
@@ -349,6 +414,7 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         // Clear existing data
         Arrays.fill(skillSlots, null);
         activeToggles.clear();
+        toggleActivationTimes.clear();
 
         // Deserialize slots
         if (tag.contains("slots")) {

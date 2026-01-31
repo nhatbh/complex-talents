@@ -16,6 +16,9 @@ public class HighPriestEffects {
     public static final RegistryObject<MobEffect> SERAPHIC_GRACE = EFFECTS.register("seraphic_grace",
         () -> new SeraphicGraceEffect());
 
+    public static final RegistryObject<MobEffect> COVENANT_PROTECTION = EFFECTS.register("covenant_protection",
+        () -> new CovenantProtectionEffect());
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered High Priest mob effects");

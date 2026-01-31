@@ -62,6 +62,15 @@ public interface Skill extends PassiveOwner {
     Component getDescription();
 
     /**
+     * Get the icon texture for this skill.
+     * Returns null to use the default icon.
+     *
+     * @return The icon texture location, or null for default
+     */
+    @Nullable
+    ResourceLocation getIcon();
+
+    /**
      * Maximum range for targeting (blocks)
      */
     double getMaxRange();
@@ -128,6 +137,31 @@ public interface Skill extends PassiveOwner {
      * Resource cost per tick while toggled on
      */
     double getToggleCostPerTick();
+
+    /**
+     * Maximum duration in seconds that a toggle can stay active.
+     * Returns 0 if the toggle has no maximum duration (stays on until manually toggled).
+     * When this duration is reached, the toggle will automatically turn off and cooldown will start.
+     *
+     * @return Maximum toggle duration in seconds, or 0 for unlimited
+     */
+    double getToggleMaxDuration();
+
+    /**
+     * Check if this skill has a toggle-off handler.
+     * The toggle-off handler is called when the skill is toggled off (manually or automatically).
+     *
+     * @return true if a toggle-off handler is present
+     */
+    boolean hasToggleOffHandler();
+
+    /**
+     * Execute the toggle-off handler for this skill.
+     * Called when the skill is toggled off (manually or automatically).
+     *
+     * @param player The player who toggled the skill off
+     */
+    void executeToggleOff(Object player);
 
     /**
      * Minimum channel time in seconds.

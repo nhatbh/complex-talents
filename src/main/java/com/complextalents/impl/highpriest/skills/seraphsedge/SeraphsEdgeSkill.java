@@ -46,6 +46,7 @@ public class SeraphsEdgeSkill {
         SkillBuilder.create("complextalents", "seraphs_edge")
                 .nature(SkillNature.ACTIVE)
                 .targeting(TargetType.ENTITY)
+                .icon(ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/highpriest/seraphs_edge.png"))
                 .maxRange(32.0)
                 .minChannelTime(1.0)  // 1 second channel
                 .maxChannelTime(1.0)  // Fixed 1 second

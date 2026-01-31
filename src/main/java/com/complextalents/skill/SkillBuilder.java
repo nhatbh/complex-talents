@@ -24,10 +24,13 @@ public class SkillBuilder {
     private ResourceLocation resourceType;
     private boolean toggleable = false;
     private double toggleCostPerTick = 0.0;
+    private double toggleMaxDuration = 0.0;
+    private Consumer<Object> toggleOffHandler;
     private boolean allowSelfTarget = false;
     private boolean targetAllyOnly = false;
     private boolean targetPlayerOnly = false;
     private int maxLevel = 1;
+    private ResourceLocation icon = null;
     private final java.util.Map<String, double[]> scaledStats = new java.util.HashMap<>();
     private final java.util.Map<String, PassiveStackDef> passiveStacks = new java.util.HashMap<>();
 
@@ -141,6 +144,32 @@ public class SkillBuilder {
      */
     public SkillBuilder toggleCost(double costPerTick) {
         this.toggleCostPerTick = costPerTick;
+        return this;
+    }
+
+    /**
+     * Set the maximum duration for a toggle skill.
+     * When this duration is reached, the toggle will automatically turn off and cooldown will start.
+     * Use 0 for unlimited duration (stays on until manually toggled).
+     *
+     * @param seconds Maximum duration in seconds, or 0 for unlimited
+     * @return this builder
+     */
+    public SkillBuilder toggleMaxDuration(double seconds) {
+        this.toggleMaxDuration = seconds;
+        return this;
+    }
+
+    /**
+     * Register a handler that is called when the skill is toggled off.
+     * This is called for both manual toggle-off and automatic toggle-off (max duration, etc.).
+     * The handler receives the raw ServerPlayer object.
+     *
+     * @param handler The toggle-off handler
+     * @return this builder
+     */
+    public SkillBuilder onToggleOff(Consumer<Object> handler) {
+        this.toggleOffHandler = handler;
         return this;
     }
 
@@ -320,6 +349,29 @@ public class SkillBuilder {
     }
 
     /**
+     * Set the icon texture for this skill.
+     *
+     * @param icon The icon texture location, or null for default
+     * @return this builder
+     */
+    public SkillBuilder icon(ResourceLocation icon) {
+        this.icon = icon;
+        return this;
+    }
+
+    /**
+     * Set the icon texture for this skill.
+     *
+     * @param namespace The texture namespace (e.g., "complextalents")
+     * @param path The texture path without extension (e.g., "textures/skill/fireball")
+     * @return this builder
+     */
+    public SkillBuilder icon(String namespace, String path) {
+        this.icon = ResourceLocation.fromNamespaceAndPath(namespace, path);
+        return this;
+    }
+
+    /**
      * Build the skill and return a BuiltSkill instance.
      * Call SkillRegistry.register() with the result to register it.
      */
@@ -356,6 +408,8 @@ public class SkillBuilder {
     ResourceLocation getResourceType() { return resourceType; }
     boolean isToggleable() { return toggleable; }
     double getToggleCostPerTick() { return toggleCostPerTick; }
+    double getToggleMaxDuration() { return toggleMaxDuration; }
+    Consumer<Object> getToggleOffHandler() { return toggleOffHandler; }
     boolean isAllowSelfTarget() { return allowSelfTarget; }
     boolean isTargetAllyOnly() { return targetAllyOnly; }
     boolean isTargetPlayerOnly() { return targetPlayerOnly; }
@@ -368,6 +422,7 @@ public class SkillBuilder {
     int getMaxLevel() { return maxLevel; }
     java.util.Map<String, double[]> getScaledStats() { return new java.util.HashMap<>(scaledStats); }
     java.util.Map<String, PassiveStackDef> getPassiveStacks() { return new java.util.HashMap<>(passiveStacks); }
+    ResourceLocation getIcon() { return icon; }
 
     private ResourceLocation parseResourceLocation(String resourceType) {
         if (resourceType == null || resourceType.isEmpty()) {

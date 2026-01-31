@@ -17,6 +17,11 @@ public class ClientSkillData {
     private static final ResourceLocation[] skillSlots = new ResourceLocation[4];
     private static final Map<ResourceLocation, Integer> skillLevels = new HashMap<>();
 
+    // Cooldown tracking: skillId -> expiration game time
+    private static final Map<ResourceLocation, Long> activeCooldowns = new HashMap<>();
+    private static long serverGameTime = 0;
+    private static long lastSyncTime = 0;
+
     /**
      * Sync skill slots from the server.
      *
@@ -31,6 +36,63 @@ public class ClientSkillData {
         if (levels != null) {
             skillLevels.putAll(levels);
         }
+        lastSyncTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Sync cooldown data from server.
+     *
+     * @param cooldowns Map of skillId -> expiration game time
+     * @param gameTime Current server game time
+     */
+    public static void syncCooldowns(Map<ResourceLocation, Long> cooldowns, long gameTime) {
+        activeCooldowns.clear();
+        if (cooldowns != null) {
+            activeCooldowns.putAll(cooldowns);
+        }
+        serverGameTime = gameTime;
+        lastSyncTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Get remaining cooldown for a skill in seconds.
+     *
+     * @param skillId The skill ID
+     * @return Remaining cooldown in seconds, or 0 if not on cooldown
+     */
+    public static double getCooldownRemaining(ResourceLocation skillId) {
+        Long expiration = activeCooldowns.get(skillId);
+        if (expiration == null) {
+            return 0;
+        }
+        // Calculate remaining ticks at sync time, then subtract elapsed time
+        long remainingTicksAtSync = expiration - serverGameTime;
+        if (remainingTicksAtSync <= 0) {
+            return 0;
+        }
+        // Client doesn't have real gameTime, so estimate based on last sync
+        long elapsed = System.currentTimeMillis() - lastSyncTime;
+        long elapsedTicks = elapsed / 50; // Convert ms to ticks (20 ticks per second)
+        long remainingTicks = remainingTicksAtSync - elapsedTicks;
+        return Math.max(0, remainingTicks / 20.0); // Convert ticks to seconds
+    }
+
+    /**
+     * Check if a skill is on cooldown.
+     *
+     * @param skillId The skill ID
+     * @return true if the skill is on cooldown
+     */
+    public static boolean isOnCooldown(ResourceLocation skillId) {
+        return getCooldownRemaining(skillId) > 0;
+    }
+
+    /**
+     * Clear all cooldown data (on disconnect).
+     */
+    public static void clearCooldowns() {
+        activeCooldowns.clear();
+        serverGameTime = 0;
     }
 
     /**
@@ -61,6 +123,7 @@ public class ClientSkillData {
     public static void clear() {
         java.util.Arrays.fill(skillSlots, null);
         skillLevels.clear();
+        clearCooldowns();
     }
 
     /**
