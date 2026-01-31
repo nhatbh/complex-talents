@@ -54,7 +54,7 @@ public class SeraphSwordFXRenderer {
         // Spawn main END_ROD trail particle behind sword
         level.addParticle(
             ParticleTypes.END_ROD,
-            pos.x, pos.y, pos.z,
+            pos.x, pos.y+0.4, pos.z,
             trailDir.x, trailDir.y, trailDir.z
         );
 

@@ -441,6 +441,9 @@ public class SeraphsBouncingSwordEntity extends Projectile {
             // FIX: Guard against NaN position before setting
             if (Double.isFinite(newPos.x) && Double.isFinite(newPos.y) && Double.isFinite(newPos.z)) {
                 this.setPos(newPos);
+                this.yo = this.getY(); 
+                this.xo = this.getX();
+                this.zo = this.getZ();
                 // Ensure bounding box is updated after manual position change
                 this.setBoundingBox(this.makeBoundingBox());
             }
@@ -623,6 +626,9 @@ public class SeraphsBouncingSwordEntity extends Projectile {
         // FIX: Guard against NaN position before setting
         if (Double.isFinite(awayFromBlock.x) && Double.isFinite(awayFromBlock.y) && Double.isFinite(awayFromBlock.z)) {
             this.setPos(awayFromBlock);
+            this.yo = this.getY(); 
+            this.xo = this.getX();
+            this.zo = this.getZ();
             // Ensure bounding box is updated after manual position change
             this.setBoundingBox(this.makeBoundingBox());
         }
