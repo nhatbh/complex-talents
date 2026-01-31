@@ -36,38 +36,50 @@ public class SeraphsBouncingSwordRenderer extends EntityRenderer<SeraphsBouncing
             MultiBufferSource buffer,
             int packedLight
     ) {
+        // 1. Snapshot values to local variables immediately
+        float pYaw = entity.prevYawRender;
+        float cYaw = entity.yawRender;
+        float pPitch = entity.prevPitchRender;
+        float cPitch = entity.pitchRender;
+        float pRoll = entity.prevRollRender;
+        float cRoll = entity.rollRender;
+
+        // 2. EMERGENCY SANITIZATION: If state is corrupted, reset to current or zero
+        // This prevents Mth.lerp from returning NaN
+        if (!Float.isFinite(pYaw)) pYaw = Float.isFinite(cYaw) ? cYaw : 0;
+        if (!Float.isFinite(cYaw)) cYaw = pYaw;
+
+        if (!Float.isFinite(pPitch)) pPitch = Float.isFinite(cPitch) ? cPitch : 0;
+        if (!Float.isFinite(cPitch)) cPitch = pPitch;
+
+        if (!Float.isFinite(pRoll)) pRoll = Float.isFinite(cRoll) ? cRoll : 0;
+        if (!Float.isFinite(cRoll)) cRoll = pRoll;
+
         poseStack.pushPose();
 
-        // Interpolated rotations
-        float yaw = Mth.lerp(partialTicks, entity.prevYawRender, entity.yawRender);
-        float pitch = Mth.lerp(partialTicks, entity.prevPitchRender, entity.pitchRender);
-        float roll = Mth.lerp(partialTicks, entity.prevRollRender, entity.rollRender);
+        // 3. Use rotLerp for Yaw (prevents 360-degree spins when crossing 0/360 boundary)
+        float yaw = Mth.rotLerp(partialTicks, pYaw, cYaw);
+        float pitch = Mth.lerp(partialTicks, pPitch, cPitch);
+        float roll = Mth.lerp(partialTicks, pRoll, cRoll);
 
-        // Guard against NaN/Infinity values that can accumulate after many hits
-        if (!Float.isFinite(yaw)) yaw = 0;
-        if (!Float.isFinite(pitch)) pitch = 0;
-        if (!Float.isFinite(roll)) roll = 0;
-
-        // Clamp rotations to safe ranges
-        yaw = Mth.wrapDegrees(yaw);
-        pitch = Mth.clamp(pitch, -90f, 90f);
-        roll = Mth.wrapDegrees(roll);
-
-        // Apply in correct order
+        // 4. Transform - Apply rotations in a consistent, stable order (Y -> X -> Z)
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
         poseStack.mulPose(Axis.ZP.rotationDegrees(roll));
+
+        // Center the sword model
+        poseStack.translate(0, 0.25, 0);
 
         ItemStack stack = new ItemStack(HighPriestItems.DIVINE_PUNISHER.get());
         Minecraft.getInstance().getItemRenderer().renderStatic(
                 stack,
                 ItemDisplayContext.FIXED,
-                15728880, // full bright; replace with packedLight if you want world lighting
+                15728880, // Full bright
                 OverlayTexture.NO_OVERLAY,
                 poseStack,
                 buffer,
                 entity.level(),
-                0
+                entity.getId() // Pass entity ID for consistent random seeds
         );
 
         poseStack.popPose();

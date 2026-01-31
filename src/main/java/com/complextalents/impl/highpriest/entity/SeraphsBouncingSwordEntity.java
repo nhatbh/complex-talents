@@ -349,7 +349,17 @@ public class SeraphsBouncingSwordEntity extends Projectile {
 
         this.rollRender = Mth.lerp(0.2f, this.rollRender, targetRoll);
 
-        // 6. Sync to Vanilla Data
+        // 6. FINAL SAFETY GATE: Prevent NaN corruption from spreading to prev values
+        if (!Float.isFinite(yawRender)) yawRender = prevYawRender;
+        if (!Float.isFinite(pitchRender)) pitchRender = prevPitchRender;
+        if (!Float.isFinite(rollRender)) rollRender = prevRollRender;
+
+        // Double check that prev is also finite (initialization safety)
+        if (!Float.isFinite(prevYawRender)) prevYawRender = 0;
+        if (!Float.isFinite(prevPitchRender)) prevPitchRender = 0;
+        if (!Float.isFinite(prevRollRender)) prevRollRender = 0;
+
+        // 7. Sync to Vanilla Data
         // This ensures that if your custom renderer fails, the hitbox/debug renderer
         // and server-side logic still know which way it's facing.
         this.setYRot(this.yawRender);
