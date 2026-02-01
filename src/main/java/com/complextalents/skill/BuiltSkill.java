@@ -37,6 +37,12 @@ public class BuiltSkill implements Skill {
     private final java.util.Map<String, double[]> scaledStats;
     private final java.util.Map<String, PassiveStackDef> passiveStacks;
 
+    // Scaling arrays for cooldown, cost, and toggle cost
+    private final double[] scaledActiveCooldown;
+    private final double[] scaledPassiveCooldown;
+    private final double[] scaledResourceCost;
+    private final double[] scaledToggleCost;
+
     private final BiConsumer<ExecutionContext, Object> activeHandler;
     private final Consumer<Object> passiveHandler;
     private final SkillBuilder.ChanneledHandler channeledHandler;
@@ -70,6 +76,10 @@ public class BuiltSkill implements Skill {
         this.icon = builder.getIcon();
         this.scaledStats = builder.getScaledStats();
         this.passiveStacks = builder.getPassiveStacks();
+        this.scaledActiveCooldown = builder.getScaledActiveCooldown();
+        this.scaledPassiveCooldown = builder.getScaledPassiveCooldown();
+        this.scaledResourceCost = builder.getScaledResourceCost();
+        this.scaledToggleCost = builder.getScaledToggleCost();
         this.minChannelTime = builder.getMinChannelTime();
         this.maxChannelTime = builder.getMaxChannelTime();
         this.activeHandler = builder.getActiveHandler();
@@ -114,13 +124,40 @@ public class BuiltSkill implements Skill {
     }
 
     @Override
+    public double getActiveCooldown(int level) {
+        if (scaledActiveCooldown == null || scaledActiveCooldown.length == 0) {
+            return activeCooldown;
+        }
+        int index = Math.min(Math.max(level - 1, 0), scaledActiveCooldown.length - 1);
+        return scaledActiveCooldown[index];
+    }
+
+    @Override
     public double getPassiveCooldown() {
         return passiveCooldown;
     }
 
     @Override
+    public double getPassiveCooldown(int level) {
+        if (scaledPassiveCooldown == null || scaledPassiveCooldown.length == 0) {
+            return passiveCooldown;
+        }
+        int index = Math.min(Math.max(level - 1, 0), scaledPassiveCooldown.length - 1);
+        return scaledPassiveCooldown[index];
+    }
+
+    @Override
     public double getResourceCost() {
         return resourceCost;
+    }
+
+    @Override
+    public double getResourceCost(int level) {
+        if (scaledResourceCost == null || scaledResourceCost.length == 0) {
+            return resourceCost;
+        }
+        int index = Math.min(Math.max(level - 1, 0), scaledResourceCost.length - 1);
+        return scaledResourceCost[index];
     }
 
     @Override
@@ -152,6 +189,15 @@ public class BuiltSkill implements Skill {
     @Override
     public double getToggleCostPerTick() {
         return toggleCostPerTick;
+    }
+
+    @Override
+    public double getToggleCostPerTick(int level) {
+        if (scaledToggleCost == null || scaledToggleCost.length == 0) {
+            return toggleCostPerTick;
+        }
+        int index = Math.min(Math.max(level - 1, 0), scaledToggleCost.length - 1);
+        return scaledToggleCost[index];
     }
 
     @Override

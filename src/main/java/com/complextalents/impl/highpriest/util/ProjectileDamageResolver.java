@@ -56,7 +56,7 @@ public class ProjectileDamageResolver {
         }
 
         // Abstract hurting projectiles (blaze fireballs, etc.)
-        if (p instanceof AbstractHurtingProjectile hurting) {
+        if (p instanceof AbstractHurtingProjectile) {
             // Power is stored as a private field, use estimated value
             return 5f;
         }

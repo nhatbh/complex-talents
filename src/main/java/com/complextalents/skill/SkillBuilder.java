@@ -46,6 +46,12 @@ public class SkillBuilder {
     private double minChannelTime = 0.0;
     private double maxChannelTime = 0.0;
 
+    // Scaling arrays for cooldown, cost, and toggle cost
+    private double[] scaledActiveCooldown = null;
+    private double[] scaledPassiveCooldown = null;
+    private double[] scaledResourceCost = null;
+    private double[] scaledToggleCost = null;
+
     /**
      * Handler for channeled skills that receives channel time.
      */
@@ -372,6 +378,103 @@ public class SkillBuilder {
     }
 
     /**
+     * Set the cooldown that scales with skill level.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the skill level exceeds the array length, the last value is used.
+     * <p>
+     * If not set, the fixed cooldown from {@link #activeCooldown(double)} is used for all levels.
+     *
+     * @param values Array of cooldown values per level (in seconds, must have at least one value)
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public SkillBuilder scaledCooldown(double[] values) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled cooldown values must have at least one element");
+        }
+        this.scaledActiveCooldown = values.clone();
+        return this;
+    }
+
+    /**
+     * Set the passive cooldown that scales with skill level.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the skill level exceeds the array length, the last value is used.
+     * <p>
+     * If not set, the fixed cooldown from {@link #passiveCooldown(double)} is used for all levels.
+     *
+     * @param values Array of passive cooldown values per level (in seconds, must have at least one value)
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public SkillBuilder scaledPassiveCooldown(double[] values) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled passive cooldown values must have at least one element");
+        }
+        this.scaledPassiveCooldown = values.clone();
+        return this;
+    }
+
+    /**
+     * Set the resource cost that scales with skill level.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the skill level exceeds the array length, the last value is used.
+     * <p>
+     * If not set, the fixed cost from {@link #resourceCost(double, String)} is used for all levels.
+     *
+     * @param values Array of cost values per level (must have at least one value)
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public SkillBuilder scaledResourceCost(double[] values) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled resource cost values must have at least one element");
+        }
+        this.scaledResourceCost = values.clone();
+        return this;
+    }
+
+    /**
+     * Set the resource cost that scales with skill level, including the resource type.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the skill level exceeds the array length, the last value is used.
+     * <p>
+     * This method sets both the resource type and the scaled cost values.
+     *
+     * @param values Array of cost values per level (must have at least one value)
+     * @param resourceType The resource ID (e.g., "complextalents:piety")
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public SkillBuilder scaledResourceCost(double[] values, String resourceType) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled resource cost values must have at least one element");
+        }
+        this.resourceType = parseResourceLocation(resourceType);
+        this.scaledResourceCost = values.clone();
+        return this;
+    }
+
+    /**
+     * Set the toggle cost per tick that scales with skill level.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the skill level exceeds the array length, the last value is used.
+     * <p>
+     * If not set, the fixed cost from {@link #toggleCost(double)} is used for all levels.
+     *
+     * @param values Array of cost per tick values per level (must have at least one value)
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public SkillBuilder scaledToggleCost(double[] values) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled toggle cost values must have at least one element");
+        }
+        this.scaledToggleCost = values.clone();
+        return this;
+    }
+
+    /**
      * Build the skill and return a BuiltSkill instance.
      * Call SkillRegistry.register() with the result to register it.
      */
@@ -423,6 +526,10 @@ public class SkillBuilder {
     java.util.Map<String, double[]> getScaledStats() { return new java.util.HashMap<>(scaledStats); }
     java.util.Map<String, PassiveStackDef> getPassiveStacks() { return new java.util.HashMap<>(passiveStacks); }
     ResourceLocation getIcon() { return icon; }
+    double[] getScaledActiveCooldown() { return scaledActiveCooldown; }
+    double[] getScaledPassiveCooldown() { return scaledPassiveCooldown; }
+    double[] getScaledResourceCost() { return scaledResourceCost; }
+    double[] getScaledToggleCost() { return scaledToggleCost; }
 
     private ResourceLocation parseResourceLocation(String resourceType) {
         if (resourceType == null || resourceType.isEmpty()) {

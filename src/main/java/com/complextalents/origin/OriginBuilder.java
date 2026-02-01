@@ -34,6 +34,7 @@ public class OriginBuilder {
     private final Map<String, double[]> scaledStats = new HashMap<>();
     private final Map<String, PassiveStackDef> passiveStacks = new HashMap<>();
     private OriginRenderer renderer;
+    private double[] scaledMaxResource = null;
 
     /**
      * Create a new origin builder.
@@ -173,6 +174,25 @@ public class OriginBuilder {
     }
 
     /**
+     * Set the maximum resource value that scales with origin level.
+     * Values are indexed by level: index 0 = level 1, index 1 = level 2, etc.
+     * If the origin level exceeds the array length, the last value is used.
+     * <p>
+     * If not set, the resource type's fixed max is used for all levels.
+     *
+     * @param values Array of max resource values per level (must have at least one value)
+     * @return this builder
+     * @throws IllegalArgumentException if values is null or empty
+     */
+    public OriginBuilder scaledMaxResource(double[] values) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Scaled max resource values must have at least one element");
+        }
+        this.scaledMaxResource = values.clone();
+        return this;
+    }
+
+    /**
      * Build the origin and return a BuiltOrigin instance.
      * Call OriginRegistry.register() with the result to register it.
      */
@@ -235,5 +255,9 @@ public class OriginBuilder {
 
     OriginRenderer getRenderer() {
         return renderer;
+    }
+
+    double[] getScaledMaxResource() {
+        return scaledMaxResource;
     }
 }

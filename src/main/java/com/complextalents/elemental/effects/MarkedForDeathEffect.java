@@ -1,6 +1,7 @@
 package com.complextalents.elemental.effects;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.util.UUIDHelper;
 import com.complextalents.elemental.strategies.reactions.VoidfireReaction;
 import com.complextalents.util.TeamHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -12,6 +13,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
+import java.util.UUID;
+
 /**
  * Marked for Death Effect - Accumulates damage taken and deals bonus damage on expiration
  * While active, the target takes increased damage (reduced armor).
@@ -19,8 +22,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
  */
 public class MarkedForDeathEffect extends MobEffect {
 
-    private static final java.util.UUID DAMAGE_MODIFIER_UUID = java.util.UUID.fromString("e7f4c6b8-3d29-4a1f-8e93-2f5b8c9d1a3e");
-    private static final java.util.UUID ARMOR_MODIFIER_UUID = java.util.UUID.fromString("f8c5d7a2-1b34-4e2d-9c87-3a6f5b8e2d1c");
+    private static final UUID DAMAGE_MODIFIER_UUID = UUIDHelper.generateAttributeModifierUUID("elemental_effects", "marked_for_death_toughness");
+    private static final UUID ARMOR_MODIFIER_UUID = UUIDHelper.generateAttributeModifierUUID("elemental_effects", "marked_for_death_armor");
 
     private static final String NBT_ACCUMULATED_DAMAGE = "MarkedForDeathAccumulatedDamage";
     private static final String NBT_HAS_TRIGGERED = "MarkedForDeathTriggered";

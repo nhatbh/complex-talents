@@ -23,6 +23,7 @@ public class BuiltOrigin implements Origin {
     private final Map<String, double[]> scaledStats;
     private final Map<String, PassiveStackDef> passiveStacks;
     private final OriginRenderer renderer;
+    private final double[] scaledMaxResource;
 
     /**
      * Create a BuiltOrigin from an OriginBuilder.
@@ -36,6 +37,7 @@ public class BuiltOrigin implements Origin {
         this.scaledStats = builder.getScaledStats();
         this.passiveStacks = builder.getPassiveStacks();
         this.renderer = builder.getRenderer();
+        this.scaledMaxResource = builder.getScaledMaxResource();
     }
 
     @Override
@@ -72,6 +74,18 @@ public class BuiltOrigin implements Origin {
         // Clamp level to valid range
         int index = Math.min(Math.max(level - 1, 0), values.length - 1);
         return values[index];
+    }
+
+    @Override
+    public double getMaxResource(int level) {
+        if (scaledMaxResource == null || scaledMaxResource.length == 0) {
+            // Fall back to resource type's fixed max
+            ResourceType type = getResourceType();
+            return type != null ? type.getMax() : 0;
+        }
+        // Clamp to valid range
+        int index = Math.min(Math.max(level - 1, 0), scaledMaxResource.length - 1);
+        return scaledMaxResource[index];
     }
 
     @Override

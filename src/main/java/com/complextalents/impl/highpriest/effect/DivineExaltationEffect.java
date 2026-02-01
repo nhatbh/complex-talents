@@ -1,5 +1,7 @@
 package com.complextalents.impl.highpriest.effect;
 
+import com.complextalents.util.UUIDHelper;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
@@ -23,10 +25,9 @@ public class DivineExaltationEffect extends MobEffect {
     private static final String NBT_CASTER_UUID = "DivineExaltationCasterUUID";
     private static final String NBT_SKILL_LEVEL = "DivineExaltationSkillLevel";
     private static final String NBT_PIETY_PER_HIT = "DivineExaltationPietyPerHit";
-    private static final String NBT_DAMAGE_BOOST_UUID = "DivineExaltationDamageBoostUUID";
 
     // Damage boost attribute modifier UUID (unique per entity)
-    private static final UUID DAMAGE_MODIFIER_UUID = UUID.fromString("a4b1c5d3-e7f9-4a2b-8c6d-1e3f5a7b9c0d");
+    private static final UUID DAMAGE_MODIFIER_UUID = UUIDHelper.generateAttributeModifierUUID("high_priest_effects", "divine_exaltation_damage");
 
     public DivineExaltationEffect() {
         super(MobEffectCategory.BENEFICIAL, 0xFFD700); // Gold color

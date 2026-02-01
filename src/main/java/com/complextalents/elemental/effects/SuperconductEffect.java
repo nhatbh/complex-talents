@@ -1,5 +1,6 @@
 package com.complextalents.elemental.effects;
 
+import com.complextalents.util.UUIDHelper;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,7 +15,7 @@ import java.util.UUID;
  */
 public class SuperconductEffect extends MobEffect {
 
-    private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("a8b3c4d5-6e7f-4a8b-9c0d-1e2f3a4b5c6d");
+    private static final UUID ARMOR_MODIFIER_UUID = UUIDHelper.generateAttributeModifierUUID("elemental_effects", "superconduct_armor");
 
     public SuperconductEffect(MobEffectCategory category, int color) {
         super(category, color);

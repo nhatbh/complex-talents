@@ -19,7 +19,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -27,20 +26,19 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 /**
- * Divine Grace - A channeled AoE aura skill with three distinct tiers based on channel time.
+ * Divine Grace - A channeled AoE aura skill with two distinct tiers based on channel time.
  * <p>
  * Requires full Grace stacks (10) to activate. The effect depends on how long the skill is channeled:
  * <ul>
- *   <li>Tier 1: Sacred Withdrawal (&lt; 1 second) - Allies gain speed for retreat/reset</li>
- *   <li>Tier 2: Divine Exaltation (1-2 seconds) - Allies gain damage boost and generate piety for caster on hit</li>
- *   <li>Tier 3: The Sanctuary (2+ seconds) - Creates a spherical barrier that blocks enemies and projectiles</li>
+ *   <li>Tier 1 (&lt; 1 second): Divine Exaltation - Allies gain damage boost and generate piety for caster on hit</li>
+ *   <li>Tier 2 (1+ seconds): The Sanctuary - Creates a spherical barrier that blocks enemies and projectiles</li>
  * </ul>
  * <p>
  * <strong>Properties:</strong>
  * <ul>
  *   <li>Resource: Piety (cost varies by tier)</li>
- *   <li>Cooldown: 8 seconds</li>
- *   <li>Max Channel Time: 3 seconds</li>
+ *   <li>Cooldown: 240/200/160/120 seconds (by level)</li>
+ *   <li>Max Channel Time: 2 seconds</li>
  *   <li>Max Level: 4</li>
  *   <li>Aura Radius: 8/10/12/15 blocks (by level)</li>
  *   <li>Requires: 10 Grace stacks</li>
@@ -60,20 +58,18 @@ public class DivineGraceSkill {
                 .icon(ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/highpriest/divine_grace.png"))
                 .maxRange(0.0)  // Self-cast, AoE around player
                 .minChannelTime(0.0)  // Can release anytime
-                .maxChannelTime(3.0)  // Max 3 seconds for Tier 3
-                .activeCooldown(8.0)  // 8 second cooldown
+                .maxChannelTime(2.0)  // Max 2 seconds for Tier 2
+                .scaledCooldown(new double[]{240.0, 200.0, 160.0, 120.0})  // 240/200/160/120 second cooldown by level
                 .setMaxLevel(4)
                 // Aura radius: 8/10/12/15 blocks
                 .scaledStat("auraRadius", new double[]{8.0, 10.0, 12.0, 15.0})
-                // Tier 1 speed duration multiplier: 1/2/3/4
-                .scaledStat("speedDurationMult", new double[]{1.0, 2.0, 3.0, 4.0})
-                // Tier 2 damage boost: 10/15/20/25%
+                // Tier 1 damage boost: 10/15/20/25%
                 .scaledStat("damageBoost", new double[]{0.10, 0.15, 0.20, 0.25})
-                // Tier 2 piety per hit: 3/5/7/10
+                // Tier 1 piety per hit: 3/5/7/10
                 .scaledStat("pietyPerHit", new double[]{3.0, 5.0, 7.0, 10.0})
-                // Tier 3 barrier HP multiplier: 2/3/4/5
+                // Tier 2 barrier HP multiplier: 2/3/4/5
                 .scaledStat("barrierHpMult", new double[]{2.0, 3.0, 4.0, 5.0})
-                // Tier 2 duration: 20 seconds
+                // Tier 1 duration: 20 seconds
                 .scaledStat("exaltationDuration", new double[]{20.0, 20.0, 20.0, 20.0})
                 .validate((context, player) -> {
                     // Must have 10 Grace stacks to activate
@@ -95,13 +91,10 @@ public class DivineGraceSkill {
                     double auraRadius = context.getStat("auraRadius");
 
                     if (channelTime < 1.0) {
-                        // Tier 1: Sacred Withdrawal
-                        applySacredWithdrawal(context, player, level, auraRadius);
-                    } else if (channelTime < 2.0) {
-                        // Tier 2: Divine Exaltation
+                        // Tier 1: Divine Exaltation (damage boost)
                         applyDivineExaltation(context, player, level, auraRadius);
                     } else {
-                        // Tier 3: The Sanctuary
+                        // Tier 2: The Sanctuary (barrier)
                         applySanctuary(context, player, level, auraRadius);
                     }
                 })
@@ -109,65 +102,15 @@ public class DivineGraceSkill {
     }
 
     /**
-     * Tier 1: Sacred Withdrawal
-     * Consumes 1/3 of current Piety.
-     * Allies in range gain speed for duration based on piety consumed.
-     */
-    private static void applySacredWithdrawal(Skill.ExecutionContext context, ServerPlayer player,
-                                               ServerLevel level, double auraRadius) {
-        // Calculate piety to consume (1/3 current)
-        double currentPiety = OriginManager.getResource(player);
-        double pietyConsumed = currentPiety / 3.0;
-        OriginManager.modifyResource(player, -pietyConsumed);
-
-        // Get speed duration multiplier
-        double durationMult = context.getStat("speedDurationMult");
-        int durationTicks = (int) (pietyConsumed * 20.0 * durationMult);
-
-        // Always apply to caster first
-        player.addEffect(new MobEffectInstance(
-                MobEffects.MOVEMENT_SPEED,
-                durationTicks,
-                1, // Amplifier for significant speed boost
-                false, false, true
-        ));
-
-        // Get allies in range (excluding caster since they already got it)
-        List<LivingEntity> allies = getNearbyAllies(player, auraRadius).stream()
-                .filter(e -> e != player)
-                .toList();
-
-        // Apply speed effect to each ally
-        for (LivingEntity ally : allies) {
-            ally.addEffect(new MobEffectInstance(
-                    MobEffects.MOVEMENT_SPEED,
-                    durationTicks,
-                    1, // Amplifier for significant speed boost
-                    false, false, true
-            ));
-        }
-
-        // Play sound
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0f, 1.5f);
-
-        // Feedback message
-        player.sendSystemMessage(Component.literal(String.format(
-                "§eSacred Withdrawal! §7%d allies gain speed for §f%.1f§7 seconds.",
-                allies.size() + 1, durationTicks / 20.0
-        )));
-    }
-
-    /**
-     * Tier 2: Divine Exaltation
-     * Consumes 2/3 of current Piety.
+     * Tier 1: Divine Exaltation
+     * Consumes 1/2 of current Piety.
      * Allies in range gain damage boost and generate piety for caster on hit.
      */
     private static void applyDivineExaltation(Skill.ExecutionContext context, ServerPlayer player,
                                               ServerLevel level, double auraRadius) {
-        // Calculate piety to consume (2/3 current)
+        // Calculate piety to consume (1/2 current)
         double currentPiety = OriginManager.getResource(player);
-        double pietyConsumed = (currentPiety * 2.0) / 3.0;
+        double pietyConsumed = currentPiety / 2.0;
         OriginManager.modifyResource(player, -pietyConsumed);
 
         // Get effect stats
@@ -221,7 +164,7 @@ public class DivineGraceSkill {
     }
 
     /**
-     * Tier 3: The Sanctuary
+     * Tier 2: The Sanctuary
      * Consumes ALL Piety.
      * Pushes all enemies outside radius, creates spherical barrier.
      */

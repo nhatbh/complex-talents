@@ -79,6 +79,15 @@ public interface IPlayerSkillData {
     void clearCooldown(ResourceLocation skillId);
 
     /**
+     * Get the cooldown expiration game time for a skill.
+     *
+     * @param skillId The skill ID
+     * @return The expiration game time, or null if not on cooldown
+     */
+    @Nullable
+    Long getCooldownExpiration(ResourceLocation skillId);
+
+    /**
      * Check if passive cooldown is active (for hybrid skills).
      *
      * @param skillId The skill ID

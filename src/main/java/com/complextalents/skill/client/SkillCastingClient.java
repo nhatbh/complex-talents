@@ -78,6 +78,24 @@ public class SkillCastingClient {
         ChannelManager.reset();
     }
 
+    // ==================== Pending Channel State Delegates ====================
+
+    public static void setPendingChannelStart(int slotIndex) {
+        ChannelManager.setPendingChannelStart(slotIndex);
+    }
+
+    public static boolean hasPendingChannelStart() {
+        return ChannelManager.hasPendingChannelStart();
+    }
+
+    public static int getPendingSlot() {
+        return ChannelManager.getPendingSlot();
+    }
+
+    public static void clearPendingChannelStart() {
+        ChannelManager.clearPendingChannelStart();
+    }
+
     // ==================== Skill Information ====================
 
     /**

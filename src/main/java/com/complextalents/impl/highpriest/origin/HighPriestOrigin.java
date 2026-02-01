@@ -38,10 +38,10 @@ import java.util.UUID;
  * A skilled Priest is an immortal raid commander; a sloppy one is a liability with no resources.
  * </p>
  *
- * <h3>Resource: Piety (0-100)</h3>
+ * <h3>Resource: Piety (0-100/125/150/200 by level)</h3>
  * <ul>
  *   <li><strong>Generation:</strong> Gain Piety when Iron's Spells successfully hit or heal</li>
- *   <li><strong>Punishment:</strong> Lose 20 Piety instantly when taking damage</li>
+ *   <li><strong>Punishment:</strong> Lose Piety instantly when taking damage</li>
  *   <li><strong>Economy:</strong> Forces careful aim and dodging</li>
  * </ul>
  *
@@ -106,6 +106,7 @@ public class HighPriestOrigin {
                 .displayName("High Priest")
                 .description(Component.literal("Holy Judgment - Divine Retribution through perfect positioning"))
                 .resourceType(PIETY)
+                .scaledMaxResource(new double[]{100.0, 125.0, 150.0, 200.0})  // Max Piety by level: 100/125/150/200
                 .maxLevel(5)
                 // Grace stacks - gain over time, lose on damage
                 .passiveStack("grace", PassiveStackDef.create("grace")

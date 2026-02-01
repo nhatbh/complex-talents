@@ -22,6 +22,84 @@ import net.minecraftforge.fml.common.Mod;
 public class SkillCooldownHandler {
 
     /**
+     * Result of skill cast validation.
+     */
+    public static class ValidationResult {
+        private final boolean valid;
+        private final String failureReason;
+
+        private ValidationResult(boolean valid, String failureReason) {
+            this.valid = valid;
+            this.failureReason = failureReason;
+        }
+
+        public static ValidationResult success() {
+            return new ValidationResult(true, null);
+        }
+
+        public static ValidationResult failure(String reason) {
+            return new ValidationResult(false, reason);
+        }
+
+        public boolean isValid() {
+            return valid;
+        }
+
+        public String getFailureReason() {
+            return failureReason;
+        }
+    }
+
+    /**
+     * Validate if a player can cast a skill (check cooldowns and resources).
+     * This method is reusable for both channel start validation and final cast validation.
+     *
+     * @param player The player attempting to cast
+     * @param skillId The skill being cast
+     * @return ValidationResult indicating success or failure with reason
+     */
+    public static ValidationResult validateSkillCast(ServerPlayer player, ResourceLocation skillId) {
+        var skillDataOpt = player.getCapability(SkillDataProvider.SKILL_DATA);
+        if (!skillDataOpt.isPresent()) {
+            return ValidationResult.failure("Skill data not available");
+        }
+
+        var skillData = skillDataOpt.resolve().get();
+
+        // Get skill from registry
+        Skill skill = SkillRegistry.getInstance().getSkill(skillId);
+        if (skill == null) {
+            return ValidationResult.failure("Unknown skill");
+        }
+
+        // For toggle skills: if already active, this is a valid toggle-off request
+        // The caller should handle the actual toggle-off logic
+        if (skill.isToggleable() && skillData.isToggleActive(skillId)) {
+            return ValidationResult.success(); // Allow toggle-off
+        }
+
+        // Check active cooldown
+        if (skillData.isOnCooldown(skillId)) {
+            double remaining = skillData.getCooldown(skillId);
+            return ValidationResult.failure(String.format("Cooldown: %.1fs", remaining));
+        }
+
+        // Check resource cost
+        int skillLevel = skillData.getSkillLevel(skillId);
+        double cost = skill.getResourceCost(skillLevel);
+        if (cost > 0) {
+            if (!hasEnoughResource(player, skill, cost)) {
+                String resourceName = skill.getResourceType() != null
+                        ? skill.getResourceType().getPath()
+                        : "resource";
+                return ValidationResult.failure("Not enough " + resourceName);
+            }
+        }
+
+        return ValidationResult.success();
+    }
+
+    /**
      * Stage 1: Check cooldowns and resources during cast request.
      * High priority to run before other handlers.
      */
@@ -63,24 +141,11 @@ public class SkillCooldownHandler {
             return;
         }
 
-        // Check active cooldown
-        if (skillData.isOnCooldown(skillId)) {
+        // Use the common validation method for cooldown and resource checks
+        ValidationResult result = validateSkillCast(player, skillId);
+        if (!result.isValid()) {
             event.setCanceled(true);
-            double remaining = skillData.getCooldown(skillId);
-            event.setFailureReason(String.format("Cooldown: %.1fs", remaining));
-            return;
-        }
-
-        // Check resource cost
-        if (skill.getResourceCost() > 0) {
-            if (!hasEnoughResource(player, skill)) {
-                event.setCanceled(true);
-                String resourceName = skill.getResourceType() != null
-                        ? skill.getResourceType().getPath()
-                        : "resource";
-                event.setFailureReason("Not enough " + resourceName);
-                return;
-            }
+            event.setFailureReason(result.getFailureReason());
         }
     }
 
@@ -109,29 +174,36 @@ public class SkillCooldownHandler {
             return;
         }
 
+        // Get skill level for scaling
+        int skillLevel = skillData.getSkillLevel(skillId);
+
         // For toggle skills: activate toggle and apply cooldown
         // Cooldown starts when toggle is turned on
         if (skill.isToggleable()) {
             skillData.setToggleActive(skillId, true);
-            if (skill.getActiveCooldown() > 0) {
-                skillData.setCooldown(skillId, skill.getActiveCooldown());
+            double cooldown = skill.getActiveCooldown(skillLevel);
+            if (cooldown > 0) {
+                skillData.setCooldown(skillId, cooldown);
             }
             player.sendSystemMessage(Component.literal("\u00A7aToggle skill activated"));
             // Consume initial resource cost for toggle-on
-            if (skill.getResourceCost() > 0) {
-                consumeResource(player, skill, skill.getResourceCost());
+            double cost = skill.getResourceCost(skillLevel);
+            if (cost > 0) {
+                consumeResource(player, skill, cost);
             }
             return;
         }
 
         // For non-toggle skills: apply cooldown
-        if (skill.getActiveCooldown() > 0) {
-            skillData.setCooldown(skillId, skill.getActiveCooldown());
+        double cooldown = skill.getActiveCooldown(skillLevel);
+        if (cooldown > 0) {
+            skillData.setCooldown(skillId, cooldown);
         }
 
         // Consume resources
-        if (skill.getResourceCost() > 0) {
-            consumeResource(player, skill, skill.getResourceCost());
+        double cost = skill.getResourceCost(skillLevel);
+        if (cost > 0) {
+            consumeResource(player, skill, cost);
         }
     }
 
@@ -199,11 +271,12 @@ public class SkillCooldownHandler {
      *
      * @param player The player
      * @param skill  The skill with resource cost
+     * @param cost   The amount of resource required
      * @return true if player has enough resources
      */
-    private static boolean hasEnoughResource(ServerPlayer player, Skill skill) {
+    private static boolean hasEnoughResource(ServerPlayer player, Skill skill, double cost) {
         ResourceLocation resourceType = skill.getResourceType();
-        if (resourceType == null) {
+        if (resourceType == null || cost <= 0) {
             return true;
         }
 

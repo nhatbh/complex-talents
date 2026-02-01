@@ -3,7 +3,6 @@ package com.complextalents.impl.highpriest.skills.covenantofprotection;
 import com.complextalents.impl.highpriest.effect.CovenantProtectionEffect;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.network.ActivateBeamPacket;
-import com.complextalents.network.DeactivateBeamPacket;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.SkillNature;
@@ -33,8 +32,8 @@ import java.util.UUID;
  * <p>
  * <strong>Properties:</strong>
  * <ul>
- *   <li>Resource: Piety (15 initial cost)</li>
- *   <li>Cooldown: 20 seconds</li>
+ *   <li>Resource: Piety (15/10/5/0 initial cost by level)</li>
+ *   <li>Cooldown: 60/50/40/30 seconds (by level)</li>
  *   <li>Range: 15/20/25/30 blocks (by level)</li>
  *   <li>Max Level: 4</li>
  *   <li>Duration: 10/15/20/25 seconds (by level)</li>
@@ -58,8 +57,8 @@ public class CovenantOfProtectionSkill {
                 .targeting(TargetType.ENTITY)
                 .icon(ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/highpriest/covenant_of_protection.png"))
                 .maxRange(15.0)  // Max range at level 4
-                .activeCooldown(20.0)  // 20 second cooldown (starts when toggle ends)
-                .resourceCost(15.0, "complextalents:piety")
+                .scaledCooldown(new double[]{60.0, 50.0, 40.0, 30.0})  // 60/50/40/20 second cooldown by level (starts when toggle ends)
+                .scaledResourceCost(new double[]{15.0, 10.0, 5.0, 0.0}, "complextalents:piety")  // 15/10/5/0 piety cost by level
                 .toggleable(true)  // MAKES IT A TOGGLE SKILL
                 .toggleMaxDuration(25.0)  // Max duration matches level 4 duration
                 .setMaxLevel(4)

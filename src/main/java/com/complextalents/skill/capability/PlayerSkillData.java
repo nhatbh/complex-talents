@@ -124,6 +124,25 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         syncCooldowns();
     }
 
+    /**
+     * Get the cooldown expiration time for a skill.
+     *
+     * @param skillId The skill ID
+     * @return The expiration game time, or null if not on cooldown
+     */
+    public Long getCooldownExpiration(ResourceLocation skillId) {
+        if (!activeCooldowns.containsKey(skillId)) {
+            return null;
+        }
+        long gameTime = player.level().getGameTime();
+        long expiration = activeCooldowns.get(skillId);
+        if (gameTime >= expiration) {
+            activeCooldowns.remove(skillId);
+            return null;
+        }
+        return expiration;
+    }
+
     @Override
     public boolean isPassiveOnCooldown(ResourceLocation skillId) {
         if (!passiveCooldowns.containsKey(skillId)) {
@@ -212,6 +231,9 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
                 continue;
             }
 
+            // Get skill level for scaling
+            int skillLevel = getSkillLevel(toggleSkill);
+
             // Check if max duration has been reached
             if (skill.getToggleMaxDuration() > 0) {
                 Long activationTime = toggleActivationTimes.get(toggleSkill);
@@ -221,8 +243,9 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
                         // Max duration reached - turn off toggle and start cooldown
                         toggleIterator.remove();
                         toggleActivationTimes.remove(toggleSkill);
-                        if (skill.getActiveCooldown() > 0) {
-                            setCooldown(toggleSkill, skill.getActiveCooldown());
+                        double cooldown = skill.getActiveCooldown(skillLevel);
+                        if (cooldown > 0) {
+                            setCooldown(toggleSkill, cooldown);
                         }
                         // Call toggle-off handler if present
                         if (skill.hasToggleOffHandler()) {
@@ -234,9 +257,10 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
                 }
             }
 
-            if (skill.getToggleCostPerTick() > 0) {
+            double toggleCost = skill.getToggleCostPerTick(skillLevel);
+            if (toggleCost > 0) {
                 // Check if player has enough resources
-                if (!hasEnoughResource(skill)) {
+                if (!hasEnoughResource(skill, toggleCost / 20.0)) {
                     // Turn off toggle if not enough resources
                     toggleIterator.remove();
                     toggleActivationTimes.remove(toggleSkill);
@@ -246,7 +270,7 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
                     sync();
                 } else {
                     // Consume resources (per tick cost is per second, so divide by 20)
-                    consumeResource(skill, skill.getToggleCostPerTick() / 20.0);
+                    consumeResource(skill, toggleCost / 20.0);
                 }
             }
         }
@@ -269,7 +293,7 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
     /**
      * Sync cooldown data to client.
      */
-    private void syncCooldowns() {
+    public void syncCooldowns() {
         PacketHandler.sendTo(new SkillCooldownSyncPacket(new HashMap<>(activeCooldowns), player.level().getGameTime()), player);
     }
 
@@ -436,8 +460,26 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
             tag.putLong("formExpiration", formExpiration);
         }
 
-        // Note: Cooldowns are not persisted as they reset on respawn/death
-        // This is intentional - players shouldn't keep cooldowns after death
+        // Serialize active cooldowns (store remaining duration, not absolute time)
+        long currentGameTime = player.level().getGameTime();
+        CompoundTag activeCooldownsTag = new CompoundTag();
+        for (var entry : activeCooldowns.entrySet()) {
+            long remainingTicks = entry.getValue() - currentGameTime;
+            if (remainingTicks > 0) {
+                activeCooldownsTag.putLong(entry.getKey().toString(), remainingTicks);
+            }
+        }
+        tag.put("activeCooldowns", activeCooldownsTag);
+
+        // Serialize passive cooldowns (store remaining duration)
+        CompoundTag passiveCooldownsTag = new CompoundTag();
+        for (var entry : passiveCooldowns.entrySet()) {
+            long remainingTicks = entry.getValue() - currentGameTime;
+            if (remainingTicks > 0) {
+                passiveCooldownsTag.putLong(entry.getKey().toString(), remainingTicks);
+            }
+        }
+        tag.put("passiveCooldowns", passiveCooldownsTag);
 
         return tag;
     }
@@ -482,15 +524,46 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         // Deserialize active form (but don't restore on respawn - players must reactivate)
         // This is intentional: forms should not persist through death
         // If we wanted to restore after logout/login but not death, we'd need a flag
+
+        // Deserialize active cooldowns (restore from remaining duration)
+        if (tag.contains("activeCooldowns")) {
+            CompoundTag cooldownsTag = tag.getCompound("activeCooldowns");
+            long currentGameTime = player.level().getGameTime();
+            for (String key : cooldownsTag.getAllKeys()) {
+                ResourceLocation skillId = ResourceLocation.tryParse(key);
+                if (skillId != null) {
+                    long remainingTicks = cooldownsTag.getLong(key);
+                    // Calculate new expiration based on current game time + remaining duration
+                    activeCooldowns.put(skillId, currentGameTime + remainingTicks);
+                }
+            }
+        }
+
+        // Deserialize passive cooldowns (restore from remaining duration)
+        if (tag.contains("passiveCooldowns")) {
+            CompoundTag cooldownsTag = tag.getCompound("passiveCooldowns");
+            long currentGameTime = player.level().getGameTime();
+            for (String key : cooldownsTag.getAllKeys()) {
+                ResourceLocation skillId = ResourceLocation.tryParse(key);
+                if (skillId != null) {
+                    long remainingTicks = cooldownsTag.getLong(key);
+                    passiveCooldowns.put(skillId, currentGameTime + remainingTicks);
+                }
+            }
+        }
     }
 
     /**
      * Check if player has enough of a resource.
      * This is a placeholder for integration with resource systems like Iron's Spellbooks.
+     *
+     * @param skill The skill with resource cost
+     * @param amount The amount to check
+     * @return true if player has enough resources
      */
-    private boolean hasEnoughResource(Skill skill) {
+    private boolean hasEnoughResource(Skill skill, double amount) {
         ResourceLocation resourceType = skill.getResourceType();
-        if (resourceType == null) {
+        if (resourceType == null || amount <= 0) {
             return true;
         }
 

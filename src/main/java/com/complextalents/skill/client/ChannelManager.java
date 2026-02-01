@@ -32,6 +32,10 @@ public final class ChannelManager {
     private static int currentSlot = -1;
     private static double maxChannelTime = 0;
 
+    // Pending channel start state - used while waiting for server validation
+    private static boolean pendingChannelStart = false;
+    private static int pendingSlot = -1;
+
     private ChannelManager() {}
 
     /**
@@ -188,5 +192,45 @@ public final class ChannelManager {
         currentSlot = -1;
         maxChannelTime = 0;
         channelStartTime = 0;
+        clearPendingChannelStart();
+    }
+
+    // ==================== Pending Channel Start State ====================
+
+    /**
+     * Mark a channel start as pending while waiting for server validation.
+     *
+     * @param slotIndex The slot being requested
+     */
+    public static void setPendingChannelStart(int slotIndex) {
+        pendingChannelStart = true;
+        pendingSlot = slotIndex;
+    }
+
+    /**
+     * Check if there's a pending channel start request.
+     *
+     * @return true if waiting for server response
+     */
+    public static boolean hasPendingChannelStart() {
+        return pendingChannelStart;
+    }
+
+    /**
+     * Get the slot for the pending channel start.
+     *
+     * @return The pending slot index, or -1 if none
+     */
+    public static int getPendingSlot() {
+        return pendingSlot;
+    }
+
+    /**
+     * Clear the pending channel start state.
+     * Called when server response arrives or request is canceled.
+     */
+    public static void clearPendingChannelStart() {
+        pendingChannelStart = false;
+        pendingSlot = -1;
     }
 }

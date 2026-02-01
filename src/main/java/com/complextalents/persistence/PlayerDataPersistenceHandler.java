@@ -45,13 +45,13 @@ public class PlayerDataPersistenceHandler {
             originData.sync(); // Sync to client after restore
         });
 
-        // Restore skill data (slots, levels, form - but NOT cooldowns/toggles)
+        // Restore skill data (slots, levels, form, cooldowns - but NOT toggles)
         player.getCapability(SkillDataProvider.SKILL_DATA).ifPresent(cap -> {
             if (cap instanceof com.complextalents.skill.capability.PlayerSkillData skillData) {
                 CompoundTag savedTag = persistentData.getSkillData(playerId);
                 if (savedTag != null) {
-                    // Deserialize but skip cooldowns and toggles (they reset on death)
                     skillData.deserializeNBT(savedTag);
+                    skillData.syncCooldowns(); // Sync restored cooldowns to client
                     LOGGER.info("[PERSISTENCE] Restored skill data for player {}", playerId);
                 }
             }

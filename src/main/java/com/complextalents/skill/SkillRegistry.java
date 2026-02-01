@@ -247,6 +247,7 @@ public class SkillRegistry {
         com.complextalents.impl.highpriest.skills.seraphsedge.SeraphsEdgeSkill.register();
         com.complextalents.impl.highpriest.skills.covenantofprotection.CovenantOfProtectionSkill.register();
         com.complextalents.impl.highpriest.skills.divinegrace.DivineGraceSkill.register();
+        com.complextalents.impl.highpriest.skills.divineascendance.DivineAscendanceSkill.register();
 
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }

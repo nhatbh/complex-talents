@@ -25,6 +25,7 @@ public class ProjectileImpactHandler {
      * Handle projectile impacts on Sanctuary Barriers.
      * Cancels the projectile's impact and damages the barrier instead.
      */
+    @SuppressWarnings("removal")
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onProjectileImpact(ProjectileImpactEvent event) {
         var rayTraceResult = event.getRayTraceResult();

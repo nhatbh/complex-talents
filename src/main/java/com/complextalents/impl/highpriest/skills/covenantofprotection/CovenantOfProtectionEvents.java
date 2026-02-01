@@ -8,8 +8,6 @@ import com.complextalents.network.DeactivateBeamPacket;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.PulseBeamPacket;
 import com.complextalents.origin.OriginManager;
-import com.complextalents.skill.SkillRegistry;
-import com.complextalents.skill.capability.SkillDataProvider;
 import com.complextalents.skill.event.SkillToggleTerminationEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;

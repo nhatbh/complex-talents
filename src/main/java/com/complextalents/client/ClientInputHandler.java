@@ -8,6 +8,7 @@ import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.client.ClientSkillData;
 import com.complextalents.skill.client.SkillCastingClient;
 import com.complextalents.skill.network.SkillCastPacket;
+import com.complextalents.skill.network.SkillChannelStartPacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -62,6 +63,10 @@ public class ClientInputHandler {
                 SkillCastingClient.cancelChanneling();
                 MC.player.displayClientMessage(Component.literal("§7Channeling canceled"), true);
             }
+            // Also clear any pending channel start
+            if (SkillCastingClient.hasPendingChannelStart()) {
+                SkillCastingClient.clearPendingChannelStart();
+            }
             CombatModeClient.toggle();
             PacketHandler.sendToServer(new ToggleCombatModePacket());
             return;
@@ -115,8 +120,8 @@ public class ClientInputHandler {
     }
 
     /**
-     * Handle skill key press - start channeling (all skills are channeled).
-     * Instant skills will have channelTime = 0.
+     * Handle skill key press - request server validation before starting channeling.
+     * The server will check cooldowns and resources, then respond with approval/denial.
      */
     private static void handleSkillKeyPress(int slotIndex) {
         ResourceLocation skillId = ClientSkillData.getSkillInSlot(slotIndex);
@@ -131,19 +136,29 @@ public class ClientInputHandler {
             return;
         }
 
-        // All skills use channeling - instant skills have maxChannelTime = 0
-        SkillCastingClient.startChanneling(slotIndex, skill.getMaxChannelTime());
-
-        // Only show channeling message for skills with actual channel time
-        if (skill.getMaxChannelTime() > 0) {
-            MC.player.displayClientMessage(Component.literal("§eChanneling..."), true);
+        // Don't allow multiple pending channel requests
+        if (SkillCastingClient.hasPendingChannelStart()) {
+            return;
         }
+
+        // Mark pending state so we know we're waiting for server response
+        SkillCastingClient.setPendingChannelStart(slotIndex);
+
+        // Send request to server to validate cooldowns and resources
+        // Server will respond and we'll start channeling only if approved
+        PacketHandler.sendToServer(new SkillChannelStartPacket(skillId, slotIndex));
     }
 
     /**
      * Handle skill key release - finish channeling and send packet.
      */
     private static void handleSkillKeyRelease(int slotIndex) {
+        // If player released the key before server responded, clear the pending state
+        if (SkillCastingClient.hasPendingChannelStart() && SkillCastingClient.getPendingSlot() == slotIndex) {
+            SkillCastingClient.clearPendingChannelStart();
+            return;
+        }
+
         if (!SkillCastingClient.isChanneling() || SkillCastingClient.getCurrentSlot() != slotIndex) {
             return;
         }

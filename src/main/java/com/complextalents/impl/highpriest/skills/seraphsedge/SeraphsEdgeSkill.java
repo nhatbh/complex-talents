@@ -21,8 +21,8 @@ import net.minecraft.world.phys.Vec3;
  * <p>
  * <strong>Properties:</strong>
  * <ul>
- *   <li>Resource: Piety (no cost for testing)</li>
- *   <li>Cooldown: 5 seconds</li>
+ *   <li>Resource: Piety (15/20/25/30 cost by level)</li>
+ *   <li>Cooldown: 10/9/8/7 seconds (by level)</li>
  *   <li>Channel Time: 1 second</li>
  *   <li>Range: 32 blocks</li>
  *   <li>Max Level: 4</li>
@@ -50,8 +50,8 @@ public class SeraphsEdgeSkill {
                 .maxRange(32.0)
                 .minChannelTime(1.0)  // 1 second channel
                 .maxChannelTime(1.0)  // Fixed 1 second
-                .activeCooldown(5.0)  // 5 second cooldown
-                .resourceCost(0.0, "complextalents:piety")  // No cost for testing
+                .scaledCooldown(new double[]{10.0, 9.0, 8.0, 7.0})  // 10/9/8/7 second cooldown by level
+                .scaledResourceCost(new double[]{15.0, 20.0, 25.0, 30.0}, "complextalents:piety")  // 15/20/25/30 piety cost by level
                 .setMaxLevel(4)
                 .scaledStat("hits", new double[]{3, 4, 5, 6})      // Max bounces per level
                 .scaledStat("damage", new double[]{8, 10, 12, 15}) // Damage per hit

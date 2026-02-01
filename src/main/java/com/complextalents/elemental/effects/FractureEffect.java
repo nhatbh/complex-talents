@@ -1,6 +1,7 @@
 package com.complextalents.elemental.effects;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.util.UUIDHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
@@ -21,7 +22,7 @@ import java.util.UUID;
 public class FractureEffect extends MobEffect {
 
     private static final String NBT_HIT_COUNTER = "FractureHitCounter";
-    private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("b9c4d5e6-7f8a-4b9c-0d1e-2f3a4b5c6d7e");
+    private static final UUID ARMOR_MODIFIER_UUID = UUIDHelper.generateAttributeModifierUUID("elemental_effects", "fracture_armor");
     private static final int MAX_HITS = 3;
 
     public FractureEffect(MobEffectCategory category, int color) {

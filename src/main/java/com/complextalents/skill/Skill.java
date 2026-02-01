@@ -88,16 +88,52 @@ public interface Skill extends PassiveOwner {
     double getActiveCooldown();
 
     /**
+     * Get the active cooldown for a specific skill level.
+     * Default implementation returns the fixed cooldown.
+     * Implementations can override to use scaling arrays.
+     *
+     * @param level The skill level
+     * @return The cooldown in seconds
+     */
+    default double getActiveCooldown(int level) {
+        return getActiveCooldown();
+    }
+
+    /**
      * Cooldown in seconds for the passive trigger
      * Only used for hybrid skills with passive cooldowns
      */
     double getPassiveCooldown();
 
     /**
+     * Get the passive cooldown for a specific skill level.
+     * Default implementation returns the fixed cooldown.
+     * Implementations can override to use scaling arrays.
+     *
+     * @param level The skill level
+     * @return The cooldown in seconds
+     */
+    default double getPassiveCooldown(int level) {
+        return getPassiveCooldown();
+    }
+
+    /**
      * Resource cost for active cast (mana, energy, etc.)
      * Returns 0 if no resource cost
      */
     double getResourceCost();
+
+    /**
+     * Get the resource cost for a specific skill level.
+     * Default implementation returns the fixed cost.
+     * Implementations can override to use scaling arrays.
+     *
+     * @param level The skill level
+     * @return The resource cost
+     */
+    default double getResourceCost(int level) {
+        return getResourceCost();
+    }
 
     /**
      * Resource ID for cost (e.g., "irons_spellbooks:mana")
@@ -137,6 +173,18 @@ public interface Skill extends PassiveOwner {
      * Resource cost per tick while toggled on
      */
     double getToggleCostPerTick();
+
+    /**
+     * Get the toggle cost per tick for a specific skill level.
+     * Default implementation returns the fixed cost.
+     * Implementations can override to use scaling arrays.
+     *
+     * @param level The skill level
+     * @return The cost per tick
+     */
+    default double getToggleCostPerTick(int level) {
+        return getToggleCostPerTick();
+    }
 
     /**
      * Maximum duration in seconds that a toggle can stay active.

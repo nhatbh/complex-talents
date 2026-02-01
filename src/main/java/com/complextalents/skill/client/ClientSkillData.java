@@ -88,6 +88,19 @@ public class ClientSkillData {
     }
 
     /**
+     * Set a cooldown from server data (used when server rejects a skill cast due to cooldown).
+     *
+     * @param skillId The skill ID
+     * @param expirationTime The cooldown expiration game time from server
+     * @param currentServerTime The current server game time
+     */
+    public static void setCooldown(ResourceLocation skillId, long expirationTime, long currentServerTime) {
+        activeCooldowns.put(skillId, expirationTime);
+        serverGameTime = currentServerTime;
+        lastSyncTime = System.currentTimeMillis();
+    }
+
+    /**
      * Clear all cooldown data (on disconnect).
      */
     public static void clearCooldowns() {

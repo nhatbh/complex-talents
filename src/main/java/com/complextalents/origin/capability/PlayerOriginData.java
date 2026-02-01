@@ -86,7 +86,16 @@ public class PlayerOriginData implements IPlayerOriginData {
     public void setResource(double value) {
         ResourceType resourceType = getResourceType();
         if (resourceType != null) {
-            this.resourceValue = resourceType.clamp(value);
+            // Use scaled max if available
+            Origin origin = getOrigin();
+            double max;
+            if (origin != null) {
+                max = origin.getMaxResource(originLevel);
+            } else {
+                max = resourceType.getMax();
+            }
+            double min = resourceType.getMin();
+            this.resourceValue = Math.max(min, Math.min(max, value));
         } else {
             this.resourceValue = value;
         }
@@ -107,7 +116,17 @@ public class PlayerOriginData implements IPlayerOriginData {
         // Send sync packet to client
         ResourceType resourceType = getResourceType();
         ResourceLocation resourceTypeId = resourceType != null ? resourceType.getId() : null;
-        double resourceMax = resourceType != null ? resourceType.getMax() : 0;
+
+        // Use scaled max resource if available
+        double resourceMax;
+        Origin origin = getOrigin();
+        if (origin != null) {
+            resourceMax = origin.getMaxResource(originLevel);
+        } else if (resourceType != null) {
+            resourceMax = resourceType.getMax();
+        } else {
+            resourceMax = 0;
+        }
 
         OriginDataSyncPacket.send(
                 player,

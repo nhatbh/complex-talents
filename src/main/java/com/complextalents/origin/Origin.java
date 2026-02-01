@@ -68,6 +68,19 @@ public interface Origin extends PassiveOwner {
     ResourceType getResourceType();
 
     /**
+     * Get the maximum resource value for a specific origin level.
+     * Default implementation returns the resource type's fixed max.
+     * Implementations can override to use scaling arrays.
+     *
+     * @param level The origin level
+     * @return The maximum resource value
+     */
+    default double getMaxResource(int level) {
+        ResourceType type = getResourceType();
+        return type != null ? type.getMax() : 0;
+    }
+
+    /**
      * Maximum level this origin can be upgraded to.
      * Default is 1 (no leveling).
      */

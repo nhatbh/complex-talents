@@ -4,6 +4,8 @@ import com.complextalents.TalentsMod;
 import com.complextalents.origin.network.OriginDataSyncPacket;
 import com.complextalents.passive.network.PassiveStackSyncPacket;
 import com.complextalents.skill.network.SkillCastPacket;
+import com.complextalents.skill.network.SkillChannelStartPacket;
+import com.complextalents.skill.network.SkillChannelStartResponsePacket;
 import com.complextalents.skill.network.SkillCooldownSyncPacket;
 import com.complextalents.skill.network.SkillDataSyncPacket;
 import com.complextalents.network.elemental.SpawnBloomReactionPacket;
@@ -235,6 +237,20 @@ public class PacketHandler {
                 SkillCooldownSyncPacket::encode,
                 SkillCooldownSyncPacket::decode,
                 SkillCooldownSyncPacket::handle);
+
+        // Skill channel start packet (client requests server validation before channeling)
+        INSTANCE.registerMessage(packetId++,
+                SkillChannelStartPacket.class,
+                SkillChannelStartPacket::encode,
+                SkillChannelStartPacket::decode,
+                SkillChannelStartPacket::handle);
+
+        // Skill channel start response packet (server responds to channel start request)
+        INSTANCE.registerMessage(packetId++,
+                SkillChannelStartResponsePacket.class,
+                SkillChannelStartResponsePacket::encode,
+                SkillChannelStartResponsePacket::decode,
+                SkillChannelStartResponsePacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

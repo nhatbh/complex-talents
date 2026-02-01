@@ -47,8 +47,13 @@ public class SkillExecutionHandler {
 
         ServerPlayer player = event.getPlayer();
 
+        // Get skill level for scaling
+        int skillLevel = player.getCapability(SkillDataProvider.SKILL_DATA)
+                .map(data -> data.getSkillLevel(skillId))
+                .orElse(1);
+
         // Validate resource cost (check against origin resource)
-        double cost = skill.getResourceCost();
+        double cost = skill.getResourceCost(skillLevel);
         ResourceLocation costResourceType = skill.getResourceType();
         if (cost > 0 && costResourceType != null) {
             // Get player's active origin resource type
@@ -211,7 +216,13 @@ public class SkillExecutionHandler {
      * @param skill  The skill being cast
      */
     private static void consumeOriginResource(ServerPlayer player, Skill skill) {
-        double cost = skill.getResourceCost();
+        ResourceLocation skillId = skill.getId();
+        // Get skill level for scaling
+        int skillLevel = player.getCapability(SkillDataProvider.SKILL_DATA)
+                .map(data -> data.getSkillLevel(skillId))
+                .orElse(1);
+
+        double cost = skill.getResourceCost(skillLevel);
         ResourceLocation costResourceType = skill.getResourceType();
         if (cost > 0 && costResourceType != null) {
             ResourceType playerResource = OriginManager.getResourceType(player);
