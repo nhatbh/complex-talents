@@ -25,6 +25,7 @@ import com.complextalents.network.elemental.SpawnSpringReactionPacket;
 import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
+import com.complextalents.network.highpriest.SpawnBarrierFXPacket;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -173,6 +174,13 @@ public class PacketHandler {
                 SpawnSeraphSwordFXPacket::encode,
                 SpawnSeraphSwordFXPacket::decode,
                 SpawnSeraphSwordFXPacket::handle);
+
+        // Sanctuary Barrier FX packet
+        INSTANCE.registerMessage(packetId++,
+                SpawnBarrierFXPacket.class,
+                SpawnBarrierFXPacket::encode,
+                SpawnBarrierFXPacket::decode,
+                SpawnBarrierFXPacket::handle);
 
         // Holy Beam packets - Covenant of Protection visual effects
         INSTANCE.registerMessage(packetId++,

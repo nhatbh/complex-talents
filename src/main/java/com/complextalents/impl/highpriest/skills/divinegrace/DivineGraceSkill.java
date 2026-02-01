@@ -3,6 +3,8 @@ package com.complextalents.impl.highpriest.skills.divinegrace;
 import com.complextalents.impl.highpriest.effect.DivineExaltationEffect;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.impl.highpriest.entity.SanctuaryBarrierEntity;
+import com.complextalents.network.PacketHandler;
+import com.complextalents.network.highpriest.SpawnBarrierFXPacket;
 import com.complextalents.origin.OriginManager;
 import com.complextalents.passive.PassiveManager;
 import com.complextalents.skill.Skill;
@@ -122,8 +124,18 @@ public class DivineGraceSkill {
         double durationMult = context.getStat("speedDurationMult");
         int durationTicks = (int) (pietyConsumed * 20.0 * durationMult);
 
-        // Get allies in range
-        List<LivingEntity> allies = getNearbyAllies(player, auraRadius);
+        // Always apply to caster first
+        player.addEffect(new MobEffectInstance(
+                MobEffects.MOVEMENT_SPEED,
+                durationTicks,
+                1, // Amplifier for significant speed boost
+                false, false, true
+        ));
+
+        // Get allies in range (excluding caster since they already got it)
+        List<LivingEntity> allies = getNearbyAllies(player, auraRadius).stream()
+                .filter(e -> e != player)
+                .toList();
 
         // Apply speed effect to each ally
         for (LivingEntity ally : allies) {
@@ -142,7 +154,7 @@ public class DivineGraceSkill {
         // Feedback message
         player.sendSystemMessage(Component.literal(String.format(
                 "§eSacred Withdrawal! §7%d allies gain speed for §f%.1f§7 seconds.",
-                allies.size(), durationTicks / 20.0
+                allies.size() + 1, durationTicks / 20.0
         )));
     }
 
@@ -164,8 +176,22 @@ public class DivineGraceSkill {
         double duration = context.getStat("exaltationDuration");
         int durationTicks = (int) (duration * 20);
 
-        // Get allies in range
-        List<LivingEntity> allies = getNearbyAllies(player, auraRadius);
+        // Always apply to caster first
+        MobEffectInstance playerEffect = new MobEffectInstance(
+                HighPriestEffects.DIVINE_EXALTATION.get(),
+                durationTicks,
+                skillLevel - 1,
+                false, false, true
+        );
+        player.addEffect(playerEffect);
+        DivineExaltationEffect.initializeEffectData(
+                player, player.getUUID(), skillLevel, pietyPerHit
+        );
+
+        // Get allies in range (excluding caster since they already got it)
+        List<LivingEntity> allies = getNearbyAllies(player, auraRadius).stream()
+                .filter(e -> e != player)
+                .toList();
 
         // Apply effect to each ally
         for (LivingEntity ally : allies) {
@@ -190,7 +216,7 @@ public class DivineGraceSkill {
         // Feedback message
         player.sendSystemMessage(Component.literal(String.format(
                 "§6Divine Exaltation! §7%d allies gain §e+%d%%§7 damage. Hits generate piety.",
-                allies.size(), (int) (context.getStat("damageBoost") * 100)
+                allies.size() + 1, (int) (context.getStat("damageBoost") * 100)
         )));
     }
 
@@ -239,9 +265,21 @@ public class DivineGraceSkill {
         level.addFreshEntity(barrier);
 
         // Set synced data after entity is added to the world
-        barrier.setRadius((float) auraRadius);
+        // Set target radius - barrier will scale up from tiny to this size over 1 second
+        barrier.setTargetRadius((float) auraRadius);
         barrier.setHp(barrierHP);
         barrier.setMaxHp(barrierHP);
+
+        // Send creation effect packet
+        PacketHandler.sendToNearby(
+            new SpawnBarrierFXPacket(
+                barrier.getX(), barrier.getY(), barrier.getZ(),
+                SpawnBarrierFXPacket.EffectType.CREATED,
+                barrier.getTargetRadius(),
+                barrier.getId()
+            ),
+            level, barrier.position()
+        );
 
         // Play sound
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
