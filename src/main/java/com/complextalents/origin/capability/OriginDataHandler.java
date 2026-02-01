@@ -7,7 +7,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -45,16 +44,8 @@ public class OriginDataHandler {
         });
     }
 
-    @SubscribeEvent(priority = EventPriority.LOW)
-    public static void onPlayerClone(PlayerEvent.Clone event) {
-        // Copy origin data on respawn and after death
-        // Data persists until explicitly changed by command
-        event.getOriginal().getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(oldData -> {
-            event.getEntity().getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(newData -> {
-                newData.copyFrom(oldData);
-            });
-        });
-    }
+    // Clone event is now handled by PlayerDataPersistenceHandler using SavedData
+    // This removes the dependency on reviveCaps() which was unreliable
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {

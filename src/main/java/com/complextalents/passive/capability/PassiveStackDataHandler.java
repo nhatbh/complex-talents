@@ -7,7 +7,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -39,19 +38,8 @@ public class PassiveStackDataHandler {
         // No periodic tick needed for passive stack capability itself
     }
 
-    @SubscribeEvent(priority = EventPriority.LOW)
-    public static void onPlayerClone(PlayerEvent.Clone event) {
-        // Copy passive stack data on respawn and after death
-        // Data persists until explicitly changed by command
-        event.getOriginal().getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(oldData -> {
-            event.getEntity().getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(newData -> {
-                // Copy passive stacks
-                for (var entry : oldData.getPassiveStacks().entrySet()) {
-                    newData.setPassiveStacks(entry.getKey(), entry.getValue());
-                }
-            });
-        });
-    }
+    // Clone event is now handled by PlayerDataPersistenceHandler using SavedData
+    // This removes the dependency on reviveCaps() which was unreliable
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
