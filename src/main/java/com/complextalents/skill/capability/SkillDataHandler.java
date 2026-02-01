@@ -7,6 +7,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -43,19 +44,13 @@ public class SkillDataHandler {
         });
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        // Copy skill data on respawn (not death)
-        if (event.isWasDeath()) {
-            return;
-        }
-
+        // Copy skill data on respawn and after death
+        // Data persists until explicitly changed by command
         event.getOriginal().getCapability(SkillDataProvider.SKILL_DATA).ifPresent(oldData -> {
             event.getEntity().getCapability(SkillDataProvider.SKILL_DATA).ifPresent(newData -> {
-                // Copy slot assignments on respawn
-                for (int i = 0; i < IPlayerSkillData.SLOT_COUNT; i++) {
-                    newData.setSkillInSlot(i, oldData.getSkillInSlot(i));
-                }
+                newData.copyFrom(oldData);
             });
         });
     }

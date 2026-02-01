@@ -34,6 +34,15 @@ public class HighPriestEntities {
                             .fireImmune()
                             .build("seraphs_bouncing_sword"));
 
+    public static final RegistryObject<EntityType<SanctuaryBarrierEntity>> SANCTUARY_BARRIER =
+            ENTITY_TYPES.register("sanctuary_barrier",
+                    () -> EntityType.Builder.<SanctuaryBarrierEntity>of(SanctuaryBarrierEntity::new, MobCategory.MISC)
+                            .sized(1.0f, 1.0f)
+                            .clientTrackingRange(8)
+                            .updateInterval(1)
+                            .fireImmune()
+                            .build("sanctuary_barrier"));
+
     public static void register(IEventBus modEventBus) {
         ENTITY_TYPES.register(modEventBus);
         HighPriestSounds.register(modEventBus);

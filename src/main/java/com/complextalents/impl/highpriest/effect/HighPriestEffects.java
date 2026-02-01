@@ -19,6 +19,9 @@ public class HighPriestEffects {
     public static final RegistryObject<MobEffect> COVENANT_PROTECTION = EFFECTS.register("covenant_protection",
         () -> new CovenantProtectionEffect());
 
+    public static final RegistryObject<MobEffect> DIVINE_EXALTATION = EFFECTS.register("divine_exaltation",
+        () -> new DivineExaltationEffect());
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered High Priest mob effects");

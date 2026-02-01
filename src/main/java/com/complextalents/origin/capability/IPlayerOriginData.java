@@ -86,4 +86,12 @@ public interface IPlayerOriginData extends INBTSerializable<net.minecraft.nbt.Co
      * Called each server tick for passive effects.
      */
     void tick();
+
+    /**
+     * Copy all origin data from another instance.
+     * Used during player clone/respawn to persist data.
+     *
+     * @param other The source data to copy from
+     */
+    void copyFrom(IPlayerOriginData other);
 }

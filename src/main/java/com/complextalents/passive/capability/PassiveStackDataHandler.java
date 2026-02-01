@@ -6,8 +6,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -39,16 +39,13 @@ public class PassiveStackDataHandler {
         // No periodic tick needed for passive stack capability itself
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        // Copy passive stack data on respawn (not death)
-        if (event.isWasDeath()) {
-            return;
-        }
-
+        // Copy passive stack data on respawn and after death
+        // Data persists until explicitly changed by command
         event.getOriginal().getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(oldData -> {
             event.getEntity().getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(newData -> {
-                // Copy passive stacks on respawn
+                // Copy passive stacks
                 for (var entry : oldData.getPassiveStacks().entrySet()) {
                     newData.setPassiveStacks(entry.getKey(), entry.getValue());
                 }
@@ -72,24 +69,6 @@ public class PassiveStackDataHandler {
         if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(data -> {
                 data.sync();
-            });
-        }
-    }
-
-    /**
-     * Reset passive stacks on player death.
-     * Passive stacks are meant to be lost on death as a gameplay mechanic.
-     */
-    @SubscribeEvent
-    public static void onPlayerDeath(LivingDeathEvent event) {
-        var entity = event.getEntity();
-        if (entity.level().isClientSide) {
-            return;
-        }
-
-        if (entity instanceof ServerPlayer player) {
-            player.getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(data -> {
-                data.resetPassiveStacks();
             });
         }
     }

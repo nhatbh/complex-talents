@@ -356,6 +356,39 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
         this.formExpiration = expirationTime;
     }
 
+    @Override
+    public void copyFrom(IPlayerSkillData other) {
+        // Copy skill slot assignments
+        ResourceLocation[] otherSlots = other.getAssignedSlots();
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            skillSlots[i] = otherSlots[i];
+        }
+
+        // Copy skill levels by iterating through assigned slots
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            ResourceLocation skillId = skillSlots[i];
+            if (skillId != null) {
+                int level = other.getSkillLevel(skillId);
+                if (level > 1) {
+                    skillLevels.put(skillId, level);
+                }
+            }
+        }
+
+        // Copy active form and expiration
+        ResourceLocation otherForm = other.getActiveForm();
+        if (otherForm != null) {
+            activeForm = otherForm;
+            formExpiration = other.getFormExpiration();
+        }
+
+        // Note: We do NOT copy active toggles, toggle activation times, or cooldowns
+        // Toggles must be reactivated after death/respawn for safety
+        // Cooldowns reset on death as a gameplay mechanic
+
+        sync();
+    }
+
     // NBT serialization for persistence
     @Override
     public CompoundTag serializeNBT() {

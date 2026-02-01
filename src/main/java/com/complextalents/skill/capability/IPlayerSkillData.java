@@ -226,4 +226,12 @@ public interface IPlayerSkillData {
      * @param expirationTime The game time when the form expires
      */
     void setFormExpiration(long expirationTime);
+
+    /**
+     * Copy all skill data from another instance.
+     * Used during player clone/respawn to persist data.
+     *
+     * @param other The source data to copy from
+     */
+    void copyFrom(IPlayerSkillData other);
 }

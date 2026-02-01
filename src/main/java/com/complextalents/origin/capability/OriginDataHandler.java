@@ -3,12 +3,11 @@ package com.complextalents.origin.capability;
 import com.complextalents.TalentsMod;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -46,20 +45,13 @@ public class OriginDataHandler {
         });
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        // Copy origin data on respawn (not death)
-        if (event.isWasDeath()) {
-            return;
-        }
-
+        // Copy origin data on respawn and after death
+        // Data persists until explicitly changed by command
         event.getOriginal().getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(oldData -> {
             event.getEntity().getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(newData -> {
-                // Copy origin and level on respawn
-                newData.setActiveOrigin(oldData.getActiveOrigin());
-                newData.setOriginLevel(oldData.getOriginLevel());
-                // Resource resets to min on respawn
-                newData.setResource(newData.getResourceType() != null ? newData.getResourceType().getMin() : 0);
+                newData.copyFrom(oldData);
             });
         });
     }
@@ -81,24 +73,6 @@ public class OriginDataHandler {
             player.getCapability(OriginDataProvider.ORIGIN_DATA).ifPresent(data -> {
                 data.sync();
             });
-        }
-    }
-
-    /**
-     * Reset passive stacks on player death.
-     * Passive stacks are meant to be lost on death as a gameplay mechanic.
-     * Now handled by the shared passive capability.
-     */
-    @SubscribeEvent
-    public static void onPlayerDeath(LivingDeathEvent event) {
-        LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide) {
-            return;
-        }
-
-        if (entity instanceof ServerPlayer player) {
-            player.getCapability(com.complextalents.passive.capability.PassiveStackDataProvider.PASSIVE_STACK_DATA)
-                    .ifPresent(data -> data.resetPassiveStacks());
         }
     }
 

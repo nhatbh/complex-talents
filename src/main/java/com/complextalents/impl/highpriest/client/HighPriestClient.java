@@ -2,6 +2,7 @@ package com.complextalents.impl.highpriest.client;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.highpriest.client.renderer.DivinePunisherRenderer;
+import com.complextalents.impl.highpriest.client.renderer.SanctuaryBarrierRenderer;
 import com.complextalents.impl.highpriest.client.renderer.SeraphsBouncingSwordRenderer;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import net.minecraftforge.api.distmarker.Dist;
@@ -25,6 +26,10 @@ public class HighPriestClient {
         event.registerEntityRenderer(
                 HighPriestEntities.SERAPHS_BOUNCING_SWORD.get(),
                 SeraphsBouncingSwordRenderer::new
+        );
+        event.registerEntityRenderer(
+                HighPriestEntities.SANCTUARY_BARRIER.get(),
+                SanctuaryBarrierRenderer::new
         );
         TalentsMod.LOGGER.info("Registered High Priest entity renderers");
     }

@@ -136,6 +136,20 @@ public class PlayerOriginData implements IPlayerOriginData {
         // For now, this is empty - tick behaviors are handled by event handlers
     }
 
+    @Override
+    public void copyFrom(IPlayerOriginData other) {
+        // Copy active origin
+        activeOrigin = other.getActiveOrigin();
+
+        // Copy origin level
+        originLevel = other.getOriginLevel();
+
+        // Copy resource value
+        resourceValue = other.getResource();
+
+        sync();
+    }
+
     /**
      * Helper to get the Origin object for the active origin.
      */
