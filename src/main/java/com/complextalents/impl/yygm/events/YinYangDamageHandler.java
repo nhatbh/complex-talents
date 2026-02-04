@@ -162,7 +162,8 @@ public class YinYangDamageHandler {
     /**
      * Handle Exposed gate hit logic for Eight Formation Battle Array Ultimate.
      * All 8 gates are active - each direction has a specific Yin or Yang gate.
-     * Player must hit the correct gate type (Yin or Yang) based on their current pending state.
+     * Player must hit gates in alternating Yin/Yang order (like Harmonized).
+     * Already completed gates are treated as empty gates (body hit penalty).
      * Wrong gate type clears Exposed immediately.
      */
     private static void handleExposedGateHit(LivingDamageEvent event, LivingEntity target, ServerPlayer player) {
@@ -170,14 +171,25 @@ public class YinYangDamageHandler {
         double attackAngle = ExposedEffect.calculateAttackAngle(target, player);
         int compassDirection = ExposedEffect.angleToCompassDirection(attackAngle);
 
-        // Get the required gate type at this direction (what's on the target)
+        // CHECK 1: Is this gate already completed?
+        int completedBitmap = ExposedEffect.getCompletedGatesBitmap(target, player.getUUID());
+        boolean isGateCompleted = (completedBitmap & (1 << compassDirection)) != 0;
+
+        if (isGateCompleted) {
+            // Already completed gate - treat as empty gate (body hit penalty)
+            applyBodyHitPenalty(event, player);
+
+            TalentsMod.LOGGER.debug("YYGM {} hit already completed Exposed gate at direction {}, applying body hit penalty",
+                player.getName().getString(), compassDirection);
+            return;
+        }
+
+        // CHECK 2: Get gate type at the hit direction and next required from Exposed state
         int targetGateType = ExposedEffect.getGateTypeAtDirection(target, player.getUUID(), compassDirection);
+        int nextRequired = ExposedEffect.getNextRequired(target, player.getUUID());
 
-        // Get the player's current attack type (based on pending hit state)
-        int playerAttackType = getPlayerAttackType(player.getUUID());
-
-        // Check if this is a correct gate hit (player's attack type matches target's gate type)
-        boolean isCorrect = (playerAttackType == targetGateType);
+        // CHECK 3: Is this a correct gate hit? (gate type must match next required)
+        boolean isCorrect = (targetGateType == nextRequired);
 
         if (isCorrect) {
             // Mark gate as completed
@@ -202,16 +214,21 @@ public class YinYangDamageHandler {
                 if (completedCount >= 8) {
                     convertToYinYangAnnihilation(target, player);
                 }
-            } else {
-                // Gate already completed - still apply true damage (Yin Yang Annihilation)
-                applyYinYangAnnihilation(event, player);
             }
 
-            // Sync state
+            // Toggle next required gate (same as Harmonized)
+            int newNextRequired = (targetGateType == ExposedEffect.GATE_YANG)
+                ? ExposedEffect.GATE_YIN
+                : ExposedEffect.GATE_YANG;
+            ExposedEffect.setNextRequired(target, player.getUUID(), newNextRequired);
+
+            // Sync state (includes updated nextRequired)
             ExposedEffect.syncExposedState(target, player.getUUID());
 
-            TalentsMod.LOGGER.debug("YYGM {} hit correct Exposed gate at direction {}, target gate: {}, player attack: {}, completed count: {}",
-                player.getName().getString(), compassDirection, targetGateType, playerAttackType, ExposedEffect.getCompletedGateCount(target, player.getUUID()));
+            TalentsMod.LOGGER.debug("YYGM {} hit correct Exposed gate at direction {}, target gate: {}, next was: {}, next now: {}, completed count: {}",
+                player.getName().getString(), compassDirection, targetGateType, nextRequired,
+                newNextRequired == ExposedEffect.GATE_YANG ? "Yang" : "Yin",
+                ExposedEffect.getCompletedGateCount(target, player.getUUID()));
         } else {
             // WRONG gate hit - clear Exposed immediately
             ExposedEffect.removeFromTarget(target, player.getUUID());
@@ -228,8 +245,9 @@ public class YinYangDamageHandler {
                 );
             }
 
-            TalentsMod.LOGGER.debug("YYGM {} hit wrong Exposed gate at direction {}, target gate: {}, player attack: {}, effect cleared",
-                player.getName().getString(), compassDirection, targetGateType, playerAttackType);
+            TalentsMod.LOGGER.debug("YYGM {} hit wrong Exposed gate at direction {}, target gate: {}, next required: {}, effect cleared",
+                player.getName().getString(), compassDirection, targetGateType,
+                nextRequired == ExposedEffect.GATE_YANG ? "Yang" : "Yin");
         }
     }
 
