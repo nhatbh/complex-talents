@@ -5,10 +5,12 @@ import com.complextalents.impl.yygm.EquilibriumData;
 import com.complextalents.impl.yygm.client.renderer.YinYangRenderer;
 import com.complextalents.impl.yygm.effect.HarmonizedEffect;
 import com.complextalents.impl.yygm.events.YYGMGateHitEvent;
+import com.complextalents.impl.yygm.skill.SwordDanceSkill;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.OriginManager;
+import com.complextalents.skill.capability.SkillDataProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -67,7 +69,7 @@ public class YinYangGrandmasterOrigin {
                 // Custom HUD renderer for Equilibrium stacks
                 .renderer(new YinYangRenderer())
                 // True damage multiplier base on correct gate hit: [1.5, 1.7, 2.0, 2.5, 3.0]
-                .scaledStat("trueDamageMultiplier", new double[]{1.5, 1.7, 2.0, 2.5, 3.0})
+                .scaledStat("trueDamageMultiplier", new double[]{1, 1.2, 1.5, 2.0, 2.5})
                 // True damage percent bonus per Equilibrium stack: [5%, 8%, 12%, 15%, 15%]
                 .scaledStat("equilibriumTrueDamagePercent", new double[]{0.05, 0.08, 0.12, 0.15, 0.15})
                 // Gate cooldown in ticks before next gate spawns: [40, 35, 30, 25, 20]
@@ -142,14 +144,6 @@ public class YinYangGrandmasterOrigin {
             int gateType = event.getGateType();
 
             // Get current Equilibrium from player-global data
-            int equilibrium = EquilibriumData.getEquilibrium(player.getUUID());
-
-            // Apply true damage multiplier base + Equilibrium bonus
-            double trueDamageMult = OriginManager.getOriginStat(player, "trueDamageMultiplier");
-            double equilibriumBonusPercent = OriginManager.getOriginStat(player, "equilibriumTrueDamagePercent");
-            double equilibriumBonus = 1.0 + (equilibrium * equilibriumBonusPercent);
-
-            // Get original damage from event context (stored in LivingDamageEvent)
             // For now, we'll let the damage event handle the actual damage modification
             // This handler just updates Equilibrium and gate state
 
@@ -181,6 +175,11 @@ public class YinYangGrandmasterOrigin {
 
             // Sync to client to reset timer (even if equilibrium didn't change)
             EquilibriumData.syncToClient(player);
+
+            // SwordDance cooldown refund on regular gate hits (not from SwordDance itself)
+            if (!event.isFromSwordDance()) {
+                handleSwordDanceRefund(event);
+            }
 
             // Toggle next required gate
             int newNextRequired = (gateType == YYGMGateHitEvent.GATE_YANG)
@@ -299,6 +298,42 @@ public class YinYangGrandmasterOrigin {
         }
 
         /**
+         * Handle SwordDance cooldown refund on regular gate hits.
+         * When SwordDance is on cooldown, hitting a correct gate refunds 50% of current remaining cooldown.
+         * Only applies to regular melee attacks (not SwordDance itself) and once per cooldown cycle.
+         */
+        private static void handleSwordDanceRefund(YYGMGateHitEvent event) {
+            ServerPlayer player = event.getPlayer();
+
+            // Check if refund has already been used this cooldown cycle
+            if (SwordDanceSkill.isRefundUsed(player)) {
+                return;
+            }
+
+            // Check if SwordDance is on cooldown
+            player.getCapability(SkillDataProvider.SKILL_DATA).ifPresent(data -> {
+                double remaining = data.getCooldown(SwordDanceSkill.ID);
+                if (remaining <= 0) {
+                    return; // Not on cooldown
+                }
+
+                // Calculate refund: 50% of current remaining cooldown
+                double refundAmount = remaining * 0.5;
+                double newCooldown = remaining - refundAmount;
+
+                // Apply the refund
+                data.setCooldown(SwordDanceSkill.ID, newCooldown);
+                data.sync();
+
+                // Mark refund as used for this cooldown cycle
+                SwordDanceSkill.setRefundUsed(player);
+
+                TalentsMod.LOGGER.debug("SwordDance: Refunded {} seconds of cooldown ({} -> {} remaining) via regular gate hit",
+                        refundAmount, remaining, newCooldown);
+            });
+        }
+
+        /**
          * Gate respawn tick handler.
          * Runs every 5 ticks to check for gates that need respawning.
          */
@@ -314,35 +349,36 @@ public class YinYangGrandmasterOrigin {
             }
 
             for (ServerLevel level : event.getServer().getAllLevels()) {
-                double searchRange = 128.0;
-                for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
-                        new net.minecraft.world.phys.AABB(
-                            net.minecraft.world.phys.Vec3.ZERO,
-                            new net.minecraft.world.phys.Vec3(searchRange, 256.0, searchRange)
-                        ).inflate(searchRange))) {
-
-                    if (!HarmonizedEffect.hasAnyGates(entity)) {
+                // Iterate through all players and check their harmonized entities
+                for (ServerPlayer player : level.players()) {
+                    if (!YinYangGrandmasterOrigin.isYinYangGrandmaster(player)) {
                         continue;
                     }
 
+                    // Get this player's harmonized target
+                    java.util.UUID playerUuid = player.getUUID();
+                    Integer targetId = HarmonizedEffect.getHarmonizedEntityId(playerUuid);
+                    if (targetId == null) continue;
+
+                    net.minecraft.world.entity.Entity entity = level.getEntity(targetId);
+                    if (!(entity instanceof LivingEntity living)) continue;
+
                     long currentTime = level.getGameTime();
 
-                    for (java.util.UUID playerUuid : HarmonizedEffect.getGatePlayers(entity)) {
-                        // Check Yang gate respawn
-                        long yangRespawn = HarmonizedEffect.getYangRespawnTick(entity, playerUuid);
-                        int yangGate = HarmonizedEffect.getYangGateDirection(entity, playerUuid);
+                    // Check Yang gate respawn
+                    long yangRespawn = HarmonizedEffect.getYangRespawnTick(living, playerUuid);
+                    int yangGate = HarmonizedEffect.getYangGateDirection(living, playerUuid);
 
-                        if (yangGate == HarmonizedEffect.GATE_NONE && yangRespawn > 0 && currentTime >= yangRespawn) {
-                            respawnGate(entity, playerUuid, HarmonizedEffect.GATE_YANG);
-                        }
+                    if (yangGate == HarmonizedEffect.GATE_NONE && yangRespawn > 0 && currentTime >= yangRespawn) {
+                        respawnGate(living, playerUuid, HarmonizedEffect.GATE_YANG);
+                    }
 
-                        // Check Yin gate respawn
-                        long yinRespawn = HarmonizedEffect.getYinRespawnTick(entity, playerUuid);
-                        int yinGate = HarmonizedEffect.getYinGateDirection(entity, playerUuid);
+                    // Check Yin gate respawn
+                    long yinRespawn = HarmonizedEffect.getYinRespawnTick(living, playerUuid);
+                    int yinGate = HarmonizedEffect.getYinGateDirection(living, playerUuid);
 
-                        if (yinGate == HarmonizedEffect.GATE_NONE && yinRespawn > 0 && currentTime >= yinRespawn) {
-                            respawnGate(entity, playerUuid, HarmonizedEffect.GATE_YIN);
-                        }
+                    if (yinGate == HarmonizedEffect.GATE_NONE && yinRespawn > 0 && currentTime >= yinRespawn) {
+                        respawnGate(living, playerUuid, HarmonizedEffect.GATE_YIN);
                     }
                 }
             }

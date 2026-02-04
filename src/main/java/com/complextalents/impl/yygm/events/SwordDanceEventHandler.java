@@ -124,19 +124,15 @@ public class SwordDanceEventHandler {
 
     /**
      * Handle the case where dash goes through the target.
-     * Clamps end position and activates two gates.
+     * Activates two gates (start and end angles).
+     * Simplified: count correct gates, gain 1 Equilibrium after 2, then reset.
+     * Note: Position clamping is already done during dash initialization.
      */
     private static void handleThroughTarget(ServerPlayer player, LivingEntity target,
-                                            Vec3 startPos, Vec3 originalEndPos) {
-        // Clamp end position to 1 block outside target's hitbox
-        Vec3 clampedEndPos = clampToOutsideHitbox(target, originalEndPos);
-
-        // Update player position to clamped location
-        player.teleportTo(clampedEndPos.x, player.getY(), clampedEndPos.z);
-
-        // Calculate two angles: from target to start, and from target to clamped end
+                                            Vec3 startPos, Vec3 endPos) {
+        // Calculate two angles: from target to start, and from target to end
         double startAngle = calculateAngleFromTarget(target, startPos);
-        double endAngle = calculateAngleFromTarget(target, clampedEndPos);
+        double endAngle = calculateAngleFromTarget(target, endPos);
 
         // Activate gates in sequence
         int correctGates = 0;
@@ -145,13 +141,20 @@ public class SwordDanceEventHandler {
         YYGMGateHitEvent startEvent = activateGateAtAngle(player, target, startAngle);
         if (startEvent.getHitResult() == YYGMGateHitEvent.HitResult.TRUE_GATE) {
             correctGates++;
+            // Deal YYGM true damage for correct gate hit
+            dealYYGMTrueDamage(player, target);
         }
 
         // End position gate activation
         YYGMGateHitEvent endEvent = activateGateAtAngle(player, target, endAngle);
         if (endEvent.getHitResult() == YYGMGateHitEvent.HitResult.TRUE_GATE) {
             correctGates++;
+            // Deal YYGM true damage for correct gate hit
+            dealYYGMTrueDamage(player, target);
         }
+
+        // Equilibrium is handled by the centralized YYGMGateHitEvent handler
+        // No need to duplicate logic here
 
         // Apply cooldown refund
         ResourceLocation skillId = SwordDanceSkill.ID;
@@ -184,12 +187,11 @@ public class SwordDanceEventHandler {
         // Activate gate
         YYGMGateHitEvent event = activateGateAtAngle(player, target, angle);
 
-        // Deal player attack damage to target
-        double attackDamage = player.getAttributes().getValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-        target.hurt(player.level().damageSources().playerAttack(player), (float) attackDamage);
-
-        // Apply cooldown refund if correct gate
+        // Deal YYGM true damage if correct gate hit
         if (event.getHitResult() == YYGMGateHitEvent.HitResult.TRUE_GATE) {
+            dealYYGMTrueDamage(player, target);
+
+            // Apply cooldown refund
             int skillLevel = player.getCapability(SkillDataProvider.SKILL_DATA)
                     .map(data -> data.getSkillLevel(SwordDanceSkill.ID))
                     .orElse(1);
@@ -200,21 +202,31 @@ public class SwordDanceEventHandler {
     }
 
     /**
-     * Clamp a position to be outside the target's hitbox.
-     * Returns a position 1 block outside the hitbox edge.
+     * Deal YYGM true damage to target using the gate damage formula.
+     * Formula: baseAttackDamage * (1 + (trueDamageMultiplier - 1) + equilibrium * equilibriumBonusPercent)
+     * This makes trueDamageMultiplier and equilibriumBonus additive.
      */
-    private static Vec3 clampToOutsideHitbox(LivingEntity target, Vec3 pos) {
-        AABB hitbox = target.getBoundingBox();
-        Vec3 targetCenter = target.position();
+    private static void dealYYGMTrueDamage(ServerPlayer player, LivingEntity target) {
+        // Get base attack damage from player's attributes
+        double baseAttackDamage = player.getAttributes().getValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
 
-        // Calculate direction from target center to position
-        Vec3 direction = pos.subtract(targetCenter).normalize();
+        // Get current Equilibrium from player-global data
+        int equilibrium = com.complextalents.impl.yygm.EquilibriumData.getEquilibrium(player.getUUID());
 
-        // Get hitbox radius (approximate as max of width and depth)
-        double hitboxRadius = Math.max(hitbox.getXsize(), hitbox.getZsize()) / 2.0;
+        // Get YYGM stats
+        double trueDamageMult = com.complextalents.origin.OriginManager.getOriginStat(player, "trueDamageMultiplier");
+        double equilibriumBonusPercent = com.complextalents.origin.OriginManager.getOriginStat(player, "equilibriumTrueDamagePercent");
 
-        // Calculate clamped position (1 block outside hitbox edge)
-        return targetCenter.add(direction.scale(hitboxRadius + SwordDanceSkill.HITBOX_BUFFER));
+        // Calculate final damage additively
+        // Total multiplier = 1 (base) + (trueDamageMultiplier - 1) + (equilibrium * equilibriumBonusPercent)
+        float totalMultiplier = 1.0f + (float) (trueDamageMult - 1.0) + (float) (equilibrium * equilibriumBonusPercent);
+        float trueDamage = (float) baseAttackDamage * totalMultiplier;
+
+        // Apply damage
+        target.hurt(target.level().damageSources().indirectMagic(player, target), trueDamage);
+
+        TalentsMod.LOGGER.debug("Sword Dance: Dealt {} true damage (base: {}, mult: {}, eq: {}, totalMult: {})",
+                trueDamage, baseAttackDamage, trueDamageMult, equilibrium, totalMultiplier);
     }
 
     /**

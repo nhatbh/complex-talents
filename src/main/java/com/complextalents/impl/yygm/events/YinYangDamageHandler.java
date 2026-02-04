@@ -3,6 +3,7 @@ package com.complextalents.impl.yygm.events;
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.yygm.EquilibriumData;
 import com.complextalents.impl.yygm.effect.HarmonizedEffect;
+import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
@@ -13,6 +14,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -144,6 +146,8 @@ public class YinYangDamageHandler {
 
     /**
      * Apply true damage with equilibrium bonus.
+     * Formula: originalDamage * (1 + (trueDamageMultiplier - 1) + equilibrium * equilibriumBonusPercent)
+     * This makes trueDamageMultiplier and equilibriumBonus additive.
      */
     private static void applyTrueDamage(LivingDamageEvent event, ServerPlayer player, LivingEntity target) {
         float originalDamage = event.getAmount();
@@ -151,15 +155,16 @@ public class YinYangDamageHandler {
         // Get current Equilibrium from player-global data
         int equilibrium = EquilibriumData.getEquilibrium(player.getUUID());
 
-        // Apply true damage multiplier base + Equilibrium bonus
+        // Apply true damage multiplier additively with equilibrium bonus
+        // Total multiplier = 1 (base) + (trueDamageMultiplier - 1) + (equilibrium * equilibriumBonusPercent)
         double trueDamageMult = OriginManager.getOriginStat(player, "trueDamageMultiplier");
         double equilibriumBonusPercent = OriginManager.getOriginStat(player, "equilibriumTrueDamagePercent");
-        double equilibriumBonus = 1.0 + (equilibrium * equilibriumBonusPercent);
-        float trueDamage = originalDamage * (float) trueDamageMult * (float) equilibriumBonus;
+        float totalMultiplier = 1.0f + (float) (trueDamageMult - 1.0) + (float) (equilibrium * equilibriumBonusPercent);
+        float trueDamage = originalDamage * totalMultiplier;
         event.setAmount(trueDamage);
 
-        TalentsMod.LOGGER.debug("YYGM {} applying true damage: {} -> {} (eq: {})",
-            player.getName().getString(), originalDamage, trueDamage, equilibrium);
+        TalentsMod.LOGGER.debug("YYGM {} applying true damage: {} -> {} (eq: {}, mult: {})",
+            player.getName().getString(), originalDamage, trueDamage, totalMultiplier);
     }
 
     /**
@@ -174,6 +179,7 @@ public class YinYangDamageHandler {
 
     /**
      * Handle server tick for expired harmonized effect fail-safe checking.
+     * Delegates to HarmonizedEffect which uses the internal cache for efficient iteration.
      * Gate respawns and equilibrium decay are handled in YinYangGrandmasterOrigin.GateCombatEvents.
      */
     @SubscribeEvent
@@ -187,29 +193,7 @@ public class YinYangDamageHandler {
             return;
         }
 
-        for (ServerLevel level : event.getServer().getAllLevels()) {
-            double searchRange = 128.0;
-            for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
-                    new net.minecraft.world.phys.AABB(
-                        net.minecraft.world.phys.Vec3.ZERO,
-                        new net.minecraft.world.phys.Vec3(searchRange, 256.0, searchRange)
-                    ).inflate(searchRange))) {
-
-                if (!HarmonizedEffect.hasAnyGates(entity)) {
-                    continue;
-                }
-
-                for (UUID playerUuid : HarmonizedEffect.getGatePlayers(entity)) {
-                    // Check for expired Harmonized effect (data exists but effect is gone)
-                    // This is a fail-safe to clean up orphaned data
-                    if (HarmonizedEffect.getHarmonizedEntityId(playerUuid) != null
-                            && !entity.hasEffect(com.complextalents.impl.yygm.effect.YinYangEffects.HARMONIZED.get())) {
-                        HarmonizedEffect.handleEffectExpiration(entity, playerUuid);
-                        continue;
-                    }
-                }
-            }
-        }
+        HarmonizedEffect.onServerTick(event.getServer());
     }
 
     /**
@@ -353,5 +337,34 @@ public class YinYangDamageHandler {
             return living;
         }
         return null;
+    }
+
+    /**
+     * Handle Harmonized effect removal immediately when it expires or is removed.
+     * This is more immediate than the tick-based fail-safe in onServerTick.
+     * Ensures that gate data and client overlay are cleaned up promptly.
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onEffectRemoved(MobEffectEvent.Expired event) {
+        LivingEntity entity = event.getEntity();
+        if (event.getEntity().level().isClientSide) {
+            return;
+        }
+
+        // Check if the removed effect is Harmonized
+        if (event.getEffectInstance().getEffect() != YinYangEffects.HARMONIZED.get()) {
+            return;
+        }
+
+        // Find all players who have gates on this entity and clean up
+        // Multiple YYGM players can have gates on the same entity
+        if (HarmonizedEffect.hasAnyGates(entity)) {
+            for (UUID playerUuid : HarmonizedEffect.getGatePlayers(entity)) {
+                Integer trackedId = HarmonizedEffect.getHarmonizedEntityId(playerUuid);
+                if (trackedId != null && trackedId == entity.getId()) {
+                    HarmonizedEffect.handleEffectExpiration(entity, playerUuid);
+                }
+            }
+        }
     }
 }

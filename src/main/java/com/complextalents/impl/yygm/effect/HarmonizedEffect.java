@@ -587,4 +587,46 @@ public class HarmonizedEffect extends MobEffect {
 
         return angle;
     }
+
+    // ==================== SERVER TICK HANDLING ====================
+
+    /**
+     * Server tick handler for expired harmonized effect fail-safe checking.
+     * Uses the internal player->entity cache for efficient iteration.
+     * This should be called from a server tick event (throttled, e.g., every 5 ticks).
+     *
+     * @param server The Minecraft server instance
+     */
+    public static void onServerTick(net.minecraft.server.MinecraftServer server) {
+        for (var entry : PLAYER_HARMONIZED_CACHE.entrySet()) {
+            UUID playerUuid = entry.getKey();
+            Integer entityId = entry.getValue();
+
+            if (entityId == null) {
+                continue;
+            }
+
+            // Find the entity in any loaded level
+            LivingEntity harmonizedEntity = null;
+            for (ServerLevel level : server.getAllLevels()) {
+                net.minecraft.world.entity.Entity entity = level.getEntity(entityId);
+                if (entity instanceof LivingEntity living && living.isAlive()) {
+                    harmonizedEntity = living;
+                    break;
+                }
+            }
+
+            if (harmonizedEntity == null) {
+                // Entity not found or dead - clear the cache
+                clearHarmonizedTracking(playerUuid);
+                continue;
+            }
+
+            // Check for expired Harmonized effect (data exists but effect is gone)
+            // This is a fail-safe to clean up orphaned data
+            if (!harmonizedEntity.hasEffect(YinYangEffects.HARMONIZED.get())) {
+                handleEffectExpiration(harmonizedEntity, playerUuid);
+            }
+        }
+    }
 }

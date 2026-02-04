@@ -40,15 +40,16 @@ public class SwordDanceSkill {
     private static final String NBT_DASH_END_Z = "sword_dance_end_z";
     private static final String NBT_DASH_TARGET_ID = "sword_dance_target_id";
     private static final String NBT_DASH_HAS_REFUND = "sword_dance_has_refund";
+    private static final String NBT_DASH_REFUND_USED = "sword_dance_refund_used";
 
     // Constants
     public static final double DASH_DISTANCE = 8.0;
-    public static final int DASH_DURATION_TICKS = 10; // 0.5 seconds
+    public static final int DASH_DURATION_TICKS = 5; // 0.25 seconds (doubled speed)
     public static final double NEAR_DISTANCE = 1.0;
     public static final double HITBOX_BUFFER = 1.0;
 
     // Cooldown by level: [30, 25, 20, 15] seconds
-    private static final double[] COOLDOWN_BY_LEVEL = {3.0, 25.0, 20.0, 15.0};
+    private static final double[] COOLDOWN_BY_LEVEL = {30.0, 25.0, 20.0, 15.0};
     // Refund percentages
     public static final double REFUND_ONE_GATE = 0.25; // 25%
     public static final double REFUND_BOTH_GATES = 1.0; // 100%
@@ -89,11 +90,16 @@ public class SwordDanceSkill {
         Vec3 direction = new Vec3(lookAngle.x, 0, lookAngle.z).normalize();
         Vec3 endPos = startPos.add(direction.scale(DASH_DISTANCE));
 
-        // Block collision check
+        // Block collision check using chest-level raycast to avoid minor obstacles
+        // Chest height is approximately 1.2 blocks above player's feet (player height is 1.8)
+        double chestHeight = 0.7;
+        Vec3 chestStartPos = new Vec3(startPos.x, startPos.y + chestHeight, startPos.z);
+        Vec3 chestEndPos = new Vec3(endPos.x, startPos.y + chestHeight, endPos.z);
+
         if (player.level() instanceof ServerLevel level) {
             ClipContext clipContext = new ClipContext(
-                    startPos,
-                    endPos,
+                    chestStartPos,
+                    chestEndPos,
                     ClipContext.Block.OUTLINE,
                     ClipContext.Fluid.NONE,
                     player
@@ -101,8 +107,9 @@ public class SwordDanceSkill {
             BlockHitResult blockResult = level.clip(clipContext);
 
             if (blockResult.getType() != BlockHitResult.Type.MISS) {
-                // Cull to collision point
-                endPos = blockResult.getLocation();
+                // Cull to collision point (adjust Y back to player level)
+                Vec3 collisionPoint = blockResult.getLocation();
+                endPos = new Vec3(collisionPoint.x, startPos.y, collisionPoint.z);
                 TalentsMod.LOGGER.debug("Sword Dance: Dash culled by block at {}", endPos);
             }
         }
@@ -117,8 +124,19 @@ public class SwordDanceSkill {
             }
         }
 
+        // Check if dash will go through target's hitbox and clamp end position
+        if (harmonizedTarget != null) {
+            if (willDashThroughTarget(startPos, endPos, harmonizedTarget)) {
+                // Clamp end position to outside target's hitbox
+                endPos = clampToOutsideHitbox(harmonizedTarget, endPos);
+                TalentsMod.LOGGER.debug("Sword Dance: Dash clamped for through-target case to {}", endPos);
+            }
+        }
+
         // Store dash data in player's persistent data
         CompoundTag data = player.getPersistentData();
+        // Clear refund flag at start of new cooldown cycle
+        clearRefundUsed(player);
         data.putInt(NBT_DASH_TICK, 0);
         data.putDouble(NBT_DASH_START_X, startPos.x);
         data.putDouble(NBT_DASH_START_Y, startPos.y);
@@ -153,6 +171,41 @@ public class SwordDanceSkill {
 
         TalentsMod.LOGGER.debug("Sword Dance: Dash started for {}, from {} to {}",
                 player.getName().getString(), startPos, endPos);
+    }
+
+    /**
+     * Check if the dash line will go through the target's hitbox.
+     */
+    private static boolean willDashThroughTarget(Vec3 startPos, Vec3 endPos, LivingEntity target) {
+        net.minecraft.world.phys.AABB hitbox = target.getBoundingBox().inflate(0.1);
+
+        // Sample points along the dash path
+        int samples = 10;
+        for (int i = 0; i <= samples; i++) {
+            double t = (double) i / samples;
+            Vec3 samplePos = startPos.add(endPos.subtract(startPos).scale(t));
+            if (hitbox.contains(samplePos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Clamp a position to be outside the target's hitbox.
+     */
+    private static Vec3 clampToOutsideHitbox(LivingEntity target, Vec3 pos) {
+        net.minecraft.world.phys.AABB hitbox = target.getBoundingBox();
+        Vec3 targetCenter = target.position();
+
+        // Calculate direction from target center to position
+        Vec3 dir = pos.subtract(targetCenter).normalize();
+
+        // Get hitbox radius
+        double hitboxRadius = Math.max(hitbox.getXsize(), hitbox.getZsize()) / 2.0;
+
+        // Calculate clamped position (outside hitbox edge)
+        return targetCenter.add(dir.scale(hitboxRadius + HITBOX_BUFFER));
     }
 
     /**
@@ -253,6 +306,30 @@ public class SwordDanceSkill {
         data.remove(NBT_DASH_END_Z);
         data.remove(NBT_DASH_TARGET_ID);
         data.remove(NBT_DASH_HAS_REFUND);
+    }
+
+    /**
+     * Check if the cooldown refund has been used this cycle.
+     */
+    public static boolean isRefundUsed(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        return data.getBoolean(NBT_DASH_REFUND_USED);
+    }
+
+    /**
+     * Mark that the cooldown refund has been used this cycle.
+     */
+    public static void setRefundUsed(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        data.putBoolean(NBT_DASH_REFUND_USED, true);
+    }
+
+    /**
+     * Clear the refund used flag (called when starting a new cooldown cycle).
+     */
+    public static void clearRefundUsed(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        data.remove(NBT_DASH_REFUND_USED);
     }
 
     /**

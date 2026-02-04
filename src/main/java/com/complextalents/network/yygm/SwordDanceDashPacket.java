@@ -142,7 +142,7 @@ public class SwordDanceDashPacket {
             if (dash == null) return;
 
             // Get partial tick for smooth interpolation between ticks
-            float partial = mc.getDeltaTracker().getRealtimeDeltaTicks();
+            float partial = event.getPartialTick();
 
             // Calculate progress with partial tick for sub-tick precision
             float t = (dash.tick + partial) / dash.durationTicks;
