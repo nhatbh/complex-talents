@@ -22,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
  * /skill slots - View current assignments
  * /skill list - List all available skills
  * /skill toggle <slot> - Toggle a toggle skill
+ * /skill resetcd [slot] - Reset cooldown for a slot or all slots
  */
 public class SkillCommand {
 
@@ -35,6 +36,7 @@ public class SkillCommand {
                 .then(SlotsCommand.register())
                 .then(ListCommand.register())
                 .then(ToggleCommand.register())
+                .then(ResetCooldownCommand.register())
         );
     }
 
@@ -214,6 +216,62 @@ public class SkillCommand {
                 boolean newState = data.toggle(skillId);
                 String status = newState ? "\u00A7aactivated" : "\u00A7cdeactivated";
                 src.sendSuccess(() -> Component.literal("Toggle skill " + status), true);
+            });
+
+            return 1;
+        }
+    }
+
+    public static class ResetCooldownCommand {
+        static com.mojang.brigadier.builder.ArgumentBuilder<CommandSourceStack, ?> register() {
+            return Commands.literal("resetcd")
+                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+                            .executes(ctx -> resetSlotCooldown(
+                                    ctx.getSource(),
+                                    IntegerArgumentType.getInteger(ctx, "slot") - 1
+                            ))
+                    )
+                    .executes(ctx -> resetAllCooldowns(ctx.getSource()));
+        }
+
+        private static int resetSlotCooldown(CommandSourceStack src, int slotIndex) {
+            if (!(src.getEntity() instanceof ServerPlayer player)) {
+                src.sendFailure(Component.literal("This command can only be used by players"));
+                return 0;
+            }
+
+            player.getCapability(SkillDataProvider.SKILL_DATA).ifPresent(data -> {
+                ResourceLocation skillId = data.getSkillInSlot(slotIndex);
+                if (skillId == null) {
+                    src.sendFailure(Component.literal("No skill in slot " + (slotIndex + 1)));
+                    return;
+                }
+
+                data.clearCooldown(skillId);
+                Skill skill = SkillRegistry.getInstance().getSkill(skillId);
+                String name = skill != null ? skill.getDisplayName().getString() : skillId.toString();
+                src.sendSuccess(() -> Component.literal("Reset cooldown for " + name + " (slot " + (slotIndex + 1) + ")"), true);
+            });
+
+            return 1;
+        }
+
+        private static int resetAllCooldowns(CommandSourceStack src) {
+            if (!(src.getEntity() instanceof ServerPlayer player)) {
+                src.sendFailure(Component.literal("This command can only be used by players"));
+                return 0;
+            }
+
+            player.getCapability(SkillDataProvider.SKILL_DATA).ifPresent(data -> {
+                final int[] count = {0};
+                for (int slot = 0; slot < IPlayerSkillData.SLOT_COUNT; slot++) {
+                    ResourceLocation skillId = data.getSkillInSlot(slot);
+                    if (skillId != null) {
+                        data.clearCooldown(skillId);
+                        count[0]++;
+                    }
+                }
+                src.sendSuccess(() -> Component.literal("Reset cooldowns for " + count[0] + " skill(s)"), true);
             });
 
             return 1;

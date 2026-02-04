@@ -1,6 +1,7 @@
 package com.complextalents.impl.yygm.events;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.effect.HarmonizedEffect;
 import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
 import net.minecraft.server.level.ServerLevel;
@@ -36,6 +37,11 @@ public class YYGMHarmonizationHandler {
                 }
 
                 if (!HarmonizedEffect.hasCachedDamage(player.getUUID())) {
+                    continue;
+                }
+
+                // Check if player has an active Exposed target - cannot apply Harmonized during Exposed
+                if (ExposedEffect.hasExposedTarget(player.getUUID())) {
                     continue;
                 }
 

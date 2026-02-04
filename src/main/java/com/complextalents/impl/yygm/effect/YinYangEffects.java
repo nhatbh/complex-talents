@@ -16,6 +16,12 @@ public class YinYangEffects {
     public static final RegistryObject<MobEffect> HARMONIZED = EFFECTS.register("harmonized",
         () -> new HarmonizedEffect());
 
+    public static final RegistryObject<MobEffect> EXPOSED = EFFECTS.register("exposed",
+        () -> new ExposedEffect());
+
+    public static final RegistryObject<MobEffect> YIN_YANG_ANNIHILATION = EFFECTS.register("yin_yang_annihilation",
+        () -> new YinYangAnnihilationEffect());
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered Yin Yang Grandmaster mob effects");

@@ -1,6 +1,7 @@
 package com.complextalents.impl.yygm.client.renderer;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -72,7 +73,7 @@ public class YinYangBaguaRenderer {
         // Loop through all entities in the client world
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (entity instanceof LivingEntity livingEntity && shouldRenderBagua(livingEntity)) {
-                
+
                 // 1. Calculate Entity Position relative to Camera
                 double lerpX = Mth.lerp(partialTick, entity.xo, entity.getX());
                 double lerpY = Mth.lerp(partialTick, entity.yo, entity.getY());
@@ -93,8 +94,15 @@ public class YinYangBaguaRenderer {
 
                 // 3. Render
                 int light = 15728880; // Full brightness
+
+                // Render Harmonized gates (dual-gate system)
                 for (UUID playerUuid : YinYangGateStateSyncPacket.ClientGateData.getPlayersForEntity(entity.getId())) {
                     renderBaguaForPlayer(livingEntity, playerUuid, poseStack, bufferSource, light);
+                }
+
+                // Render Exposed gates (Eight Formation Battle Array - all 8 gates)
+                for (UUID playerUuid : ExposedStateSyncPacket.ClientExposedData.getPlayersForEntity(entity.getId())) {
+                    renderExposedGatesForPlayer(livingEntity, playerUuid, poseStack, bufferSource, light);
                 }
 
                 poseStack.popPose();
@@ -107,7 +115,8 @@ public class YinYangBaguaRenderer {
     }
 
     private static boolean shouldRenderBagua(LivingEntity entity) {
-        return YinYangGateStateSyncPacket.ClientGateData.hasGates(entity.getId());
+        return YinYangGateStateSyncPacket.ClientGateData.hasGates(entity.getId())
+            || ExposedStateSyncPacket.ClientExposedData.hasExposed(entity.getId());
     }
 
     private static void renderBaguaForPlayer(LivingEntity entity, UUID playerUuid,
@@ -259,5 +268,103 @@ public class YinYangBaguaRenderer {
         vc.vertex(pose, x, 0, z2).color(r, g, b, a).uv(0, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
         vc.vertex(pose, x2, 0, z2).color(r, g, b, a).uv(1, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
         vc.vertex(pose, x2, 0, z).color(r, g, b, a).uv(1, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
+    }
+
+    /**
+     * Render Exposed gates (Eight Formation Battle Array Ultimate).
+     * All 8 gates are active simultaneously - 4 Yang (gold) and 4 Yin (silver).
+     * Completed gates are shown with reduced opacity.
+     * Inner octagon fill shows the next required gate type.
+     */
+    private static void renderExposedGatesForPlayer(LivingEntity entity, UUID playerUuid,
+                                                      PoseStack poseStack, MultiBufferSource buffer, int light) {
+        ExposedStateSyncPacket.ExposedData exposedData = ExposedStateSyncPacket.ClientExposedData.getExposedData(entity.getId(), playerUuid);
+        if (exposedData == null) return;
+
+        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucentEmissive(BLANK_TEXTURE));
+        Matrix4f pose = poseStack.last().pose();
+
+        float entityWidth = Math.max(entity.getBbWidth(), 0.8f);
+        float outerRadius = entityWidth * OUTER_RADIUS_MULT;
+        float innerRadius = outerRadius * INNER_RADIUS_MULT;
+
+        // Draw inner octagon fill to indicate next required gate type
+        int nextRequired = exposedData.getNextRequired();
+        float innerFillR, innerFillG, innerFillB, innerFillA;
+        if (nextRequired == 0) {
+            innerFillR = 1.0f; innerFillG = 0.84f; innerFillB = 0.0f; innerFillA = 0.3f; // Gold for Yang
+        } else {
+            innerFillR = 0.88f; innerFillG = 0.88f; innerFillB = 0.88f; innerFillA = 0.3f; // Silver for Yin
+        }
+        // Draw filled octagon for center area
+        for (int oct = 0; oct < 8; oct++) {
+            float octAngle1 = (float) Math.toRadians(oct * 45.0f);
+            float octAngle2 = (float) Math.toRadians((oct + 1) * 45.0f);
+            float ox1 = (float) Math.sin(octAngle1) * innerRadius;
+            float oz1 = (float) -Math.cos(octAngle1) * innerRadius;
+            float ox2 = (float) Math.sin(octAngle2) * innerRadius;
+            float oz2 = (float) -Math.cos(octAngle2) * innerRadius;
+            drawTrapezoid(vertexConsumer, pose, 0, 0, ox1, oz1, ox2, oz2, 0, 0, innerFillR, innerFillG, innerFillB, innerFillA, 15728880);
+        }
+
+        // Render all 8 gates
+        for (int i = 0; i < 8; i++) {
+            float angleDeg = i * 45.0f;
+            float angleRad = (float) Math.toRadians(angleDeg);
+            float nextAngleRad = (float) Math.toRadians((i + 1) * 45.0f);
+
+            float sin = (float) Math.sin(angleRad);
+            float cos = (float) -Math.cos(angleRad);
+            float nextSin = (float) Math.sin(nextAngleRad);
+            float nextCos = (float) -Math.cos(nextAngleRad);
+
+            float xInner = sin * innerRadius; float zInner = cos * innerRadius;
+            float xOuter = sin * outerRadius; float zOuter = cos * outerRadius;
+            float nextXInner = nextSin * innerRadius; float nextZInner = nextCos * innerRadius;
+            float nextXOuter = nextSin * outerRadius; float nextZOuter = nextCos * outerRadius;
+
+            // Get gate type (0 = Yang/gold, 1 = Yin/silver) from Exposed data
+            int gateType = exposedData.getGateTypeAtDirection(i);
+            boolean isCompleted = exposedData.isGateCompleted(i);
+
+            // Gate color and opacity based on type and completion
+            float r, g, b, a;
+            if (gateType == 0) { // Yang (gold)
+                r = 1.0f; g = 0.84f; b = 0.0f;
+            } else { // Yin (silver)
+                r = 0.88f; g = 0.88f; b = 0.88f;
+            }
+
+            // Completed gates have lower opacity
+            a = isCompleted ? 0.15f : 0.5f;
+
+            // Draw filled trapezoid for the gate
+            drawTrapezoid(vertexConsumer, pose, xInner, zInner, xOuter, zOuter, nextXOuter, nextZOuter, nextXInner, nextZInner, r, g, b, a, light);
+
+            // Draw grid lines
+            float lr = 1.0f, lg = 0.9f, lb = 0.5f, la = isCompleted ? 0.3f : 0.8f;
+            drawThickLine(vertexConsumer, pose, xInner, 0, zInner, xOuter, 0, zOuter, lr, lg, lb, la, light);
+            drawThickLine(vertexConsumer, pose, xInner, 0, zInner, nextXInner, 0, nextZInner, lr, lg, lb, la, light);
+            drawThickLine(vertexConsumer, pose, xOuter, 0, zOuter, nextXOuter, 0, nextZOuter, lr, lg, lb, la, light);
+
+            // Draw trigram
+            float centerAngleDeg = angleDeg + 22.5f;
+            float centerAngleRad = (float) Math.toRadians(centerAngleDeg);
+            float trigramDist = (innerRadius + outerRadius) / 2.0f;
+            float tx = (float) Math.sin(centerAngleRad) * trigramDist;
+            float tz = (float) -Math.cos(centerAngleRad) * trigramDist;
+
+            poseStack.pushPose();
+            poseStack.translate(tx, 0.015f, tz);
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0f - centerAngleDeg));
+
+            float scale = entityWidth * 0.5f;
+            poseStack.scale(scale, 1.0f, scale);
+
+            int trigramColor = (gateType == 0) ? 0xFFFFD700 : 0xFFE0E0E0;
+            int trigramLines[] = TRIGRAMS[i];
+            renderTrigram(poseStack.last().pose(), vertexConsumer, trigramLines, trigramColor, light);
+            poseStack.popPose();
+        }
     }
 }

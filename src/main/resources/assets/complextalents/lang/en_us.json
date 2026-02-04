@@ -28,8 +28,13 @@
 
   "origin.complextalents.yygm": "Yin Yang Grandmaster",
   "effect.complextalents.harmonized": "Harmonized",
+  "effect.complextalents.exposed": "Exposed",
+  "effect.complextalents.yin_yang_annihilation": "Yin Yang Annihilation",
   "passive.complextalents.yang": "Yang",
   "passive.complextalents.yin": "Yin",
+
+  "skill.complextalents.eight_formation_battle_array": "Eight Formation Battle Array",
+  "skill.complextalents.eight_formation_battle_array.desc": "Ultimate: Requires 8 Equilibrium. Applies Exposed with all 8 gates. Complete all 8 gates to trigger Yin Yang Annihilation - true damage from any angle.",
 
   "skill.complextalents.pincer_lunge": "Pincer Lunge",
   "skill.complextalents.pincer_lunge.desc": "Channel to dash. Channel < 1s: Quick dash + dagger throw (1 Yang). Channel 1s+: Long dash with line damage + spear impale (2 Yang).",

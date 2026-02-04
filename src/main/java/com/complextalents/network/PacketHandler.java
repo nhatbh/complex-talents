@@ -29,6 +29,7 @@ import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
+import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.EquilibriumSyncPacket;
 import com.complextalents.network.yygm.SwordDanceDashPacket;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
@@ -285,6 +286,13 @@ public class PacketHandler {
                 SwordDanceGateActivatePacket::encode,
                 SwordDanceGateActivatePacket::decode,
                 SwordDanceGateActivatePacket::handle);
+
+        // Exposed state sync packet (Eight Formation Battle Array Ultimate)
+        INSTANCE.registerMessage(packetId++,
+                ExposedStateSyncPacket.class,
+                ExposedStateSyncPacket::encode,
+                ExposedStateSyncPacket::decode,
+                ExposedStateSyncPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }
