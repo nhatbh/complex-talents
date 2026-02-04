@@ -43,31 +43,19 @@ public class SwordDanceEventHandler {
 
     /**
      * Process a single tick of dash movement for a player.
+     * Server only tracks progress - client handles interpolation.
+     * Final position is enforced when dash completes.
      */
     private static void processDashTick(ServerPlayer player) {
         int tick = SwordDanceSkill.incrementDashTick(player);
 
         if (tick >= SwordDanceSkill.DASH_DURATION_TICKS) {
-            // Dash complete - process post-dash logic
-            finalizeDash(player);
-        } else {
-            // Interpolate position
-            Vec3 startPos = SwordDanceSkill.getDashStartPos(player);
+            // Dash complete - enforce final position and process post-dash logic
             Vec3 endPos = SwordDanceSkill.getDashEndPos(player);
-
-            // Calculate progress with accelerating curve (t^2)
-            double t = (double) tick / SwordDanceSkill.DASH_DURATION_TICKS;
-            double easedT = t * t;
-
-            // Interpolate position
-            Vec3 currentPos = startPos.add(endPos.subtract(startPos).scale(easedT));
-
-            // Teleport player to interpolated position
-            player.teleportTo(currentPos.x, player.getY(), currentPos.z);
-
-            TalentsMod.LOGGER.debug("Sword Dance: Tick {} for {}, pos: {}",
-                    tick, player.getName().getString(), currentPos);
+            player.teleportTo(endPos.x, endPos.y, endPos.z);
+            finalizeDash(player);
         }
+        // Client handles per-frame interpolation for smooth visuals
     }
 
     /**
