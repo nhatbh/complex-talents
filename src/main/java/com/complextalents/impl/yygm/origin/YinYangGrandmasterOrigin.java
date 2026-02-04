@@ -3,7 +3,10 @@ package com.complextalents.impl.yygm.origin;
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.yygm.EquilibriumData;
 import com.complextalents.impl.yygm.client.renderer.YinYangRenderer;
+import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.effect.HarmonizedEffect;
+import com.complextalents.impl.yygm.effect.YinYangAnnihilationEffect;
+import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.events.YYGMGateHitEvent;
 import com.complextalents.impl.yygm.skill.SwordDanceSkill;
 import com.complextalents.network.PacketHandler;
@@ -111,9 +114,14 @@ public class YinYangGrandmasterOrigin {
             ServerPlayer player = event.getPlayer();
             LivingEntity target = event.getTarget();
 
-            // Refresh Harmonized effect duration
-            HarmonizedEffect.applyToTarget(target, player.getUUID());
-            HarmonizedEffect.syncGateState(target, player.getUUID());
+            // Only apply/refresh Harmonized if target doesn't have Exposed or Annihilation
+            // Exposed and Annihilation have their own effect management and should not be overwritten
+            if (!target.hasEffect(YinYangEffects.EXPOSED.get()) &&
+                !target.hasEffect(YinYangEffects.YIN_YANG_ANNIHILATION.get())) {
+                // Refresh Harmonized effect duration
+                HarmonizedEffect.applyToTarget(target, player.getUUID());
+                HarmonizedEffect.syncGateState(target, player.getUUID());
+            }
 
             // Update last hit time for decay tracking (player-global in EquilibriumData)
             long currentTime = target.level().getGameTime();

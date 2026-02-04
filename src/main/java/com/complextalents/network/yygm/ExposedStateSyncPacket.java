@@ -87,6 +87,10 @@ public class ExposedStateSyncPacket {
         if (entity instanceof net.minecraft.world.entity.LivingEntity) {
             // Store Exposed data for client-side rendering
             ClientExposedData.updateExposedData(entityId, playerUuid, gatePattern, completedGates, nextRequired, expirationTick);
+
+            // Clear any Harmonized data for this player/entity to prevent stacking
+            // This ensures that when Exposed is applied to a Harmonized target, only Exposed gates render
+            YinYangGateStateSyncPacket.ClientGateData.removePlayerGateData(entityId, playerUuid);
         }
     }
 

@@ -34,7 +34,7 @@ public class EightFormationBattleArraySkill {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "eight_formation_battle_array");
 
     // Duration by level: [15, 20, 25, 30] seconds
-    private static final double[] DURATION_BY_LEVEL = {15.0, 20.0, 25.0, 30.0};
+    private static final double[] DURATION_BY_LEVEL = {60.0, 20.0, 25.0, 30.0};
     // Cooldown by level: [180, 160, 140, 120, 100] seconds (3 min to 1 min 40 sec)
     private static final double[] COOLDOWN_BY_LEVEL = {18.0, 160.0, 140.0, 120.0, 100.0};
     // Max range

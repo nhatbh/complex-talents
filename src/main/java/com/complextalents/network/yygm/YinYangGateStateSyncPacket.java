@@ -118,6 +118,10 @@ public class YinYangGateStateSyncPacket {
                     nextRequired, cooldownEnd, yangRespawnTick, yinRespawnTick, usedSlotsBitmap);
             // Also update the next required for HUD
             ClientGateData.setNextRequired(nextRequired);
+
+            // Clear any Exposed data for this player/entity to prevent stacking
+            // This ensures that when Harmonized is applied, Exposed gates are cleared
+            ExposedStateSyncPacket.ClientExposedData.removePlayerExposedData(entityId, playerUuid);
         }
     }
 

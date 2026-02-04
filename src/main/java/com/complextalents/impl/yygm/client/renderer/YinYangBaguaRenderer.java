@@ -281,6 +281,14 @@ public class YinYangBaguaRenderer {
         ExposedStateSyncPacket.ExposedData exposedData = ExposedStateSyncPacket.ClientExposedData.getExposedData(entity.getId(), playerUuid);
         if (exposedData == null) return;
 
+        // Check if expired - don't render if expiration time has passed
+        long currentTime = Minecraft.getInstance().level.getGameTime();
+        if (currentTime >= exposedData.getExpirationTick()) {
+            // Remove expired data and don't render
+            ExposedStateSyncPacket.ClientExposedData.removePlayerExposedData(entity.getId(), playerUuid);
+            return;
+        }
+
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityTranslucentEmissive(BLANK_TEXTURE));
         Matrix4f pose = poseStack.last().pose();
 

@@ -502,6 +502,14 @@ public class ExposedEffect extends MobEffect {
                 continue;
             }
 
+            // Check if the actual MobEffect is still present (handles server restart where MobEffect is lost but NBT remains)
+            if (!exposedEntity.hasEffect(YinYangEffects.EXPOSED.get())) {
+                removeFromTarget(exposedEntity, playerUuid);
+                TalentsMod.LOGGER.debug("Exposed MobEffect missing for player {} on entity {} (server restart?), cleaning up",
+                    playerUuid, exposedEntity.getName().getString());
+                continue;
+            }
+
             // Check if expired
             long currentTime = exposedEntity.level().getGameTime();
             if (isExpired(exposedEntity, playerUuid, currentTime)) {
