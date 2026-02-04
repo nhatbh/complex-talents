@@ -27,6 +27,7 @@ public class EquilibriumData {
     private static final ConcurrentHashMap<UUID, Long> LAST_GATE_HIT_TIME = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> PENDING_YIN_HIT = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Boolean> PENDING_YANG_HIT = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Integer> NEXT_REQUIRED_GATE = new ConcurrentHashMap<>();
 
     /**
      * Get the current equilibrium stacks for a player.
@@ -148,6 +149,35 @@ public class EquilibriumData {
     }
 
     /**
+     * Get the next required gate type for a player.
+     * @return GATE_YANG (0) or GATE_YIN (1)
+     */
+    public static int getNextRequired(UUID playerUuid) {
+        return NEXT_REQUIRED_GATE.getOrDefault(playerUuid, com.complextalents.impl.yygm.events.YYGMGateHitEvent.GATE_YANG);
+    }
+
+    /**
+     * Set the next required gate type for a player.
+     */
+    public static void setNextRequired(UUID playerUuid, int gateType) {
+        if (gateType == com.complextalents.impl.yygm.events.YYGMGateHitEvent.GATE_YANG
+            || gateType == com.complextalents.impl.yygm.events.YYGMGateHitEvent.GATE_YIN) {
+            NEXT_REQUIRED_GATE.put(playerUuid, gateType);
+        }
+    }
+
+    /**
+     * Toggle the next required gate (Yang <-> Yin).
+     */
+    public static void toggleNextRequired(UUID playerUuid) {
+        int current = getNextRequired(playerUuid);
+        int newRequired = (current == com.complextalents.impl.yygm.events.YYGMGateHitEvent.GATE_YANG)
+            ? com.complextalents.impl.yygm.events.YYGMGateHitEvent.GATE_YIN
+            : com.complextalents.impl.yygm.events.YYGMGateHitEvent.GATE_YANG;
+        setNextRequired(playerUuid, newRequired);
+    }
+
+    /**
      * Update the last gate hit time for decay tracking.
      */
     public static void updateLastHitTime(UUID playerUuid, long currentTime) {
@@ -205,6 +235,7 @@ public class EquilibriumData {
         LAST_GATE_HIT_TIME.remove(playerUuid);
         PENDING_YIN_HIT.remove(playerUuid);
         PENDING_YANG_HIT.remove(playerUuid);
+        NEXT_REQUIRED_GATE.remove(playerUuid);
         TalentsMod.LOGGER.debug("Cleaned up YYGM Equilibrium data for player {}", playerUuid);
     }
 

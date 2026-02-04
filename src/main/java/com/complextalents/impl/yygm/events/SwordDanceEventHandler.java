@@ -1,6 +1,9 @@
 package com.complextalents.impl.yygm.events;
 
+import java.util.UUID;
+
 import com.complextalents.TalentsMod;
+import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.skill.SwordDanceSkill;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
@@ -248,14 +251,45 @@ public class SwordDanceEventHandler {
 
     /**
      * Activate a gate at a specific angle and return the event result.
+     * Routes to Yin Yang Annihilation, exposed, or harmonized gate handling based on target state.
      */
     private static YYGMGateHitEvent activateGateAtAngle(ServerPlayer player, LivingEntity target, double angle) {
+        UUID playerUuid = player.getUUID();
+
+        // Check if target has Yin Yang Annihilation - HIGHEST PRIORITY
+        // All attacks deal amplified true damage from ANY angle - no gate restrictions
+        if (com.complextalents.impl.yygm.effect.YinYangAnnihilationEffect.hasYinYangAnnihilation(target, playerUuid)) {
+            // Always true damage from any angle - no gate checks needed
+            dealYYGMTrueDamage(player, target);
+
+            TalentsMod.LOGGER.debug("Sword Dance: Hitting Yin Yang Annihilation target {}, true damage applied from any angle",
+                target.getName().getString());
+
+            return new YYGMGateHitEvent(player, target,
+                YYGMGateHitEvent.HitResult.TRUE_GATE,
+                YYGMGateHitEvent.GATE_YANG, // doesn't matter for annihilation
+                0, angle, 0, true);
+        }
+
+        // Check if target is exposed (8-gate system)
+        if (ExposedEffect.isExposed(target, playerUuid)) {
+            return activateExposedGateAtAngle(player, target, angle);
+        }
+
+        // Otherwise, treat as harmonized (2-gate system)
+        return activateHarmonizedGateAtAngle(player, target, angle);
+    }
+
+    /**
+     * Activate a harmonized gate (2-gate alternating system) at a specific angle.
+     */
+    private static YYGMGateHitEvent activateHarmonizedGateAtAngle(ServerPlayer player, LivingEntity target, double angle) {
         int compassDirection = com.complextalents.impl.yygm.effect.HarmonizedEffect.angleToCompassDirection(angle);
 
         // Get gate data
         int yangGate = com.complextalents.impl.yygm.effect.HarmonizedEffect.getYangGateDirection(target, player.getUUID());
         int yinGate = com.complextalents.impl.yygm.effect.HarmonizedEffect.getYinGateDirection(target, player.getUUID());
-        int nextRequired = com.complextalents.impl.yygm.effect.HarmonizedEffect.getNextRequiredGate(target, player.getUUID());
+        int nextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(player.getUUID());
         long currentTime = target.level().getGameTime();
 
         // Check cooldown
@@ -301,6 +335,87 @@ public class SwordDanceEventHandler {
             PacketHandler.sendToNearby(new SwordDanceGateActivatePacket(
                     target.getId(), angle, gateType, hitResultCode
             ), level, target.position());
+        }
+
+        return event;
+    }
+
+    /**
+     * Activate an exposed gate (8-gate system) at a specific angle.
+     * The exposed system has all 8 gates active with a fixed pattern (4 Yang, 4 Yin).
+     * Gates do not respawn and must all be completed for Yin Yang Annihilation.
+     */
+    private static YYGMGateHitEvent activateExposedGateAtAngle(ServerPlayer player, LivingEntity target, double angle) {
+        UUID playerUuid = player.getUUID();
+        int compassDirection = ExposedEffect.angleToCompassDirection(angle);
+
+        // Get exposed gate data
+        int gateTypeAtDirection = ExposedEffect.getGateTypeAtDirection(target, playerUuid, compassDirection);
+        int nextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(playerUuid);
+        int completedBitmap = ExposedEffect.getCompletedGatesBitmap(target, playerUuid);
+
+        YYGMGateHitEvent.HitResult hitResult;
+        int gateType = YYGMGateHitEvent.GATE_NONE;
+
+        // Check if this gate has already been completed
+        if ((completedBitmap & (1 << compassDirection)) != 0) {
+            // Gate already hit - treat as empty gate
+            hitResult = YYGMGateHitEvent.HitResult.EMPTY_GATE;
+        } else {
+            // Determine which gate was hit
+            if (gateTypeAtDirection == ExposedEffect.GATE_YANG) {
+                gateType = YYGMGateHitEvent.GATE_YANG;
+            } else if (gateTypeAtDirection == ExposedEffect.GATE_YIN) {
+                gateType = YYGMGateHitEvent.GATE_YIN;
+            }
+
+            // Determine hit result
+            if (gateType == YYGMGateHitEvent.GATE_NONE) {
+                hitResult = YYGMGateHitEvent.HitResult.EMPTY_GATE;
+            } else if (gateType == nextRequired) {
+                hitResult = YYGMGateHitEvent.HitResult.TRUE_GATE;
+
+                // Mark gate as completed
+                ExposedEffect.markGateCompleted(target, playerUuid, compassDirection);
+
+                // Check if all gates completed
+                if (ExposedEffect.isAllGatesCompleted(target, playerUuid)) {
+                    // TODO: Trigger Yin Yang Annihilation state
+                    TalentsMod.LOGGER.info("Sword Dance: All 8 exposed gates completed for {} on {}!",
+                            player.getName().getString(), target.getName().getString());
+                }
+            } else {
+                hitResult = YYGMGateHitEvent.HitResult.FALSE_GATE;
+
+                // Wrong gate - clear Exposed effect immediately
+                ExposedEffect.removeFromTarget(target, playerUuid);
+                TalentsMod.LOGGER.debug("Sword Dance: Wrong gate hit on exposed target, effect removed");
+            }
+        }
+
+        // Create event with Sword Dance flag
+        YYGMGateHitEvent event = new YYGMGateHitEvent(player, target, hitResult, gateType,
+                compassDirection, angle, nextRequired, true);
+
+        // Fire event
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
+
+        // Send visual packet to client
+        if (player.level() instanceof ServerLevel level) {
+            int hitResultCode = switch (hitResult) {
+                case TRUE_GATE -> SwordDanceGateActivatePacket.HIT_TRUE_GATE;
+                case FALSE_GATE -> SwordDanceGateActivatePacket.HIT_FALSE_GATE;
+                case EMPTY_GATE -> SwordDanceGateActivatePacket.HIT_EMPTY_GATE;
+            };
+
+            PacketHandler.sendToNearby(new SwordDanceGateActivatePacket(
+                    target.getId(), angle, gateType, hitResultCode
+            ), level, target.position());
+
+            // Sync exposed state if modified
+            if (hitResult == YYGMGateHitEvent.HitResult.TRUE_GATE) {
+                ExposedEffect.syncExposedState(target, playerUuid);
+            }
         }
 
         return event;

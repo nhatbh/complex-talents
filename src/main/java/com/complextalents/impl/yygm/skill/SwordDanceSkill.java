@@ -1,6 +1,7 @@
 package com.complextalents.impl.yygm.skill;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.effect.HarmonizedEffect;
 import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
 import com.complextalents.network.PacketHandler;
@@ -24,7 +25,11 @@ import net.minecraft.world.phys.Vec3;
  * Sword Dance - A dash skill for Yin Yang Grandmaster.
  *
  * A lightning-fast horizontal dash of 8 blocks that activates gates and deals
- * damage to the harmonized target, with complex cooldown refund mechanics.
+ * damage to harmonized or exposed targets, with complex cooldown refund mechanics.
+ *
+ * Works with both:
+ * - Harmonized targets (2-gate alternating system)
+ * - Exposed targets (8-gate system from ultimate ability)
  */
 public class SwordDanceSkill {
 
@@ -39,8 +44,13 @@ public class SwordDanceSkill {
     private static final String NBT_DASH_END_Y = "sword_dance_end_y";
     private static final String NBT_DASH_END_Z = "sword_dance_end_z";
     private static final String NBT_DASH_TARGET_ID = "sword_dance_target_id";
+    private static final String NBT_DASH_TARGET_TYPE = "sword_dance_target_type"; // "harmonized" or "exposed"
     private static final String NBT_DASH_HAS_REFUND = "sword_dance_has_refund";
     private static final String NBT_DASH_REFUND_USED = "sword_dance_refund_used";
+
+    // Target type constants
+    public static final String TARGET_TYPE_HARMONIZED = "harmonized";
+    public static final String TARGET_TYPE_EXPOSED = "exposed";
 
     // Constants
     public static final double DASH_DISTANCE = 8.0;
@@ -114,21 +124,33 @@ public class SwordDanceSkill {
             }
         }
 
-        // Get harmonized target (if any)
-        LivingEntity harmonizedTarget = null;
+        // Get target (harmonized or exposed)
+        LivingEntity dashTarget = null;
+        String targetType = null;
         Integer targetId = HarmonizedEffect.getHarmonizedEntityId(player.getUUID());
+
+        // If no harmonized target, check for exposed target
+        if (targetId != null) {
+            targetType = TARGET_TYPE_HARMONIZED;
+        } else {
+            targetId = ExposedEffect.getExposedEntityId(player.getUUID());
+            if (targetId != null) {
+                targetType = TARGET_TYPE_EXPOSED;
+            }
+        }
+
         if (targetId != null && player.level() instanceof ServerLevel level) {
             net.minecraft.world.entity.Entity entity = level.getEntity(targetId);
             if (entity instanceof LivingEntity living && living.isAlive()) {
-                harmonizedTarget = living;
+                dashTarget = living;
             }
         }
 
         // Check if dash will go through target's hitbox and clamp end position
-        if (harmonizedTarget != null) {
-            if (willDashThroughTarget(startPos, endPos, harmonizedTarget)) {
+        if (dashTarget != null) {
+            if (willDashThroughTarget(startPos, endPos, dashTarget)) {
                 // Clamp end position to outside target's hitbox
-                endPos = clampToOutsideHitbox(harmonizedTarget, endPos);
+                endPos = clampToOutsideHitbox(dashTarget, endPos);
                 TalentsMod.LOGGER.debug("Sword Dance: Dash clamped for through-target case to {}", endPos);
             }
         }
@@ -144,10 +166,11 @@ public class SwordDanceSkill {
         data.putDouble(NBT_DASH_END_X, endPos.x);
         data.putDouble(NBT_DASH_END_Y, endPos.y);
         data.putDouble(NBT_DASH_END_Z, endPos.z);
-        data.putInt(NBT_DASH_TARGET_ID, harmonizedTarget != null ? harmonizedTarget.getId() : -1);
+        data.putInt(NBT_DASH_TARGET_ID, dashTarget != null ? dashTarget.getId() : -1);
+        data.putString(NBT_DASH_TARGET_TYPE, targetType != null ? targetType : "");
 
-        TalentsMod.LOGGER.info("Sword Dance: Dash data stored for {}, start: {}, end: {}",
-                player.getName().getString(), startPos, endPos);
+        TalentsMod.LOGGER.info("Sword Dance: Dash data stored for {}, start: {}, end: {}, target: {}",
+                player.getName().getString(), startPos, endPos, targetType);
 
         // Send packet to client for visual effects
         if (player.level() instanceof ServerLevel level) {
@@ -305,7 +328,18 @@ public class SwordDanceSkill {
         data.remove(NBT_DASH_END_Y);
         data.remove(NBT_DASH_END_Z);
         data.remove(NBT_DASH_TARGET_ID);
+        data.remove(NBT_DASH_TARGET_TYPE);
         data.remove(NBT_DASH_HAS_REFUND);
+    }
+
+    /**
+     * Get the dash target type for a player.
+     * @return "harmonized", "exposed", or null/empty if no target type set
+     */
+    public static String getDashTargetType(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        String type = data.getString(NBT_DASH_TARGET_TYPE);
+        return type.isEmpty() ? null : type;
     }
 
     /**

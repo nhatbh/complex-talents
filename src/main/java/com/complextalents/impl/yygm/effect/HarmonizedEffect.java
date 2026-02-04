@@ -36,13 +36,12 @@ public class HarmonizedEffect extends MobEffect {
     private static final String NBT_PLAYER_UUID = "player_uuid";
     private static final String NBT_YANG_GATE = "yang_gate";
     private static final String NBT_YIN_GATE = "yin_gate";
-    private static final String NBT_NEXT_REQUIRED = "next_required";
     private static final String NBT_GATE_COOLDOWN = "gate_cooldown";
     private static final String NBT_YANG_RESPAWN = "yang_respawn";
     private static final String NBT_YIN_RESPAWN = "yin_respawn";
     private static final String NBT_FIRST_APPLY_TIME = "first_apply_time";
     private static final String NBT_USED_SLOTS_BITMAP = "used_slots_bitmap"; // Bitmap of which compass slots have been used
-    // Note: Equilibrium, pending hits, and last hit time are now player-global in EquilibriumData, not stored per-entity
+    // Note: Equilibrium, pending hits, last hit time, and nextRequired are now player-global in EquilibriumData, not stored per-entity
 
     // Bitmap values for all 8 slots used (0-7 bits set)
     private static final int ALL_SLOTS_USED = 0xFF; // 255 = all 8 bits set
@@ -99,13 +98,12 @@ public class HarmonizedEffect extends MobEffect {
             playerTag.putUUID(NBT_PLAYER_UUID, playerUuid);
             playerTag.putInt(NBT_YANG_GATE, GATE_NONE);
             playerTag.putInt(NBT_YIN_GATE, GATE_NONE);
-            playerTag.putInt(NBT_NEXT_REQUIRED, GATE_NONE); // Will be set on first apply
             playerTag.putLong(NBT_GATE_COOLDOWN, 0);
             playerTag.putLong(NBT_YANG_RESPAWN, 0);
             playerTag.putLong(NBT_YIN_RESPAWN, 0);
             playerTag.putLong(NBT_FIRST_APPLY_TIME, entity.level().getGameTime());
             playerTag.putInt(NBT_USED_SLOTS_BITMAP, 0); // No slots used yet
-            // Note: Equilibrium, pending hits, and last hit time are player-global in EquilibriumData
+            // Note: Equilibrium, pending hits, last hit time, and nextRequired are player-global in EquilibriumData
             rootTag.put(playerKey, playerTag);
             entity.getPersistentData().put(NBT_ROOT, rootTag);
         }
@@ -126,12 +124,21 @@ public class HarmonizedEffect extends MobEffect {
      * Spawns dual gates (Yang + Yin) at different compass directions.
      * Randomly selects which gate is required first (50/50).
      * Does NOT switch targets if already harmonized.
+     * Blocked if player has an active Yin Yang Annihilation target.
      *
      * @return true if this was a new application, false otherwise
      */
     public static boolean applyToTarget(LivingEntity target, UUID playerUuid) {
         boolean targetChanged = false;
         if (!target.level().isClientSide) {
+            // Check if player has an active Yin Yang Annihilation target
+            // If so, block Harmonized application
+            if (YinYangAnnihilationEffect.hasAnnihilationTarget(playerUuid)) {
+                TalentsMod.LOGGER.debug("YYGM player {} has active Yin Yang Annihilation target, Harmonized application blocked",
+                    playerUuid);
+                return false;
+            }
+
             // Check if player already has a harmonized target
             Integer currentHarmonizedId = PLAYER_HARMONIZED_CACHE.get(playerUuid);
 
@@ -158,12 +165,11 @@ public class HarmonizedEffect extends MobEffect {
             // New application - set initial cooldown and spawn gates
             playerData.putLong(NBT_GATE_COOLDOWN, currentTime + 20); // 1 second cooldown
 
-            // Randomly select first required gate (50/50)
-            int firstRequired = target.getRandom().nextBoolean() ? GATE_YANG : GATE_YIN;
-            playerData.putInt(NBT_NEXT_REQUIRED, firstRequired);
-
             // Spawn dual gates at different compass directions
             spawnDualGates(target, playerUuid, playerData, target.getRandom());
+
+            // Note: nextRequired is now player-global in EquilibriumData
+            // It defaults to GATE_YANG and gets toggled on gate hits
 
             isNew = true;
         }
@@ -369,16 +375,8 @@ public class HarmonizedEffect extends MobEffect {
         savePlayerData(entity, playerUuid, playerData);
     }
 
-    public static int getNextRequiredGate(LivingEntity entity, UUID playerUuid) {
-        CompoundTag playerData = getPlayerGateData(entity, playerUuid);
-        return playerData.getInt(NBT_NEXT_REQUIRED);
-    }
-
-    public static void setNextRequiredGate(LivingEntity entity, UUID playerUuid, int nextRequired) {
-        CompoundTag playerData = getPlayerGateData(entity, playerUuid);
-        playerData.putInt(NBT_NEXT_REQUIRED, nextRequired);
-        savePlayerData(entity, playerUuid, playerData);
-    }
+    // Note: getNextRequiredGate() and setNextRequiredGate() removed
+    // Use EquilibriumData.getNextRequired() and EquilibriumData.setNextRequired() instead
 
     public static long getGateCooldown(LivingEntity entity, UUID playerUuid) {
         CompoundTag playerData = getPlayerGateData(entity, playerUuid);
@@ -539,7 +537,8 @@ public class HarmonizedEffect extends MobEffect {
 
         int yangGate = getYangGateDirection(entity, playerUuid);
         int yinGate = getYinGateDirection(entity, playerUuid);
-        int nextRequired = getNextRequiredGate(entity, playerUuid);
+        // nextRequired is now player-global in EquilibriumData
+        int nextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(playerUuid);
         long cooldownEnd = getGateCooldown(entity, playerUuid);
         long yangRespawn = getYangRespawnTick(entity, playerUuid);
         long yinRespawn = getYinRespawnTick(entity, playerUuid);

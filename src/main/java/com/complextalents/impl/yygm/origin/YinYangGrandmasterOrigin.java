@@ -181,11 +181,8 @@ public class YinYangGrandmasterOrigin {
                 handleSwordDanceRefund(event);
             }
 
-            // Toggle next required gate
-            int newNextRequired = (gateType == YYGMGateHitEvent.GATE_YANG)
-                ? YYGMGateHitEvent.GATE_YIN
-                : YYGMGateHitEvent.GATE_YANG;
-            HarmonizedEffect.setNextRequiredGate(target, player.getUUID(), newNextRequired);
+            // Toggle next required gate (player-global in EquilibriumData)
+            com.complextalents.impl.yygm.EquilibriumData.toggleNextRequired(player.getUUID());
 
             // Schedule gate respawn using scaled stat
             long currentTime = target.level().getGameTime();
@@ -213,6 +210,7 @@ public class YinYangGrandmasterOrigin {
             );
 
             String gateName = (gateType == YYGMGateHitEvent.GATE_YANG) ? "Yang" : "Yin";
+            int newNextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(player.getUUID());
             TalentsMod.LOGGER.debug("YYGM {} SUCCESS: hit {} gate, eq: {}, next: {}",
                 player.getName().getString(), gateName,
                 EquilibriumData.getEquilibrium(player.getUUID()),
