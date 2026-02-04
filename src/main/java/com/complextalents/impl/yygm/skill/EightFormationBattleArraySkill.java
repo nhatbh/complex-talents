@@ -4,6 +4,7 @@ import com.complextalents.TalentsMod;
 import com.complextalents.impl.yygm.EquilibriumData;
 import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.effect.HarmonizedEffect;
+import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
@@ -130,9 +131,10 @@ public class EightFormationBattleArraySkill {
                 target.getName().getString());
         }
 
-        // Step 2: Apply Exposed effect
+        // Step 2: Apply Exposed effect via instance method
         int durationTicks = durationSeconds * 20; // Convert to ticks
-        ExposedEffect.applyToTarget(target, player.getUUID(), durationTicks);
+        ExposedEffect effect = (ExposedEffect) YinYangEffects.EXPOSED.get();
+        effect.applyToTarget(target, player.getUUID(), durationTicks);
 
         // Step 3: Play FX
         if (player.level() instanceof ServerLevel level) {

@@ -9,6 +9,9 @@ import com.complextalents.impl.yygm.effect.YinYangAnnihilationEffect;
 import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.events.YYGMGateHitEvent;
 import com.complextalents.impl.yygm.skill.SwordDanceSkill;
+import com.complextalents.impl.yygm.state.PlayerTargetTracker;
+import com.complextalents.impl.yygm.state.YinYangState;
+import com.complextalents.impl.yygm.util.GateSpawnStrategy;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
 import com.complextalents.origin.OriginBuilder;
@@ -116,8 +119,9 @@ public class YinYangGrandmasterOrigin {
 
             // Only apply/refresh Harmonized if target doesn't have Exposed or Annihilation
             // Exposed and Annihilation have their own effect management and should not be overwritten
-            if (!target.hasEffect(YinYangEffects.EXPOSED.get()) &&
-                !target.hasEffect(YinYangEffects.YIN_YANG_ANNIHILATION.get())) {
+            // Check using PlayerTargetTracker for unified state tracking
+            PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(player.getUUID());
+            if (targetData == null || targetData.state() == YinYangState.HARMONIZED) {
                 // Refresh Harmonized effect duration
                 HarmonizedEffect.applyToTarget(target, player.getUUID());
                 HarmonizedEffect.syncGateState(target, player.getUUID());
@@ -361,10 +365,12 @@ public class YinYangGrandmasterOrigin {
                         continue;
                     }
 
-                    // Get this player's harmonized target
+                    // Get this player's harmonized target using PlayerTargetTracker
                     java.util.UUID playerUuid = player.getUUID();
-                    Integer targetId = HarmonizedEffect.getHarmonizedEntityId(playerUuid);
-                    if (targetId == null) continue;
+                    PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
+                    if (targetData == null || targetData.state() != YinYangState.HARMONIZED) continue;
+
+                    Integer targetId = targetData.entityId();
 
                     net.minecraft.world.entity.Entity entity = level.getEntity(targetId);
                     if (!(entity instanceof LivingEntity living)) continue;
@@ -438,8 +444,16 @@ public class YinYangGrandmasterOrigin {
                 ? HarmonizedEffect.getYinGateDirection(entity, playerUuid)
                 : HarmonizedEffect.getYangGateDirection(entity, playerUuid);
 
-            // Pick a random available slot (excluding the other gate's position)
-            int newDir = HarmonizedEffect.getRandomAvailableSlot(entity, playerUuid, otherGateDir, entity.getRandom());
+            // Get current used slots bitmap
+            int usedSlotsBitmap = HarmonizedEffect.getUsedSlotsBitmap(entity, playerUuid);
+
+            // Pick a random available slot (excluding the other gate's position) using GateSpawnStrategy
+            int newDir = GateSpawnStrategy.getRandomAvailableSlot(entity, playerUuid, otherGateDir,
+                entity.getRandom(), usedSlotsBitmap, "yygm_gates");
+
+            // Update the used slots bitmap with the new gate position
+            int newBitmap = GateSpawnStrategy.markSlotsAsUsed(usedSlotsBitmap, newDir);
+            HarmonizedEffect.setUsedSlotsBitmap(entity, playerUuid, newBitmap);
 
             if (gateType == HarmonizedEffect.GATE_YANG) {
                 HarmonizedEffect.setYangGateDirection(entity, playerUuid, newDir);
@@ -459,7 +473,7 @@ public class YinYangGrandmasterOrigin {
 
             TalentsMod.LOGGER.debug("Respawned {} gate at direction {} for player {} on entity {} (used bitmap: {})",
                 gateType == HarmonizedEffect.GATE_YANG ? "Yang" : "Yin", newDir, playerUuid,
-                entity.getName().getString(), HarmonizedEffect.getUsedSlotsBitmap(entity, playerUuid));
+                entity.getName().getString(), newBitmap);
         }
     }
 }

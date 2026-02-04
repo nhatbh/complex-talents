@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.skill.SwordDanceSkill;
+import com.complextalents.impl.yygm.util.YinYangAngleUtil;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
 import com.complextalents.skill.capability.SkillDataProvider;
@@ -284,7 +285,7 @@ public class SwordDanceEventHandler {
      * Activate a harmonized gate (2-gate alternating system) at a specific angle.
      */
     private static YYGMGateHitEvent activateHarmonizedGateAtAngle(ServerPlayer player, LivingEntity target, double angle) {
-        int compassDirection = com.complextalents.impl.yygm.effect.HarmonizedEffect.angleToCompassDirection(angle);
+        int compassDirection = YinYangAngleUtil.angleToCompassDirection(angle);
 
         // Get gate data
         int yangGate = com.complextalents.impl.yygm.effect.HarmonizedEffect.getYangGateDirection(target, player.getUUID());
@@ -347,7 +348,7 @@ public class SwordDanceEventHandler {
      */
     private static YYGMGateHitEvent activateExposedGateAtAngle(ServerPlayer player, LivingEntity target, double angle) {
         UUID playerUuid = player.getUUID();
-        int compassDirection = ExposedEffect.angleToCompassDirection(angle);
+        int compassDirection = YinYangAngleUtil.angleToCompassDirection(angle);
 
         // Get exposed gate data
         int gateTypeAtDirection = ExposedEffect.getGateTypeAtDirection(target, playerUuid, compassDirection);
@@ -387,8 +388,9 @@ public class SwordDanceEventHandler {
             } else {
                 hitResult = YYGMGateHitEvent.HitResult.FALSE_GATE;
 
-                // Wrong gate - clear Exposed effect immediately
-                ExposedEffect.removeFromTarget(target, playerUuid);
+                // Wrong gate - clear Exposed effect immediately via instance method
+                ExposedEffect effect = (ExposedEffect) com.complextalents.impl.yygm.effect.YinYangEffects.EXPOSED.get();
+                effect.removeFromTarget(target, playerUuid);
                 TalentsMod.LOGGER.debug("Sword Dance: Wrong gate hit on exposed target, effect removed");
             }
         }

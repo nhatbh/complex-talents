@@ -7,6 +7,10 @@ import com.complextalents.impl.yygm.effect.HarmonizedEffect;
 import com.complextalents.impl.yygm.effect.YinYangAnnihilationEffect;
 import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
+import com.complextalents.impl.yygm.state.PlayerTargetTracker;
+import com.complextalents.impl.yygm.state.YinYangState;
+import com.complextalents.impl.yygm.state.YinYangStateManager;
+import com.complextalents.impl.yygm.util.YinYangAngleUtil;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
@@ -67,10 +71,12 @@ public class YinYangDamageHandler {
         double distance = player.position().distanceTo(target.position());
         HarmonizedEffect.cacheDamage(player.getUUID(), target.getId(), distance);
 
+        // Unified state check via PlayerTargetTracker
+        PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(player.getUUID());
+
         // CASE -1: Hitting Yin Yang Annihilation target - HIGHEST PRIORITY
         // All attacks deal amplified true damage from ANY angle - no gate restrictions
-        Integer annihilationId = YinYangAnnihilationEffect.getAnnihilationEntityId(player.getUUID());
-        if (annihilationId != null && annihilationId == target.getId()) {
+        if (targetData != null && targetData.entityId() == target.getId() && targetData.state() == YinYangState.ANNIHILATION) {
             applyAnnihilationTrueDamage(event, player);
 
             TalentsMod.LOGGER.debug("YYGM {} hitting Yin Yang Annihilation target {}, applying amplified true damage",
@@ -79,17 +85,13 @@ public class YinYangDamageHandler {
         }
 
         // CASE 0: Hitting Exposed target - handle Exposed gate logic
-        Integer exposedId = ExposedEffect.getExposedEntityId(player.getUUID());
-        if (exposedId != null && exposedId == target.getId()) {
+        if (targetData != null && targetData.entityId() == target.getId() && targetData.state() == YinYangState.EXPOSED) {
             handleExposedGateHit(event, target, player);
             return;
         }
 
-        // Get current harmonized target
-        Integer harmonizedId = HarmonizedEffect.getHarmonizedEntityId(player.getUUID());
-
         // CASE 1: Hitting the current harmonized entity - calculate and fire event
-        if (harmonizedId != null && harmonizedId == target.getId()) {
+        if (targetData != null && targetData.entityId() == target.getId() && targetData.state() == YinYangState.HARMONIZED) {
             TalentsMod.LOGGER.debug("YYGM {} hitting harmonized entity {}, calculating gate hit",
                 player.getName().getString(), target.getName().getString());
 
@@ -115,9 +117,9 @@ public class YinYangDamageHandler {
         }
 
         // CASE 2: All other cases - apply body hit penalty
-        // (No harmonized target, hitting different target, etc.)
-        TalentsMod.LOGGER.debug("YYGM {} hitting non-harmonized entity {}, applying body hit penalty (harmonizedId: {})",
-            player.getName().getString(), target.getName().getString(), harmonizedId);
+        // (No target, hitting different target, etc.)
+        TalentsMod.LOGGER.debug("YYGM {} hitting non-harmonized entity {}, applying body hit penalty",
+            player.getName().getString(), target.getName().getString());
         applyBodyHitPenalty(event, player);
     }
 
@@ -126,9 +128,9 @@ public class YinYangDamageHandler {
      * This does NOT modify game state - only calculates and returns event data.
      */
     private static YYGMGateHitEvent calculateGateHitResult(LivingDamageEvent event, LivingEntity target, ServerPlayer player) {
-        // Calculate attack angle
-        double attackAngle = HarmonizedEffect.calculateAttackAngle(target, player);
-        int compassDirection = HarmonizedEffect.angleToCompassDirection(attackAngle);
+        // Calculate attack angle using YinYangAngleUtil
+        double attackAngle = YinYangAngleUtil.calculateAttackAngle(target, player);
+        int compassDirection = YinYangAngleUtil.angleToCompassDirection(attackAngle);
 
         // Get gate data
         int yangGate = HarmonizedEffect.getYangGateDirection(target, player.getUUID());
@@ -176,9 +178,9 @@ public class YinYangDamageHandler {
      * Wrong gate type clears Exposed immediately.
      */
     private static void handleExposedGateHit(LivingDamageEvent event, LivingEntity target, ServerPlayer player) {
-        // Calculate attack angle and compass direction
-        double attackAngle = ExposedEffect.calculateAttackAngle(target, player);
-        int compassDirection = ExposedEffect.angleToCompassDirection(attackAngle);
+        // Calculate attack angle and compass direction using YinYangAngleUtil
+        double attackAngle = YinYangAngleUtil.calculateAttackAngle(target, player);
+        int compassDirection = YinYangAngleUtil.angleToCompassDirection(attackAngle);
 
         // CHECK 1: Is this gate already completed?
         int completedBitmap = ExposedEffect.getCompletedGatesBitmap(target, player.getUUID());
@@ -240,7 +242,8 @@ public class YinYangDamageHandler {
                 ExposedEffect.getCompletedGateCount(target, player.getUUID()));
         } else {
             // WRONG gate hit - clear Exposed immediately
-            ExposedEffect.removeFromTarget(target, player.getUUID());
+            ExposedEffect effect = (ExposedEffect) YinYangEffects.EXPOSED.get();
+            effect.removeFromTarget(target, player.getUUID());
             ExposedEffect.clearExposedTarget(player.getUUID());
 
             // Apply body hit penalty
@@ -332,17 +335,14 @@ public class YinYangDamageHandler {
     /**
      * Convert Exposed effect to Yin Yang Annihilation effect.
      * Called when all 8 gates are completed successfully.
+     * Uses YinYangStateManager for unified state transition.
      */
     private static void convertToYinYangAnnihilation(LivingEntity target, ServerPlayer player) {
         // Calculate remaining duration
-        int remainingDuration = ExposedEffect.getRemainingDuration(target, player.getUUID());
+        int remainingDuration = ExposedEffect.getRemainingDurationStatic(target, player.getUUID());
 
-        // Remove Exposed
-        ExposedEffect.removeFromTarget(target, player.getUUID());
-        ExposedEffect.clearExposedTarget(player.getUUID());
-
-        // Apply Yin Yang Annihilation with remaining duration
-        YinYangAnnihilationEffect.applyToTarget(target, player.getUUID(), remainingDuration);
+        // Use YinYangStateManager for state transition
+        YinYangStateManager.transitionState(target, player.getUUID(), YinYangState.ANNIHILATION, remainingDuration);
 
         // FX for completion
         if (player.level() instanceof ServerLevel level) {
@@ -394,8 +394,8 @@ public class YinYangDamageHandler {
     }
 
     /**
-     * Handle server tick for expired harmonized, exposed, and annihilation effect fail-safe checking.
-     * Delegates to HarmonizedEffect, ExposedEffect, and YinYangAnnihilationEffect which use internal caches for efficient iteration.
+     * Handle server tick for expired YYGM effect checking.
+     * Delegates to YinYangStateManager for unified state management.
      * Gate respawns and equilibrium decay are handled in YinYangGrandmasterOrigin.GateCombatEvents.
      */
     @SubscribeEvent
@@ -409,9 +409,7 @@ public class YinYangDamageHandler {
             return;
         }
 
-        HarmonizedEffect.onServerTick(event.getServer());
-        ExposedEffect.onServerTick(event.getServer());
-        YinYangAnnihilationEffect.onServerTick(event.getServer());
+        YinYangStateManager.onServerTick(event.getServer());
     }
 
     /**
@@ -426,9 +424,8 @@ public class YinYangDamageHandler {
             return;
         }
 
-        HarmonizedEffect.clearHarmonizedTracking(player.getUUID());
-        ExposedEffect.clearExposedTarget(player.getUUID());
-        YinYangAnnihilationEffect.clearAnnihilationTarget(player.getUUID());
+        // Clear unified tracking
+        PlayerTargetTracker.clearTarget(player.getUUID());
         EquilibriumData.cleanup(player.getUUID());
         syncAllNearbyGates(player);
     }
@@ -481,7 +478,7 @@ public class YinYangDamageHandler {
                     int completedGates = ExposedEffect.getCompletedGatesBitmap(entity, playerUuid);
                     // nextRequired is now player-global in EquilibriumData
                     int nextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(playerUuid);
-                    int remainingDuration = ExposedEffect.getRemainingDuration(entity, playerUuid);
+                    int remainingDuration = ExposedEffect.getRemainingDurationStatic(entity, playerUuid);
                     long currentTime = entity.level().getGameTime();
                     long expirationTick = currentTime + remainingDuration;
 
@@ -512,46 +509,19 @@ public class YinYangDamageHandler {
             return;
         }
 
-        Integer harmonizedEntityId = HarmonizedEffect.getHarmonizedEntityId(player.getUUID());
-        Integer exposedEntityId = ExposedEffect.getExposedEntityId(player.getUUID());
-        Integer annihilationEntityId = YinYangAnnihilationEffect.getAnnihilationEntityId(player.getUUID());
+        // Get target data before clearing
+        PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(player.getUUID());
+        int entityId = (targetData != null) ? targetData.entityId() : -1;
 
-        HarmonizedEffect.clearHarmonizedTracking(player.getUUID());
-        ExposedEffect.clearExposedTarget(player.getUUID());
-        YinYangAnnihilationEffect.clearAnnihilationTarget(player.getUUID());
+        // Clear unified tracking
+        PlayerTargetTracker.clearTarget(player.getUUID());
         EquilibriumData.cleanup(player.getUUID());
 
-        if (harmonizedEntityId != null) {
-            LivingEntity harmonizedEntity = findEntityById(player.serverLevel(), harmonizedEntityId);
-            if (harmonizedEntity != null && harmonizedEntity.isAlive()) {
-                harmonizedEntity.removeEffect(com.complextalents.impl.yygm.effect.YinYangEffects.HARMONIZED.get());
-                HarmonizedEffect.cleanupPlayerData(harmonizedEntity, player.getUUID());
-
-                if (harmonizedEntity.level() instanceof ServerLevel level) {
-                    PacketHandler.sendToNearby(
-                        new YinYangGateStateSyncPacket(
-                            harmonizedEntity.getId(),
-                            player.getUUID(),
-                            -2, 0, 0, 0, 0, 0
-                        ),
-                        level,
-                        harmonizedEntity.position()
-                    );
-                }
-            }
-        }
-
-        if (exposedEntityId != null) {
-            LivingEntity exposedEntity = findEntityById(player.serverLevel(), exposedEntityId);
-            if (exposedEntity != null && exposedEntity.isAlive()) {
-                ExposedEffect.removeFromTarget(exposedEntity, player.getUUID());
-            }
-        }
-
-        if (annihilationEntityId != null) {
-            LivingEntity annihilationEntity = findEntityById(player.serverLevel(), annihilationEntityId);
-            if (annihilationEntity != null && annihilationEntity.isAlive()) {
-                YinYangAnnihilationEffect.removeFromTarget(annihilationEntity, player.getUUID());
+        if (entityId != -1) {
+            LivingEntity entity = findEntityById(player.serverLevel(), entityId);
+            if (entity != null && entity.isAlive()) {
+                // Clear state using YinYangStateManager
+                YinYangStateManager.clearState(entity, player.getUUID());
             }
         }
     }
@@ -572,10 +542,10 @@ public class YinYangDamageHandler {
         // Handle Harmonized targets
         if (HarmonizedEffect.hasAnyGates(entity)) {
             for (UUID playerUuid : HarmonizedEffect.getGatePlayers(entity)) {
-                Integer trackedId = HarmonizedEffect.getHarmonizedEntityId(playerUuid);
-                if (trackedId != null && trackedId == entity.getId()) {
+                PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
+                if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.HARMONIZED) {
                     // Clear harmonized tracking so player can harmonize a new target
-                    HarmonizedEffect.clearHarmonizedTracking(playerUuid);
+                    PlayerTargetTracker.clearTarget(playerUuid);
                     // Reset pending hits (must complete pairs on the same target)
                     EquilibriumData.resetPendingHits(playerUuid);
                     // Note: Equilibrium stacks are preserved - they are player-global
@@ -586,46 +556,36 @@ public class YinYangDamageHandler {
         }
 
         // Handle Exposed targets
-        java.util.Set<UUID> exposedPlayers = new java.util.HashSet<>();
         if (entity.getPersistentData().contains("yygm_exposed")) {
             CompoundTag rootTag = entity.getPersistentData().getCompound("yygm_exposed");
             for (String key : rootTag.getAllKeys()) {
                 CompoundTag playerTag = rootTag.getCompound(key);
                 if (playerTag.hasUUID("player_uuid")) {
                     UUID playerUuid = playerTag.getUUID("player_uuid");
-                    exposedPlayers.add(playerUuid);
+                    PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
+                    if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.EXPOSED) {
+                        PlayerTargetTracker.clearTarget(playerUuid);
+                        TalentsMod.LOGGER.debug("YYGM player {}'s exposed target died, cleared",
+                            playerUuid);
+                    }
                 }
             }
         }
 
-        for (UUID playerUuid : exposedPlayers) {
-            Integer exposedId = ExposedEffect.getExposedEntityId(playerUuid);
-            if (exposedId != null && exposedId == entity.getId()) {
-                ExposedEffect.clearExposedTarget(playerUuid);
-                TalentsMod.LOGGER.debug("YYGM player {}'s exposed target died, cleared",
-                    playerUuid);
-            }
-        }
-
         // Handle Yin Yang Annihilation targets
-        java.util.Set<UUID> annihilationPlayers = new java.util.HashSet<>();
         if (entity.getPersistentData().contains("yygm_yin_yang_annihilation")) {
             CompoundTag rootTag = entity.getPersistentData().getCompound("yygm_yin_yang_annihilation");
             for (String key : rootTag.getAllKeys()) {
                 CompoundTag playerTag = rootTag.getCompound(key);
                 if (playerTag.hasUUID("player_uuid")) {
                     UUID playerUuid = playerTag.getUUID("player_uuid");
-                    annihilationPlayers.add(playerUuid);
+                    PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
+                    if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.ANNIHILATION) {
+                        PlayerTargetTracker.clearTarget(playerUuid);
+                        TalentsMod.LOGGER.debug("YYGM player {}'s Yin Yang Annihilation target died, cleared",
+                            playerUuid);
+                    }
                 }
-            }
-        }
-
-        for (UUID playerUuid : annihilationPlayers) {
-            Integer annihilationId = YinYangAnnihilationEffect.getAnnihilationEntityId(playerUuid);
-            if (annihilationId != null && annihilationId == entity.getId()) {
-                YinYangAnnihilationEffect.clearAnnihilationTarget(playerUuid);
-                TalentsMod.LOGGER.debug("YYGM player {}'s Yin Yang Annihilation target died, cleared",
-                    playerUuid);
             }
         }
     }
@@ -656,8 +616,8 @@ public class YinYangDamageHandler {
             // Multiple YYGM players can have gates on the same entity
             if (HarmonizedEffect.hasAnyGates(entity)) {
                 for (UUID playerUuid : HarmonizedEffect.getGatePlayers(entity)) {
-                    Integer trackedId = HarmonizedEffect.getHarmonizedEntityId(playerUuid);
-                    if (trackedId != null && trackedId == entity.getId()) {
+                    PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
+                    if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.HARMONIZED) {
                         HarmonizedEffect.handleEffectExpiration(entity, playerUuid);
                     }
                 }
@@ -669,9 +629,10 @@ public class YinYangDamageHandler {
             // Find all players who have annihilation data on this entity and clean up
             if (YinYangAnnihilationEffect.hasAnyAnnihilation(entity)) {
                 for (UUID playerUuid : YinYangAnnihilationEffect.getAnnihilationPlayers(entity)) {
-                    Integer trackedId = YinYangAnnihilationEffect.getAnnihilationEntityId(playerUuid);
-                    if (trackedId != null && trackedId == entity.getId()) {
-                        YinYangAnnihilationEffect.removeFromTarget(entity, playerUuid);
+                    PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
+                    if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.ANNIHILATION) {
+                        YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
+                        effect.removeFromTarget(entity, playerUuid);
                         TalentsMod.LOGGER.debug("YYGM Yin Yang Annihilation effect expired for player {} on entity {}",
                             playerUuid, entity.getName().getString());
                     }
