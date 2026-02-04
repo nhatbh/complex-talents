@@ -36,8 +36,7 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
 
     @Override
     protected CompoundTag initializePlayerData(CompoundTag tag) {
-        tag.putLong("apply_tick", 0);
-        tag.putInt("duration_ticks", 0);
+        // No duration storage - uses Minecraft's effect system
         return tag;
     }
 
@@ -74,12 +73,7 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
             }
         }
 
-        long currentTime = target.level().getGameTime();
-
-        CompoundTag playerData = getOrCreatePlayerData(target, playerUuid);
-        playerData.putLong("apply_tick", currentTime);
-        playerData.putInt("duration_ticks", durationTicks);
-        savePlayerData(target, playerUuid, playerData);
+        // No NBT storage needed for Annihilation - duration tracked by Minecraft
 
         // Apply the mob effect instance
         target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
@@ -160,22 +154,6 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
      */
     public static boolean hasAnnihilationTarget(UUID playerUuid) {
         return PlayerTargetTracker.hasTargetInState(playerUuid, YinYangState.ANNIHILATION);
-    }
-
-    /**
-     * Get the remaining duration in ticks.
-     */
-    public static int getRemainingDurationStatic(LivingEntity entity, UUID playerUuid) {
-        YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
-        return effect.getRemainingDuration(entity, playerUuid);
-    }
-
-    /**
-     * Check if the Yin Yang Annihilation effect has expired.
-     */
-    public static boolean isExpiredStatic(LivingEntity entity, UUID playerUuid, long currentTime) {
-        YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
-        return effect.isExpired(entity, playerUuid, currentTime);
     }
 
     /**

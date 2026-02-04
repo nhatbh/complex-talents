@@ -207,35 +207,57 @@ public class YinYangDamageHandler {
             boolean wasCompleted = ExposedEffect.markGateCompleted(target, player.getUUID(), compassDirection);
 
             if (wasCompleted) {
-                // First time hitting this gate
-                int completedCount = ExposedEffect.getCompletedGateCount(target, player.getUUID());
+                // First time hitting this gate - Track pending hit for equilibrium gain (same as Harmonized)
+                if (targetGateType == YYGMGateHitEvent.GATE_YANG) {
+                    EquilibriumData.setPendingYangHit(player.getUUID(), true);
+                } else {
+                    EquilibriumData.setPendingYinHit(player.getUUID(), true);
+                }
+
+                // Check if pair is complete (both Yin and Yang hit) - Gain 1 Equilibrium
+                if (EquilibriumData.isPairComplete(player.getUUID())) {
+                    int currentEquilibrium = EquilibriumData.getEquilibrium(player.getUUID());
+                    if (currentEquilibrium < EquilibriumData.MAX_EQUILIBRIUM) {
+                        int newEquilibrium = currentEquilibrium + 1;
+                        EquilibriumData.setEquilibrium(player, newEquilibrium);
+                        TalentsMod.LOGGER.debug("YYGM {} gained Equilibrium from Exposed gate! Now: {}",
+                            player.getName().getString(), newEquilibrium);
+                    }
+                    // Reset pending hits for next pair
+                    EquilibriumData.resetPendingHits(player.getUUID());
+                }
+
+                // Update last hit time for decay tracking
+                EquilibriumData.updateLastHitTime(player.getUUID(), target.level().getGameTime());
 
                 // Apply Yin Yang Annihilation: True damage from any angle
                 applyYinYangAnnihilation(event, player);
 
                 // FX for gate completion
                 if (player.level() instanceof ServerLevel level) {
+                    SpawnYinYangGateFXPacket.EffectType fxType = (targetGateType == YYGMGateHitEvent.GATE_YANG)
+                        ? SpawnYinYangGateFXPacket.EffectType.YANG_HIT
+                        : SpawnYinYangGateFXPacket.EffectType.YIN_HIT;
                     PacketHandler.sendToNearby(
-                        new SpawnYinYangGateFXPacket(target.position(), SpawnYinYangGateFXPacket.EffectType.GATE_SPAWN),
+                        new SpawnYinYangGateFXPacket(target.position(), fxType),
                         level, target.position()
                     );
                 }
 
                 // Check if all 8 gates completed
+                int completedCount = ExposedEffect.getCompletedGateCount(target, player.getUUID());
                 if (completedCount >= 8) {
                     convertToYinYangAnnihilation(target, player);
                 }
             }
 
             // Toggle next required gate (same as Harmonized) - now player-global in EquilibriumData
-            int newNextRequired = (targetGateType == ExposedEffect.GATE_YANG)
-                ? YYGMGateHitEvent.GATE_YIN
-                : YYGMGateHitEvent.GATE_YANG;
-            com.complextalents.impl.yygm.EquilibriumData.setNextRequired(player.getUUID(), newNextRequired);
+            com.complextalents.impl.yygm.EquilibriumData.toggleNextRequired(player.getUUID());
 
             // Sync state (includes updated nextRequired)
             ExposedEffect.syncExposedState(target, player.getUUID());
 
+            int newNextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(player.getUUID());
             TalentsMod.LOGGER.debug("YYGM {} hit correct Exposed gate at direction {}, target gate: {}, next was: {}, next now: {}, completed count: {}",
                 player.getName().getString(), compassDirection, targetGateType, nextRequired,
                 newNextRequired == YYGMGateHitEvent.GATE_YANG ? "Yang" : "Yin",
@@ -245,6 +267,16 @@ public class YinYangDamageHandler {
             ExposedEffect effect = (ExposedEffect) YinYangEffects.EXPOSED.get();
             effect.removeFromTarget(target, player.getUUID());
             ExposedEffect.clearExposedTarget(player.getUUID());
+
+            // Lose ALL Equilibrium (same as Harmonized wrong gate penalty)
+            int lostEquilibrium = EquilibriumData.getEquilibrium(player.getUUID());
+            if (lostEquilibrium > 0) {
+                EquilibriumData.setEquilibrium(player, 0);
+                // Reset pending hits
+                EquilibriumData.resetPendingHits(player.getUUID());
+                TalentsMod.LOGGER.debug("YYGM {} lost all {} Equilibrium from wrong Exposed gate",
+                    player.getName().getString(), lostEquilibrium);
+            }
 
             // Apply body hit penalty
             applyBodyHitPenalty(event, player);
@@ -394,8 +426,9 @@ public class YinYangDamageHandler {
     }
 
     /**
-     * Handle server tick for expired YYGM effect checking.
-     * Delegates to YinYangStateManager for unified state management.
+     * Handle server tick for YYGM entity cleanup.
+     * Effect expiration is handled by Minecraft's MobEffectEvent.OnEffectRemove.
+     * This only handles cleanup when entities are unloaded or die.
      * Gate respawns and equilibrium decay are handled in YinYangGrandmasterOrigin.GateCombatEvents.
      */
     @SubscribeEvent

@@ -54,8 +54,6 @@ public class ExposedEffect extends BaseYinYangEffect {
 
     @Override
     protected CompoundTag initializePlayerData(CompoundTag tag) {
-        tag.putLong("apply_tick", 0);
-        tag.putInt("duration_ticks", 0);
         tag.putInt(NBT_GATE_PATTERN, 0);
         tag.putInt(NBT_COMPLETED_GATES, 0);
         return tag;
@@ -97,14 +95,10 @@ public class ExposedEffect extends BaseYinYangEffect {
             PlayerTargetTracker.setTarget(playerUuid, YinYangState.EXPOSED, target.getId());
         }
 
-        long currentTime = target.level().getGameTime();
-
         // Generate random gate pattern using GateSpawnStrategy
         int gatePattern = GateSpawnStrategy.generateEightGatePattern(target.getRandom());
 
         CompoundTag playerData = getOrCreatePlayerData(target, playerUuid);
-        playerData.putLong("apply_tick", currentTime);
-        playerData.putInt("duration_ticks", durationTicks);
         playerData.putInt(NBT_GATE_PATTERN, gatePattern);
         playerData.putInt(NBT_COMPLETED_GATES, 0);
         savePlayerData(target, playerUuid, playerData);
@@ -159,19 +153,12 @@ public class ExposedEffect extends BaseYinYangEffect {
 
     /**
      * Check if a target is Exposed by a specific player.
+     * Relies on Minecraft's effect system for duration tracking.
      */
     public static boolean isExposed(LivingEntity entity, UUID playerUuid) {
         ExposedEffect effect = (ExposedEffect) YinYangEffects.EXPOSED.get();
         CompoundTag rootTag = entity.getPersistentData().getCompound(effect.getNbtRoot());
-        if (!rootTag.contains(playerUuid.toString())) {
-            return false;
-        }
-        // Check if still within duration
-        CompoundTag playerData = rootTag.getCompound(playerUuid.toString());
-        long applyTick = playerData.getLong("apply_tick");
-        int duration = playerData.getInt("duration_ticks");
-        long currentTime = entity.level().getGameTime();
-        return currentTime < applyTick + duration;
+        return rootTag.contains(playerUuid.toString()) && entity.hasEffect(YinYangEffects.EXPOSED.get());
     }
 
     /**
@@ -287,11 +274,11 @@ public class ExposedEffect extends BaseYinYangEffect {
 
     /**
      * Get the remaining duration in ticks.
-     * Static wrapper for backward compatibility.
+     * Uses Minecraft's effect system for duration tracking.
      */
     public static int getRemainingDurationStatic(LivingEntity entity, UUID playerUuid) {
-        ExposedEffect effect = (ExposedEffect) YinYangEffects.EXPOSED.get();
-        return effect.getRemainingDuration(entity, playerUuid);
+        net.minecraft.world.effect.MobEffectInstance effectInstance = entity.getEffect(YinYangEffects.EXPOSED.get());
+        return effectInstance != null ? effectInstance.getDuration() : 0;
     }
 
     /**
@@ -321,6 +308,7 @@ public class ExposedEffect extends BaseYinYangEffect {
 
     /**
      * Sync Exposed state to all nearby players.
+     * Uses Minecraft's effect system for duration tracking.
      */
     public static void syncExposedState(LivingEntity entity, UUID playerUuid) {
         if (!(entity.level() instanceof ServerLevel level)) {
@@ -333,11 +321,14 @@ public class ExposedEffect extends BaseYinYangEffect {
         int gatePattern = playerData.getInt(NBT_GATE_PATTERN);
         int completedGates = playerData.getInt(NBT_COMPLETED_GATES);
         int nextRequired = com.complextalents.impl.yygm.EquilibriumData.getNextRequired(playerUuid);
-        long applyTick = playerData.getLong("apply_tick");
-        int duration = playerData.getInt("duration_ticks");
+
+        // Get duration from Minecraft's effect system
+        net.minecraft.world.effect.MobEffectInstance effectInstance = entity.getEffect(YinYangEffects.EXPOSED.get());
+        int remainingDuration = effectInstance != null ? effectInstance.getDuration() : 0;
+        long expirationTick = entity.level().getGameTime() + remainingDuration;
 
         ExposedStateSyncPacket packet = new ExposedStateSyncPacket(
-            entity.getId(), playerUuid, gatePattern, completedGates, nextRequired, applyTick + duration
+            entity.getId(), playerUuid, gatePattern, completedGates, nextRequired, expirationTick
         );
 
         PacketHandler.sendToNearby(packet, level, entity.position());
