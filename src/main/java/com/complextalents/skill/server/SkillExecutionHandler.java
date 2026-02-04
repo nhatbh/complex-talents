@@ -124,6 +124,7 @@ public class SkillExecutionHandler {
                     return;
                 }
 
+                // Execute the skill (channelTime is available in context for onActive handlers)
                 builtSkill.executeActive(context);
 
                 // Consume resource after successful execution

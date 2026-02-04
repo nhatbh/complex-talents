@@ -20,5 +20,79 @@
         "stream": false
       }
     ]
+  },
+  "grandmaster.gate_hit": {
+    "subtitle": "sounds.complextalents.grandmaster.gate_hit",
+    "sounds": [
+      {
+        "name": "complextalents:gate_hit1",
+        "stream": false
+      },
+      {
+        "name": "complextalents:gate_hit2",
+        "stream": false
+      },
+      {
+        "name": "complextalents:gate_hit3",
+        "stream": false
+      },
+      {
+        "name": "complextalents:gate_hit4",
+        "stream": false
+      }
+    ]
+  },
+  "grandmaster.gate_closed": {
+    "subtitle": "sounds.complextalents.grandmaster.gate_closed",
+    "sounds": [
+      {
+        "name": "complextalents:gate_closed1",
+        "stream": false
+      },
+      {
+        "name": "complextalents:gate_closed2",
+        "stream": false
+      }
+    ]
+  },
+  "grandmaster.gate_trap": {
+    "subtitle": "sounds.complextalents.grandmaster.gate_trap",
+    "sounds": [
+      {
+        "name": "complextalents:gate_trap1",
+        "stream": false
+      },
+      {
+        "name": "complextalents:gate_trap2",
+        "stream": false
+      }
+    ]
+  },
+  "yygm.pincer_lunge_dash": {
+    "subtitle": "sounds.complextalents.yygm.pincer_lunge_dash",
+    "sounds": [
+      {
+        "name": "complextalents:gate_hit1",
+        "stream": false
+      }
+    ]
+  },
+  "yygm.pincer_dagger_throw": {
+    "subtitle": "sounds.complextalents.yygm.pincer_dagger_throw",
+    "sounds": [
+      {
+        "name": "complextalents:gate_hit2",
+        "stream": false
+      }
+    ]
+  },
+  "yygm.pincer_impale": {
+    "subtitle": "sounds.complextalents.yygm.pincer_impale",
+    "sounds": [
+      {
+        "name": "complextalents:gate_hit3",
+        "stream": false
+      }
+    ]
   }
 }

@@ -2,14 +2,12 @@ package com.complextalents.client;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.network.PacketHandler;
-import com.complextalents.network.ToggleCombatModePacket;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.client.ClientSkillData;
 import com.complextalents.skill.client.SkillCastingClient;
 import com.complextalents.skill.network.SkillCastPacket;
 import com.complextalents.skill.network.SkillChannelStartPacket;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,25 +19,22 @@ import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Unified client-side input handler for combat mode and skill casting.
+ * Client-side input handler for direct skill casting.
  *
  * <p>Responsibilities:</p>
  * <ul>
- *   <li>Combat mode toggle handling</li>
- *   <li>Intercept hotbar keys 1-4 when combat mode is active</li>
+ *   <li>Handle skill key presses for slots 0-1 (SKILL_1 and SKILL_2)</li>
  *   <li>Delegate channel tracking to SkillCastingClient</li>
  *   <li>Send SkillCastPacket to server</li>
- *   <li>Prevent hotbar scrolling in combat mode</li>
  * </ul>
  *
- * <p><b>Combat Mode Behavior:</b></p>
+ * <p><b>Skill Activation:</b></p>
  * <ul>
- *   <li>Toggle key switches combat mode on/off</li>
- *   <li>Keys 1-4 activate skills instead of switching hotbar</li>
+ *   <li>SKILL_1 key (default: Z) activates skill in slot 0</li>
+ *   <li>SKILL_2 key (default: X) activates skill in slot 1</li>
  *   <li>For channeling skills: hold to charge, release to cast</li>
  *   <li>Right-click cancels channeling</li>
- *   <li>Scroll wheel is disabled for hotbar switching</li>
- *   <li>Item use (right-click) is NOT blocked</li>
+ *   <li>Keys are reconfigurable in the Controls menu</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = TalentsMod.MODID, value = Dist.CLIENT)
@@ -48,7 +43,7 @@ public class ClientInputHandler {
     private static final Minecraft MC = Minecraft.getInstance();
 
     /**
-     * Handle key input events - consume keys to prevent vanilla behavior.
+     * Handle key input events.
      */
     @SubscribeEvent
     public static void onKeyInput(InputEvent.Key event) {
@@ -56,40 +51,24 @@ public class ClientInputHandler {
             return;
         }
 
-        // Combat mode toggle
-        if (KeyBindings.TOGGLE_COMBAT_MODE.consumeClick()) {
-            // Cancel channeling if toggling combat mode
-            if (SkillCastingClient.isChanneling()) {
-                SkillCastingClient.cancelChanneling();
-                MC.player.displayClientMessage(Component.literal("§7Channeling canceled"), true);
-            }
-            // Also clear any pending channel start
-            if (SkillCastingClient.hasPendingChannelStart()) {
-                SkillCastingClient.clearPendingChannelStart();
-            }
-            CombatModeClient.toggle();
-            PacketHandler.sendToServer(new ToggleCombatModePacket());
+        // Check SKILL_1 key (slot 0)
+        if (event.getAction() == GLFW.GLFW_PRESS && KeyBindings.SKILL_1.consumeClick()) {
+            handleSkillKeyPress(0);
+            return;
+        }
+        if (event.getAction() == GLFW.GLFW_RELEASE && event.getKey() == getKeyCode(KeyBindings.SKILL_1)) {
+            handleSkillKeyRelease(0);
             return;
         }
 
-        // Skill casting - consume hotbar keys 1-4 in combat mode
-        if (CombatModeClient.isCombatMode()) {
-            KeyMapping[] hotbarKeys = MC.options.keyHotbarSlots;
-            for (int slotIndex = 0; slotIndex < Math.min(4, hotbarKeys.length); slotIndex++) {
-                KeyMapping key = hotbarKeys[slotIndex];
-                key.setDown(false);
-                while (key.consumeClick());
-
-                if (event.getAction() == GLFW.GLFW_PRESS && event.getKey() == getKeyCode(hotbarKeys[slotIndex])) {
-                    handleSkillKeyPress(slotIndex);
-                    return;
-                }
-                // Handle key release for finishing channeling
-                if (event.getAction() == GLFW.GLFW_RELEASE && event.getKey() == getKeyCode(hotbarKeys[slotIndex])) {
-                    handleSkillKeyRelease(slotIndex);
-                    return;
-                }
-            }
+        // Check SKILL_2 key (slot 1)
+        if (event.getAction() == GLFW.GLFW_PRESS && KeyBindings.SKILL_2.consumeClick()) {
+            handleSkillKeyPress(1);
+            return;
+        }
+        if (event.getAction() == GLFW.GLFW_RELEASE && event.getKey() == getKeyCode(KeyBindings.SKILL_2)) {
+            handleSkillKeyRelease(1);
+            return;
         }
     }
 
@@ -115,7 +94,7 @@ public class ClientInputHandler {
     /**
      * Get the GLFW key code from a KeyMapping.
      */
-    private static int getKeyCode(KeyMapping keyMapping) {
+    private static int getKeyCode(net.minecraft.client.KeyMapping keyMapping) {
         return keyMapping.getKey().getValue();
     }
 
@@ -196,8 +175,9 @@ public class ClientInputHandler {
         @SubscribeEvent
         public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
             KeyBindings.register();
-            event.register(KeyBindings.TOGGLE_COMBAT_MODE);
-            TalentsMod.LOGGER.info("Registered combat mode key mappings");
+            event.register(KeyBindings.SKILL_1);
+            event.register(KeyBindings.SKILL_2);
+            TalentsMod.LOGGER.info("Registered skill key mappings");
         }
     }
 }

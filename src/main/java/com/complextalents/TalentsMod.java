@@ -5,6 +5,9 @@ import com.complextalents.elemental.effects.ElementalEffects;
 import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
 import com.complextalents.elemental.registry.ReactionRegistry;
+import com.complextalents.impl.yygm.effect.YinYangEffects;
+import com.complextalents.impl.yygm.entity.YygmEntities;
+import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import com.complextalents.impl.highpriest.item.HighPriestItems;
@@ -41,10 +44,12 @@ public class TalentsMod {
         // Register custom status effects
         ElementalEffects.register(modEventBus);
         HighPriestEffects.register(modEventBus);
+        YinYangEffects.register(modEventBus);
 
         // Register custom entities
         ModEntities.register(modEventBus);
         HighPriestEntities.register(modEventBus);
+        YygmEntities.register(modEventBus);
 
         // Register High Priest items (for model baking)
         HighPriestItems.register(modEventBus);
@@ -81,6 +86,7 @@ public class TalentsMod {
         // Register example origins
         HighPriestOrigin.register();
         HighPriestOrigin.initIntegration();
+        YinYangGrandmasterOrigin.register();
         LOGGER.info("Example origins registered");
     }
 

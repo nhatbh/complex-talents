@@ -279,7 +279,7 @@ public class BuiltSkill implements Skill {
 
     @Override
     public boolean hasActiveHandler() {
-        return activeHandler != null;
+        return activeHandler != null || channeledHandler != null;
     }
 
     @Override

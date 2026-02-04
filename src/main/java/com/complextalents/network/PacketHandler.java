@@ -27,6 +27,11 @@ import com.complextalents.network.elemental.SpawnSpringReactionPacket;
 import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
+import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
+import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
+import com.complextalents.network.yygm.EquilibriumSyncPacket;
+import com.complextalents.network.yygm.SwordDanceDashPacket;
+import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
 import com.complextalents.network.highpriest.SpawnBarrierFXPacket;
 
 import net.minecraft.resources.ResourceLocation;
@@ -60,12 +65,6 @@ public class PacketHandler {
                 SpawnReactionTextPacket::encode,
                 SpawnReactionTextPacket::decode,
                 SpawnReactionTextPacket::handle);
-
-        INSTANCE.registerMessage(packetId++,
-                ToggleCombatModePacket.class,
-                ToggleCombatModePacket::encode,
-                ToggleCombatModePacket::decode,
-                ToggleCombatModePacket::handle);
 
         // Reaction effect packets
         INSTANCE.registerMessage(packetId++,
@@ -251,6 +250,41 @@ public class PacketHandler {
                 SkillChannelStartResponsePacket::encode,
                 SkillChannelStartResponsePacket::decode,
                 SkillChannelStartResponsePacket::handle);
+
+        // Yin Yang Grandmaster gate state sync packet
+        INSTANCE.registerMessage(packetId++,
+                YinYangGateStateSyncPacket.class,
+                YinYangGateStateSyncPacket::encode,
+                YinYangGateStateSyncPacket::decode,
+                YinYangGateStateSyncPacket::handle);
+
+        // Yin Yang Grandmaster gate FX packet (Yang hit, Yin hit, Discord, Gate spawn)
+        INSTANCE.registerMessage(packetId++,
+                SpawnYinYangGateFXPacket.class,
+                SpawnYinYangGateFXPacket::encode,
+                SpawnYinYangGateFXPacket::decode,
+                SpawnYinYangGateFXPacket::handle);
+
+        // Yin Yang Grandmaster Equilibrium sync packet
+        INSTANCE.registerMessage(packetId++,
+                EquilibriumSyncPacket.class,
+                EquilibriumSyncPacket::encode,
+                EquilibriumSyncPacket::decode,
+                EquilibriumSyncPacket::handle);
+
+        // Sword Dance dash visualization packet
+        INSTANCE.registerMessage(packetId++,
+                SwordDanceDashPacket.class,
+                SwordDanceDashPacket::encode,
+                SwordDanceDashPacket::decode,
+                SwordDanceDashPacket::handle);
+
+        // Sword Dance gate activation packet
+        INSTANCE.registerMessage(packetId++,
+                SwordDanceGateActivatePacket.class,
+                SwordDanceGateActivatePacket::encode,
+                SwordDanceGateActivatePacket::decode,
+                SwordDanceGateActivatePacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

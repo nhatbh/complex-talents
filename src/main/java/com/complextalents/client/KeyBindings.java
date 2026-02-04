@@ -11,15 +11,24 @@ import org.lwjgl.glfw.GLFW;
  */
 public class KeyBindings {
     // Key binding constants
-    public static KeyMapping TOGGLE_COMBAT_MODE;
+    public static KeyMapping SKILL_1;
+    public static KeyMapping SKILL_2;
 
     public static void register() {
         // Create key bindings
-        TOGGLE_COMBAT_MODE = new KeyMapping(
-                "key.complextalents.toggle_combat_mode",
+        SKILL_1 = new KeyMapping(
+                "key.complextalents.skill_1",
                 KeyConflictContext.IN_GAME,
                 InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_R,
+                GLFW.GLFW_KEY_Z,
+                "key.categories.complextalents"
+        );
+
+        SKILL_2 = new KeyMapping(
+                "key.complextalents.skill_2",
+                KeyConflictContext.IN_GAME,
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_X,
                 "key.categories.complextalents"
         );
 

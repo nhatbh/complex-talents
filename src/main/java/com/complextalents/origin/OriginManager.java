@@ -33,7 +33,10 @@ public class OriginManager {
 
             data.setActiveOrigin(originId);
             data.setOriginLevel(newLevel);
-            data.setResource(data.getResourceType().getMin());
+            // Only set resource if origin has a resource type
+            if (data.getResourceType() != null) {
+                data.setResource(data.getResourceType().getMin());
+            }
             data.sync();
 
             // Fire origin change event

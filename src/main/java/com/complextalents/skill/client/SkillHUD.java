@@ -1,6 +1,7 @@
 package com.complextalents.skill.client;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.client.KeyBindings;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.SkillRegistry;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -16,7 +17,7 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * Renders the skill HUD in the bottom-right corner.
- * Displays skill icons, cooldowns, and keybinds for slots 1-4.
+ * Displays skill icons, cooldowns, and keybinds for slots 1-2.
  */
 @Mod.EventBusSubscriber(modid = TalentsMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class SkillHUD {
@@ -57,14 +58,14 @@ public class SkillHUD {
             return;
         }
 
-        // Calculate position (bottom-right)
-        int totalWidth = (SLOT_SIZE * 4) + (SPACING * 3);
+        // Calculate position (bottom-right) - now for 2 slots
+        int totalWidth = (SLOT_SIZE * 2) + (SPACING * 1);
         int startX = width - MARGIN_RIGHT - totalWidth;
         int startY = height - MARGIN_BOTTOM - SLOT_SIZE;
 
         RenderSystem.enableBlend();
 
-        for (int slot = 0; slot < 4; slot++) {
+        for (int slot = 0; slot < 2; slot++) {
             int x = startX + slot * (SLOT_SIZE + SPACING);
             renderSlot(graphics, slot, x, startY);
         }
@@ -100,8 +101,8 @@ public class SkillHUD {
         }
         graphics.blit(icon, x + 1, y + 1, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 
-        // Keybind number
-        String keybind = String.valueOf(slot + 1);
+        // Keybind name - get from actual key binding
+        String keybind = getKeybindName(slot);
         var font = Minecraft.getInstance().font;
         graphics.drawString(font, keybind, x + 2, y + 2, KEYBIND_COLOR);
 
@@ -129,7 +130,25 @@ public class SkillHUD {
 
         // Dim keybind
         var font = Minecraft.getInstance().font;
-        String keybind = String.valueOf(slot + 1);
+        String keybind = getKeybindName(slot);
         graphics.drawString(font, keybind, x + 2, y + 2, EMPTY_KEYBIND_COLOR);
+    }
+
+    /**
+     * Get the display name for the keybind of a slot.
+     * This dynamically shows the actual key the user has bound.
+     */
+    private static String getKeybindName(int slot) {
+        try {
+            if (slot == 0) {
+                return KeyBindings.SKILL_1.getTranslatedKeyMessage().getString();
+            } else if (slot == 1) {
+                return KeyBindings.SKILL_2.getTranslatedKeyMessage().getString();
+            }
+        } catch (Exception e) {
+            // Fallback if key binding is not yet initialized
+            return String.valueOf(slot + 1);
+        }
+        return String.valueOf(slot + 1);
     }
 }

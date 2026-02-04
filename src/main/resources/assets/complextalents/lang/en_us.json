@@ -1,6 +1,7 @@
 {
   "key.categories.complextalents": "Complex Talents",
-  "key.complextalents.toggle_combat_mode": "Toggle Combat Mode",
+  "key.complextalents.skill_1": "Skill 1",
+  "key.complextalents.skill_2": "Skill 2",
 
   "reaction.complextalents.vaporize": "Vaporize",
   "reaction.complextalents.melt": "Melt",
@@ -23,5 +24,19 @@
   "element.complextalents.geo": "Geo",
 
   "sounds.complextalents.highpriest.sword_clang": "Sword Clang",
-  "sounds.complextalents.highpriest.sword_hit": "Sword Hit"
+  "sounds.complextalents.highpriest.sword_hit": "Sword Hit",
+
+  "origin.complextalents.yygm": "Yin Yang Grandmaster",
+  "effect.complextalents.harmonized": "Harmonized",
+  "passive.complextalents.yang": "Yang",
+  "passive.complextalents.yin": "Yin",
+
+  "skill.complextalents.pincer_lunge": "Pincer Lunge",
+  "skill.complextalents.pincer_lunge.desc": "Channel to dash. Channel < 1s: Quick dash + dagger throw (1 Yang). Channel 1s+: Long dash with line damage + spear impale (2 Yang).",
+
+  "skill.complextalents.sword_dance": "Sword Dance",
+  "skill.complextalents.sword_dance.desc": "A lightning-fast dash of 8 blocks that activates gates. Dashing through your harmonized target activates two gates. Correct gate hits refund cooldown. Empty gates don't cost Equilibrium.",
+
+  "entity.complextalents.pincer_dagger": "Pincer Dagger",
+  "entity.complextalents.pincer_spear": "Pincer Spear"
 }

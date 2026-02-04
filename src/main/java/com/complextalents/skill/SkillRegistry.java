@@ -249,6 +249,9 @@ public class SkillRegistry {
         com.complextalents.impl.highpriest.skills.divinegrace.DivineGraceSkill.register();
         com.complextalents.impl.highpriest.skills.divineascendance.DivineAscendanceSkill.register();
 
+        // Register Yin Yang Grandmaster skills
+        com.complextalents.impl.yygm.skill.SwordDanceSkill.register();
+
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }
 }
