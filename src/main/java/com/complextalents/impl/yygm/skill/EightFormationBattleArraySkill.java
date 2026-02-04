@@ -37,7 +37,7 @@ public class EightFormationBattleArraySkill {
     // Duration by level: [15, 20, 25, 30] seconds
     private static final double[] DURATION_BY_LEVEL = {60.0, 20.0, 25.0, 30.0};
     // Cooldown by level: [180, 160, 140, 120, 100] seconds (3 min to 1 min 40 sec)
-    private static final double[] COOLDOWN_BY_LEVEL = {18.0, 160.0, 140.0, 120.0, 100.0};
+    private static final double[] COOLDOWN_BY_LEVEL = {300.0, 270.0, 240.0, 210.0, 180.0};
     // Max range
     public static final double MAX_RANGE = 8.0;
 
@@ -50,7 +50,7 @@ public class EightFormationBattleArraySkill {
                 .targeting(TargetType.ENTITY)
                 .maxRange(MAX_RANGE)
                 .scaledCooldown(COOLDOWN_BY_LEVEL)
-                // .validate(EightFormationBattleArraySkill::validateCanCast)
+                .validate(EightFormationBattleArraySkill::validateCanCast)
                 .onActive(EightFormationBattleArraySkill::execute)
                 .build();
 

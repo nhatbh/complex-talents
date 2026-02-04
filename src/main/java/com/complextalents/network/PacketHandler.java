@@ -28,6 +28,8 @@ import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
+import com.complextalents.network.yygm.YinYangAnnihilationSyncPacket;
+import com.complextalents.network.yygm.YinYangAnnihilationExplosionPacket;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
 import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.EquilibriumSyncPacket;
@@ -293,6 +295,20 @@ public class PacketHandler {
                 ExposedStateSyncPacket::encode,
                 ExposedStateSyncPacket::decode,
                 ExposedStateSyncPacket::handle);
+
+        // Yin Yang Annihilation sync packet (spinning texture during Annihilation)
+        INSTANCE.registerMessage(packetId++,
+                YinYangAnnihilationSyncPacket.class,
+                YinYangAnnihilationSyncPacket::encode,
+                YinYangAnnihilationSyncPacket::decode,
+                YinYangAnnihilationSyncPacket::handle);
+
+        // Yin Yang Annihilation explosion packet (triggers explosion animation)
+        INSTANCE.registerMessage(packetId++,
+                YinYangAnnihilationExplosionPacket.class,
+                YinYangAnnihilationExplosionPacket::encode,
+                YinYangAnnihilationExplosionPacket::decode,
+                YinYangAnnihilationExplosionPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

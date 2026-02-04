@@ -14,16 +14,23 @@ import com.complextalents.impl.yygm.util.YinYangAngleUtil;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
+import com.complextalents.network.yygm.YinYangAnnihilationExplosionPacket;
+import com.complextalents.network.yygm.YinYangAnnihilationSyncPacket;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
 import com.complextalents.origin.OriginManager;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -329,6 +336,7 @@ public class YinYangDamageHandler {
      * Formula: originalDamage * (1 + (trueDamageMultiplier - 1) + equilibrium * equilibriumBonusPercent)
      */
     private static void applyAnnihilationTrueDamage(LivingDamageEvent event, ServerPlayer player) {
+        LivingEntity target = event.getEntity();
         float originalDamage = event.getAmount();
         int equilibrium = EquilibriumData.getEquilibrium(player.getUUID());
 
@@ -340,8 +348,12 @@ public class YinYangDamageHandler {
         float trueDamage = originalDamage * totalMultiplier;
         event.setAmount(trueDamage);
 
-        TalentsMod.LOGGER.debug("YYGM {} Annihilation True Damage: {} -> {} (eq: {}, mult: {})",
-            player.getName().getString(), originalDamage, trueDamage, equilibrium, totalMultiplier);
+        // Accumulate damage for explosion
+        YinYangAnnihilationEffect.addAccumulatedDamage(target, player.getUUID(), trueDamage);
+
+        TalentsMod.LOGGER.debug("YYGM {} Annihilation True Damage: {} -> {} (eq: {}, mult: {}, accumulated: {})",
+            player.getName().getString(), originalDamage, trueDamage, equilibrium, totalMultiplier,
+            YinYangAnnihilationEffect.getAccumulatedDamage(target, player.getUUID()));
     }
 
     /**
@@ -376,7 +388,7 @@ public class YinYangDamageHandler {
         // Use YinYangStateManager for state transition
         YinYangStateManager.transitionState(target, player.getUUID(), YinYangState.ANNIHILATION, remainingDuration);
 
-        // FX for completion
+        // FX for completion and sync packet
         if (player.level() instanceof ServerLevel level) {
             PacketHandler.sendToNearby(
                 new SpawnYinYangGateFXPacket(target.position(), SpawnYinYangGateFXPacket.EffectType.YANG_HIT),
@@ -384,12 +396,99 @@ public class YinYangDamageHandler {
             );
             level.playSound(null, target.getX(), target.getY(), target.getZ(),
                 SoundEvents.DRAGON_FIREBALL_EXPLODE, player.getSoundSource(), 1.0f, 1.0f);
+
+            // Send sync packet with start tick for client-side rendering
+            long currentTick = target.level().getGameTime();
+            PacketHandler.sendToNearby(
+                new YinYangAnnihilationSyncPacket(target.getId(), player.getUUID(), currentTick, currentTick + remainingDuration),
+                level, target.position()
+            );
         }
 
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("All gates broken! Yin Yang Annihilation activated!"));
 
         TalentsMod.LOGGER.debug("YYGM {} completed all Exposed gates! Converted to Yin Yang Annihilation, duration: {} ticks",
             player.getName().getString(), remainingDuration);
+    }
+
+    /**
+     * Trigger the Yin Yang Annihilation explosion.
+     * Called when effect expires or target dies.
+     * 1. Send explosion packet to clients (1-second animation)
+     * 2. Apply levitation immediately
+     * 3. Schedule AOE damage after 1 second via tick tracking
+     */
+    private static void triggerAnnihilationExplosion(LivingEntity target, UUID playerUuid) {
+        if (!(target.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        // Get accumulated damage
+        float accumulated = YinYangAnnihilationEffect.getAccumulatedDamage(target, playerUuid);
+        float explosionDamage = accumulated * 0.5f;
+
+        // Send explosion START packet to clients (starts 1-second animation)
+        PacketHandler.sendToNearby(
+            new YinYangAnnihilationExplosionPacket(target.getId(), accumulated),
+            level, target.position()
+        );
+
+        // Apply levitation IMMEDIATELY (starts when circle begins expanding)
+        if (target.isAlive()) {
+            target.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 160, 0, false, false));
+        }
+
+        // Schedule actual damage after 1 second (20 ticks) by storing in entity NBT
+        long explosionTick = level.getGameTime() + 20;
+        target.getPersistentData().putLong("yygm_annihilation_explosion_tick", explosionTick);
+        target.getPersistentData().putUUID("yygm_annihilation_explosion_player", playerUuid);
+        target.getPersistentData().putFloat("yygm_annihilation_explosion_damage", explosionDamage);
+
+        // Reset accumulated damage immediately (stored in NBT above)
+        YinYangAnnihilationEffect.resetAccumulatedDamage(target, playerUuid);
+
+        TalentsMod.LOGGER.debug("YYGM Annihilation explosion triggered for target {} by player {}, accumulated: {}, explosion damage: {}, scheduled tick: {}",
+            target.getName().getString(), playerUuid, accumulated, explosionDamage, explosionTick);
+    }
+
+    /**
+     * Process any scheduled Annihilation explosions.
+     * Called during server tick to execute delayed damage.
+     */
+    private static void processScheduledExplosions(ServerLevel level) {
+        long currentTime = level.getGameTime();
+
+        // Iterate through loaded entities using getEntitiesOfClass with large bounds
+        java.util.List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class,
+            new AABB(0, 0, 0, 1, 1, 1).inflate(1000000.0));
+
+        for (LivingEntity livingEntity : entities) {
+            if (!livingEntity.getPersistentData().contains("yygm_annihilation_explosion_tick")) continue;
+
+            long explosionTick = livingEntity.getPersistentData().getLong("yygm_annihilation_explosion_tick");
+
+            if (currentTime >= explosionTick) {
+                // Time to explode!
+                UUID playerUuid = livingEntity.getPersistentData().getUUID("yygm_annihilation_explosion_player");
+                float explosionDamage = livingEntity.getPersistentData().getFloat("yygm_annihilation_explosion_damage");
+
+                // Find entities in 8-block radius
+                Vec3 explosionCenter = livingEntity.position();
+                for (LivingEntity nearby : level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(explosionCenter, explosionCenter).inflate(8.0))) {
+                    // Deal true damage (bypasses armor)
+                    nearby.hurt(level.damageSources().magic(), explosionDamage);
+                }
+
+                TalentsMod.LOGGER.debug("YYGM Annihilation explosion dealt {} damage to entities in 8-block radius",
+                    explosionDamage);
+
+                // Clear the scheduled explosion data
+                livingEntity.getPersistentData().remove("yygm_annihilation_explosion_tick");
+                livingEntity.getPersistentData().remove("yygm_annihilation_explosion_player");
+                livingEntity.getPersistentData().remove("yygm_annihilation_explosion_damage");
+            }
+        }
     }
 
     /**
@@ -437,7 +536,12 @@ public class YinYangDamageHandler {
             return;
         }
 
-        // Check every 5 ticks for performance
+        // Check every tick for scheduled explosions (timing matters)
+        for (ServerLevel level : event.getServer().getAllLevels()) {
+            processScheduledExplosions(level);
+        }
+
+        // Check every 5 ticks for other cleanup
         if (event.getServer().getTickCount() % 5 != 0) {
             return;
         }
@@ -565,7 +669,7 @@ public class YinYangDamageHandler {
      * Only clears gate tracking and resets pending hits.
      */
     @SubscribeEvent
-    public static void onEntityDeath(net.minecraftforge.event.entity.living.LivingDeathEvent event) {
+    public static void onEntityDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide) {
             return;
         }
@@ -614,8 +718,11 @@ public class YinYangDamageHandler {
                     UUID playerUuid = playerTag.getUUID("player_uuid");
                     PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
                     if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.ANNIHILATION) {
+                        // Trigger explosion when target dies during Annihilation
+                        triggerAnnihilationExplosion(entity, playerUuid);
+
                         PlayerTargetTracker.clearTarget(playerUuid);
-                        TalentsMod.LOGGER.debug("YYGM player {}'s Yin Yang Annihilation target died, cleared",
+                        TalentsMod.LOGGER.debug("YYGM player {}'s Yin Yang Annihilation target died, explosion triggered",
                             playerUuid);
                     }
                 }
@@ -664,6 +771,9 @@ public class YinYangDamageHandler {
                 for (UUID playerUuid : YinYangAnnihilationEffect.getAnnihilationPlayers(entity)) {
                     PlayerTargetTracker.TargetData targetData = PlayerTargetTracker.getTarget(playerUuid);
                     if (targetData != null && targetData.entityId() == entity.getId() && targetData.state() == YinYangState.ANNIHILATION) {
+                        // Trigger explosion before cleanup
+                        triggerAnnihilationExplosion(entity, playerUuid);
+
                         YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
                         effect.removeFromTarget(entity, playerUuid);
                         TalentsMod.LOGGER.debug("YYGM Yin Yang Annihilation effect expired for player {} on entity {}",
