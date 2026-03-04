@@ -12,12 +12,12 @@ public interface IPlayerSkillData {
     /**
      * Number of skill slots available
      */
-    int SLOT_COUNT = 4;
+    int SLOT_COUNT = 1;
 
     /**
      * Get the skill assigned to a specific slot.
      *
-     * @param slotIndex 0-3
+     * @param slotIndex 0 (single slot)
      * @return Skill ID or null if empty
      */
     @Nullable
@@ -26,7 +26,7 @@ public interface IPlayerSkillData {
     /**
      * Assign a skill to a slot.
      *
-     * @param slotIndex 0-3
+     * @param slotIndex 0 (single slot)
      * @param skillId   The skill to assign, or null to clear
      */
     void setSkillInSlot(int slotIndex, @Nullable ResourceLocation skillId);
@@ -34,7 +34,7 @@ public interface IPlayerSkillData {
     /**
      * Clear a slot.
      *
-     * @param slotIndex 0-3
+     * @param slotIndex 0 (single slot)
      */
     default void clearSlot(int slotIndex) {
         setSkillInSlot(slotIndex, null);

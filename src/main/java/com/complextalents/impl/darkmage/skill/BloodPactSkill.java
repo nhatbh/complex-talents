@@ -1,0 +1,215 @@
+package com.complextalents.impl.darkmage.skill;
+
+import com.complextalents.impl.darkmage.data.SoulData;
+import com.complextalents.origin.OriginManager;
+import com.complextalents.skill.SkillBuilder;
+import com.complextalents.skill.SkillNature;
+import com.complextalents.targeting.TargetType;
+import com.complextalents.util.UUIDHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.UUID;
+
+/**
+ * Blood Pact - Dark Mage's core toggle skill.
+ * <p>
+ * Transforms the Dark Mage into a glass cannon, trading HP for immense power.
+ * </p>
+ * <p>
+ * <strong>Effects while active:</strong>
+ * <ul>
+ *   <li>HP drain per second: 8%/7%/6%/5%/4% (by level)</li>
+ *   <li>Cast Speed bonus: +10%/20%/30%/40%/50% (by level)</li>
+ *   <li>Infinite Mana (set to max each tick)</li>
+ *   <li>Soul damage bonus: +0.05%/0.1%/0.15%/0.2%/0.25% per soul (by level)</li>
+ * </ul>
+ * <p>
+ * <strong>Costs:</strong>
+ * <ul>
+ *   <li>30 second cooldown after toggling off</li>
+ *   <li>Requires 20% HP to activate</li>
+ *   <li>Auto-deactivates at 1 HP</li>
+ * </ul>
+ */
+public class BloodPactSkill {
+
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "blood_pact");
+
+    // UUIDs for attribute modifiers
+    private static final UUID CAST_SPEED_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_cast_speed");
+    private static final UUID MANA_REGEN_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_mana_regen");
+
+    // Massive mana regen bonus (10.0 = +1000% mana regen, effectively infinite)
+    private static final double MANA_REGEN_BONUS = 10.0;
+
+    /**
+     * Register this skill.
+     */
+    public static void register() {
+        SkillBuilder.create("complextalents", "blood_pact")
+                .nature(SkillNature.ACTIVE)
+                .targeting(TargetType.NONE)
+                .icon(ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/darkmage/bloodpact.png"))
+                .toggleable(true)
+                // Cooldown after toggle off: 30 seconds at all levels
+                .scaledCooldown(new double[]{30.0, 30.0, 30.0, 30.0, 30.0})
+                .setMaxLevel(5)
+                .validate((context, player) -> {
+                    ServerPlayer serverPlayer = (ServerPlayer) player;
+
+                    // Cannot activate if HP too low (below 20%)
+                    if (serverPlayer.getHealth() < serverPlayer.getMaxHealth() * 0.2f) {
+                        serverPlayer.sendSystemMessage(Component.literal(
+                                "\u00A7cBlood Pact requires at least 20% HP to activate!"
+                        ));
+                        return false;
+                    }
+
+                    return true;
+                })
+                .onActive((context, player) -> {
+                    ServerPlayer serverPlayer = (ServerPlayer) player;
+                    ServerLevel level = serverPlayer.serverLevel();
+                    int skillLevel = context.skillLevel();
+
+                    // Apply cast speed and mana regen modifiers
+                    applyCastSpeedBonus(serverPlayer);
+                    applyManaRegenBonus(serverPlayer);
+
+                    // Track Blood Pact active state
+                    SoulData.setBloodPactActive(serverPlayer.getUUID(), true);
+
+                    // Visual activation effects
+                    level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
+                            SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 0.5f, 1.5f);
+                    level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
+                            SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 1.0f, 0.8f);
+
+                    // Feedback message
+                    double souls = SoulData.getSouls(serverPlayer);
+                    double bonusPerSoul = OriginManager.getOriginStat(serverPlayer, "soulDamageBonusPercent");
+                    double totalBonus = souls * bonusPerSoul * 100;
+
+                    serverPlayer.sendSystemMessage(Component.literal(
+                            "\u00A75\u00A7lBLOOD PACT ACTIVATED!\u00A7r \u00A7dYour life force fuels your magic! " +
+                                    "\u00A78(" + String.format("%.1f", souls) + " souls = +" + String.format("%.1f", totalBonus) + "% damage)"
+                    ));
+
+                    // Sync state to client
+                    SoulData.syncToClient(serverPlayer);
+                })
+                .onToggleOff(player -> {
+                    ServerPlayer serverPlayer = (ServerPlayer) player;
+                    ServerLevel level = serverPlayer.serverLevel();
+
+                    // Remove cast speed and mana regen modifiers
+                    removeCastSpeedBonus(serverPlayer);
+                    removeManaRegenBonus(serverPlayer);
+
+                    // Track Blood Pact inactive state
+                    SoulData.setBloodPactActive(serverPlayer.getUUID(), false);
+
+                    // Play deactivation sound
+                    level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
+                            SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 0.8f, 1.2f);
+
+                    serverPlayer.sendSystemMessage(Component.literal(
+                            "\u00A7cBlood Pact deactivated."
+                    ));
+
+                    // Sync state to client
+                    SoulData.syncToClient(serverPlayer);
+                })
+                .register();
+    }
+
+    /**
+     * Apply the cast speed bonus attribute modifier.
+     */
+    public static void applyCastSpeedBonus(ServerPlayer player) {
+        double bonus = OriginManager.getOriginStat(player, "bloodPactCastSpeedBonus");
+
+        ResourceLocation castTimeAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "cast_time_reduction");
+        Attribute castTimeAttr = ForgeRegistries.ATTRIBUTES.getValue(castTimeAttrId);
+
+        if (castTimeAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(castTimeAttr);
+            if (attributeInstance != null) {
+                // Remove existing modifier if present
+                attributeInstance.removeModifier(CAST_SPEED_UUID);
+
+                // Add new modifier
+                AttributeModifier modifier = new AttributeModifier(
+                        CAST_SPEED_UUID,
+                        "Blood Pact Cast Speed",
+                        bonus,
+                        AttributeModifier.Operation.ADDITION
+                );
+                attributeInstance.addTransientModifier(modifier);
+            }
+        }
+    }
+
+    /**
+     * Remove the cast speed bonus attribute modifier.
+     */
+    public static void removeCastSpeedBonus(ServerPlayer player) {
+        ResourceLocation castTimeAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "cast_time_reduction");
+        Attribute castTimeAttr = ForgeRegistries.ATTRIBUTES.getValue(castTimeAttrId);
+
+        if (castTimeAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(castTimeAttr);
+            if (attributeInstance != null) {
+                attributeInstance.removeModifier(CAST_SPEED_UUID);
+            }
+        }
+    }
+
+    /**
+     * Apply massive mana regeneration bonus (simulates infinite mana).
+     */
+    public static void applyManaRegenBonus(ServerPlayer player) {
+        ResourceLocation manaRegenAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "mana_regen");
+        Attribute manaRegenAttr = ForgeRegistries.ATTRIBUTES.getValue(manaRegenAttrId);
+
+        if (manaRegenAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(manaRegenAttr);
+            if (attributeInstance != null) {
+                // Remove existing modifier if present
+                attributeInstance.removeModifier(MANA_REGEN_UUID);
+
+                // Add massive mana regen modifier (+1000%)
+                AttributeModifier modifier = new AttributeModifier(
+                        MANA_REGEN_UUID,
+                        "Blood Pact Mana Regen",
+                        MANA_REGEN_BONUS,
+                        AttributeModifier.Operation.MULTIPLY_TOTAL
+                );
+                attributeInstance.addTransientModifier(modifier);
+            }
+        }
+    }
+
+    /**
+     * Remove the mana regeneration bonus attribute modifier.
+     */
+    public static void removeManaRegenBonus(ServerPlayer player) {
+        ResourceLocation manaRegenAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "mana_regen");
+        Attribute manaRegenAttr = ForgeRegistries.ATTRIBUTES.getValue(manaRegenAttrId);
+
+        if (manaRegenAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(manaRegenAttr);
+            if (attributeInstance != null) {
+                attributeInstance.removeModifier(MANA_REGEN_UUID);
+            }
+        }
+    }
+}

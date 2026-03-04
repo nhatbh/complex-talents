@@ -8,6 +8,7 @@ import com.complextalents.elemental.registry.ReactionRegistry;
 import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.entity.YygmEntities;
 import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
+import com.complextalents.impl.darkmage.DarkMageRegistrar;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import com.complextalents.impl.highpriest.item.HighPriestItems;
@@ -87,6 +88,7 @@ public class TalentsMod {
         HighPriestOrigin.register();
         HighPriestOrigin.initIntegration();
         YinYangGrandmasterOrigin.register();
+        DarkMageRegistrar.register();
         LOGGER.info("Example origins registered");
     }
 

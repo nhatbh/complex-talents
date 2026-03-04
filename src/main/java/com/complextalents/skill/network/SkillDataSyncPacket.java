@@ -31,10 +31,10 @@ public class SkillDataSyncPacket {
      */
     public static SkillDataSyncPacket decode(FriendlyByteBuf buffer) {
         UUID uuid = buffer.readUUID();
-        ResourceLocation[] slots = new ResourceLocation[4];
+        ResourceLocation[] slots = new ResourceLocation[1];
         Map<ResourceLocation, Integer> levels = new HashMap<>();
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 1; i++) {
             boolean hasSkill = buffer.readBoolean();
             if (hasSkill) {
                 slots[i] = buffer.readResourceLocation();
@@ -54,7 +54,7 @@ public class SkillDataSyncPacket {
      */
     public void encode(FriendlyByteBuf buffer) {
         buffer.writeUUID(playerUuid);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 1; i++) {
             boolean hasSkill = skillSlots[i] != null;
             buffer.writeBoolean(hasSkill);
             if (hasSkill) {

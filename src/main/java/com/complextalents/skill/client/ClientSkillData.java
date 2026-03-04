@@ -14,7 +14,7 @@ import java.util.HashMap;
 @OnlyIn(Dist.CLIENT)
 public class ClientSkillData {
 
-    private static final ResourceLocation[] skillSlots = new ResourceLocation[4];
+    private static final ResourceLocation[] skillSlots = new ResourceLocation[1];
     private static final Map<ResourceLocation, Integer> skillLevels = new HashMap<>();
 
     // Cooldown tracking: skillId -> expiration game time
@@ -29,8 +29,8 @@ public class ClientSkillData {
      * @param levels The skill levels from server
      */
     public static void syncFromServer(ResourceLocation[] slots, Map<ResourceLocation, Integer> levels) {
-        if (slots != null && slots.length == 4) {
-            System.arraycopy(slots, 0, skillSlots, 0, 4);
+        if (slots != null && slots.length >= 1) {
+            System.arraycopy(slots, 0, skillSlots, 0, 1);
         }
         skillLevels.clear();
         if (levels != null) {
@@ -111,11 +111,11 @@ public class ClientSkillData {
     /**
      * Get the skill assigned to a slot.
      *
-     * @param slotIndex The slot index (0-3)
+     * @param slotIndex The slot index (0 only)
      * @return The skill ID, or null if empty
      */
     public static ResourceLocation getSkillInSlot(int slotIndex) {
-        if (slotIndex < 0 || slotIndex >= 4) {
+        if (slotIndex < 0 || slotIndex >= 1) {
             return null;
         }
         return skillSlots[slotIndex];
@@ -127,7 +127,7 @@ public class ClientSkillData {
      * @return Copy of the skill slots array
      */
     public static ResourceLocation[] getAllSlots() {
-        return java.util.Arrays.copyOf(skillSlots, 4);
+        return java.util.Arrays.copyOf(skillSlots, 1);
     }
 
     /**

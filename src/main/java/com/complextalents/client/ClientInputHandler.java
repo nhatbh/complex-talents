@@ -23,7 +23,7 @@ import org.lwjgl.glfw.GLFW;
  *
  * <p>Responsibilities:</p>
  * <ul>
- *   <li>Handle skill key presses for slots 0-1 (SKILL_1 and SKILL_2)</li>
+ *   <li>Handle skill key press for slot 0 (SKILL_1)</li>
  *   <li>Delegate channel tracking to SkillCastingClient</li>
  *   <li>Send SkillCastPacket to server</li>
  * </ul>
@@ -31,10 +31,9 @@ import org.lwjgl.glfw.GLFW;
  * <p><b>Skill Activation:</b></p>
  * <ul>
  *   <li>SKILL_1 key (default: Z) activates skill in slot 0</li>
- *   <li>SKILL_2 key (default: X) activates skill in slot 1</li>
  *   <li>For channeling skills: hold to charge, release to cast</li>
  *   <li>Right-click cancels channeling</li>
- *   <li>Keys are reconfigurable in the Controls menu</li>
+ *   <li>Key is reconfigurable in the Controls menu</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = TalentsMod.MODID, value = Dist.CLIENT)
@@ -58,17 +57,6 @@ public class ClientInputHandler {
         }
         if (event.getAction() == GLFW.GLFW_RELEASE && event.getKey() == getKeyCode(KeyBindings.SKILL_1)) {
             handleSkillKeyRelease(0);
-            return;
-        }
-
-        // Check SKILL_2 key (slot 1)
-        if (event.getAction() == GLFW.GLFW_PRESS && KeyBindings.SKILL_2.consumeClick()) {
-            handleSkillKeyPress(1);
-            return;
-        }
-        if (event.getAction() == GLFW.GLFW_RELEASE && event.getKey() == getKeyCode(KeyBindings.SKILL_2)) {
-            handleSkillKeyRelease(1);
-            return;
         }
     }
 
@@ -176,7 +164,6 @@ public class ClientInputHandler {
         public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
             KeyBindings.register();
             event.register(KeyBindings.SKILL_1);
-            event.register(KeyBindings.SKILL_2);
             TalentsMod.LOGGER.info("Registered skill key mappings");
         }
     }

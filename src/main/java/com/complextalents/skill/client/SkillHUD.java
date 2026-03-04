@@ -17,7 +17,7 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * Renders the skill HUD in the bottom-right corner.
- * Displays skill icons, cooldowns, and keybinds for slots 1-2.
+ * Displays skill icon, cooldown, and keybind for slot 1.
  */
 @Mod.EventBusSubscriber(modid = TalentsMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class SkillHUD {
@@ -29,7 +29,6 @@ public class SkillHUD {
     // Layout constants
     private static final int ICON_SIZE = 24;
     private static final int SLOT_SIZE = 26;
-    private static final int SPACING = 2;
     private static final int MARGIN_RIGHT = 10;
     private static final int MARGIN_BOTTOM = 10;
 
@@ -58,18 +57,12 @@ public class SkillHUD {
             return;
         }
 
-        // Calculate position (bottom-right) - now for 2 slots
-        int totalWidth = (SLOT_SIZE * 2) + (SPACING * 1);
-        int startX = width - MARGIN_RIGHT - totalWidth;
+        // Calculate position (bottom-right) - single slot
+        int startX = width - MARGIN_RIGHT - SLOT_SIZE;
         int startY = height - MARGIN_BOTTOM - SLOT_SIZE;
 
         RenderSystem.enableBlend();
-
-        for (int slot = 0; slot < 2; slot++) {
-            int x = startX + slot * (SLOT_SIZE + SPACING);
-            renderSlot(graphics, slot, x, startY);
-        }
-
+        renderSlot(graphics, 0, startX, startY);
         RenderSystem.disableBlend();
     }
 
@@ -142,13 +135,11 @@ public class SkillHUD {
         try {
             if (slot == 0) {
                 return KeyBindings.SKILL_1.getTranslatedKeyMessage().getString();
-            } else if (slot == 1) {
-                return KeyBindings.SKILL_2.getTranslatedKeyMessage().getString();
             }
         } catch (Exception e) {
             // Fallback if key binding is not yet initialized
-            return String.valueOf(slot + 1);
+            return "1";
         }
-        return String.valueOf(slot + 1);
+        return "1";
     }
 }

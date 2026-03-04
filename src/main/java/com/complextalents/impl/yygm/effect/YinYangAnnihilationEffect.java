@@ -30,9 +30,6 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
     /** NBT root key for annihilation data */
     private static final String NBT_ROOT = "yygm_yin_yang_annihilation";
 
-    /** NBT key for accumulated damage during Annihilation */
-    private static final String NBT_ACCUMULATED_DAMAGE = "accumulated_damage";
-
     /** NBT key for when Annihilation started (client sync) */
     private static final String NBT_START_TICK = "start_tick";
 
@@ -42,7 +39,6 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
 
     @Override
     protected CompoundTag initializePlayerData(CompoundTag tag) {
-        tag.putFloat(NBT_ACCUMULATED_DAMAGE, 0.0f);
         tag.putLong(NBT_START_TICK, 0);
         return tag;
     }
@@ -79,9 +75,8 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
                     target.getName().getString());
             }
 
-            // Initialize NBT data with start tick and zero accumulated damage
+            // Initialize NBT data with start tick
             CompoundTag playerData = getOrCreatePlayerData(target, playerUuid);
-            playerData.putFloat(NBT_ACCUMULATED_DAMAGE, 0.0f);
             playerData.putLong(NBT_START_TICK, target.level().getGameTime());
             savePlayerData(target, playerUuid, playerData);
         }
@@ -188,40 +183,6 @@ public class YinYangAnnihilationEffect extends BaseYinYangEffect {
      */
     public static void cleanupPlayerData(LivingEntity entity, UUID playerUuid) {
         BaseYinYangEffect.cleanupPlayerData(entity, playerUuid, "yygm_yin_yang_annihilation");
-    }
-
-    // ===== Damage Accumulation API =====
-
-    /**
-     * Add damage to the accumulated damage tracker for this player on the target.
-     * Called whenever damage is dealt during Yin Yang Annihilation.
-     */
-    public static void addAccumulatedDamage(LivingEntity entity, UUID playerUuid, float damage) {
-        YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
-        CompoundTag playerData = effect.getOrCreatePlayerData(entity, playerUuid);
-        float current = playerData.getFloat(NBT_ACCUMULATED_DAMAGE);
-        playerData.putFloat(NBT_ACCUMULATED_DAMAGE, current + damage);
-        effect.savePlayerData(entity, playerUuid, playerData);
-    }
-
-    /**
-     * Get the accumulated damage for this player on the target.
-     */
-    public static float getAccumulatedDamage(LivingEntity entity, UUID playerUuid) {
-        YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
-        CompoundTag playerData = effect.getOrCreatePlayerData(entity, playerUuid);
-        return playerData.getFloat(NBT_ACCUMULATED_DAMAGE);
-    }
-
-    /**
-     * Reset the accumulated damage for this player on the target.
-     * Called after explosion damage is dealt.
-     */
-    public static void resetAccumulatedDamage(LivingEntity entity, UUID playerUuid) {
-        YinYangAnnihilationEffect effect = (YinYangAnnihilationEffect) YinYangEffects.YIN_YANG_ANNIHILATION.get();
-        CompoundTag playerData = effect.getOrCreatePlayerData(entity, playerUuid);
-        playerData.putFloat(NBT_ACCUMULATED_DAMAGE, 0.0f);
-        effect.savePlayerData(entity, playerUuid, playerData);
     }
 
     /**

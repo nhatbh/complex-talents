@@ -1,6 +1,8 @@
 package com.complextalents.persistence;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.impl.darkmage.data.SoulData;
+import com.complextalents.impl.darkmage.origin.DarkMageOrigin;
 import com.complextalents.origin.capability.OriginDataProvider;
 import com.complextalents.passive.capability.PassiveStackDataProvider;
 import com.complextalents.skill.capability.SkillDataProvider;
@@ -67,6 +69,15 @@ public class PlayerDataPersistenceHandler {
             }
             passiveData.sync(); // Sync to client after restore
         });
+
+        // Restore Dark Mage soul data (check origin after capability restore)
+        if (DarkMageOrigin.isDarkMage(player)) {
+            CompoundTag savedTag = persistentData.getDarkMageData(playerId);
+            if (savedTag != null) {
+                SoulData.deserializeNBT(player, savedTag);
+                LOGGER.info("[PERSISTENCE] Restored Dark Mage soul data for player {}", playerId);
+            }
+        }
     }
 
     // --- LOGOUT: Save to SavedData ---
@@ -136,6 +147,15 @@ public class PlayerDataPersistenceHandler {
                 LOGGER.info("[CLONE] Restored passive data from SavedData for {}", playerId);
             }
         });
+
+        // Restore Dark Mage soul data from SavedData
+        if (DarkMageOrigin.isDarkMage(newPlayer)) {
+            CompoundTag savedTag = persistentData.getDarkMageData(playerId);
+            if (savedTag != null) {
+                SoulData.deserializeNBT(newPlayer, savedTag);
+                LOGGER.info("[CLONE] Restored Dark Mage soul data from SavedData for {}", playerId);
+            }
+        }
     }
 
     // --- PERIODIC SAVE (Backup safety net) ---
@@ -176,6 +196,11 @@ public class PlayerDataPersistenceHandler {
         player.getCapability(PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(data -> {
             persistentData.savePassiveData(playerId, data.serializeNBT());
         });
+
+        // Save Dark Mage soul data
+        if (DarkMageOrigin.isDarkMage(player)) {
+            persistentData.saveDarkMageData(playerId, SoulData.serializeNBT(player));
+        }
     }
 
     /**

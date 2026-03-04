@@ -5,11 +5,17 @@ import java.util.UUID;
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.yygm.effect.ExposedEffect;
 import com.complextalents.impl.yygm.skill.SwordDanceSkill;
+import com.complextalents.impl.yygm.state.YinYangState;
+import com.complextalents.impl.yygm.state.YinYangStateManager;
 import com.complextalents.impl.yygm.util.YinYangAngleUtil;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
+import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
+import com.complextalents.network.yygm.YinYangAnnihilationSyncPacket;
 import com.complextalents.skill.capability.SkillDataProvider;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -381,9 +387,33 @@ public class SwordDanceEventHandler {
 
                 // Check if all gates completed
                 if (ExposedEffect.isAllGatesCompleted(target, playerUuid)) {
-                    // TODO: Trigger Yin Yang Annihilation state
-                    TalentsMod.LOGGER.info("Sword Dance: All 8 exposed gates completed for {} on {}!",
-                            player.getName().getString(), target.getName().getString());
+                    // Convert to Yin Yang Annihilation state
+                    int remainingDuration = ExposedEffect.getRemainingDurationStatic(target, playerUuid);
+
+                    // Use YinYangStateManager for state transition
+                    YinYangStateManager.transitionState(target, playerUuid, YinYangState.ANNIHILATION, remainingDuration);
+
+                    // FX for completion and sync packet
+                    if (player.level() instanceof ServerLevel level) {
+                        PacketHandler.sendToNearby(
+                            new SpawnYinYangGateFXPacket(target.position(), SpawnYinYangGateFXPacket.EffectType.YANG_HIT),
+                            level, target.position()
+                        );
+                        level.playSound(null, target.getX(), target.getY(), target.getZ(),
+                            SoundEvents.DRAGON_FIREBALL_EXPLODE, player.getSoundSource(), 1.0f, 1.0f);
+
+                        // Send sync packet with start tick for client-side rendering
+                        long currentTick = target.level().getGameTime();
+                        PacketHandler.sendToNearby(
+                            new YinYangAnnihilationSyncPacket(target.getId(), playerUuid, currentTick, currentTick + remainingDuration),
+                            level, target.position()
+                        );
+                    }
+
+                    player.sendSystemMessage(Component.literal("All gates broken! Yin Yang Annihilation activated!"));
+
+                    TalentsMod.LOGGER.info("Sword Dance: All 8 exposed gates completed for {} on {}! Converted to Yin Yang Annihilation, duration: {} ticks",
+                        player.getName().getString(), target.getName().getString(), remainingDuration);
                 }
             } else {
                 hitResult = YYGMGateHitEvent.HitResult.FALSE_GATE;

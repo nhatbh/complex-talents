@@ -2,7 +2,6 @@ package com.complextalents.impl.yygm.client.renderer;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.network.yygm.ExposedStateSyncPacket;
-import com.complextalents.network.yygm.YinYangAnnihilationSyncPacket;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -38,7 +37,6 @@ public class YinYangBaguaRenderer {
 
     // Textures
     private static final ResourceLocation BLANK_TEXTURE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
-    private static final ResourceLocation YINYANG_TEXTURE = ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/yygm/yinyang.png");
 
     // Geometry Constants
     private static final float OUTER_RADIUS_MULT = 1.5f;
@@ -107,11 +105,6 @@ public class YinYangBaguaRenderer {
                     renderExposedGatesForPlayer(livingEntity, playerUuid, poseStack, bufferSource, light);
                 }
 
-                // Render Yin Yang Annihilation spinning texture
-                for (UUID playerUuid : YinYangAnnihilationSyncPacket.ClientAnnihilationData.getPlayersForEntity(entity.getId())) {
-                    renderSpinningYinYang(livingEntity, playerUuid, poseStack, bufferSource, light);
-                }
-
                 poseStack.popPose();
             }
         }
@@ -123,8 +116,7 @@ public class YinYangBaguaRenderer {
 
     private static boolean shouldRenderBagua(LivingEntity entity) {
         return YinYangGateStateSyncPacket.ClientGateData.hasGates(entity.getId())
-            || ExposedStateSyncPacket.ClientExposedData.hasExposed(entity.getId())
-            || YinYangAnnihilationSyncPacket.ClientAnnihilationData.hasAnnihilation(entity.getId());
+            || ExposedStateSyncPacket.ClientExposedData.hasExposed(entity.getId());
     }
 
     private static void renderBaguaForPlayer(LivingEntity entity, UUID playerUuid,
@@ -382,49 +374,5 @@ public class YinYangBaguaRenderer {
             renderTrigram(poseStack.last().pose(), vertexConsumer, trigramLines, trigramColor, light);
             poseStack.popPose();
         }
-    }
-
-    /**
-     * Render spinning Yin Yang texture for Yin Yang Annihilation targets.
-     * During Annihilation, the texture spins at a constant rate below the target.
-     */
-    private static void renderSpinningYinYang(LivingEntity entity, UUID playerUuid,
-                                               PoseStack poseStack, MultiBufferSource buffer, int light) {
-        YinYangAnnihilationSyncPacket.AnnihilationData data =
-            YinYangAnnihilationSyncPacket.ClientAnnihilationData.getAnnihilationData(entity.getId(), playerUuid);
-        if (data == null) return;
-
-        // Check if expired
-        long currentTime = Minecraft.getInstance().level.getGameTime();
-        if (currentTime >= data.getExpirationTick()) {
-            // Remove expired data
-            YinYangAnnihilationSyncPacket.ClientAnnihilationData.removePlayerAnnihilationData(entity.getId(), playerUuid);
-            return;
-        }
-
-        long elapsedTicks = currentTime - data.getStartTick();
-
-        // During Annihilation: constant spin (8 degrees per tick - steady spin)
-        float rotation = elapsedTicks * 8.0f;
-
-        float entityWidth = Math.max(entity.getBbWidth(), 0.8f);
-        float size = entityWidth * 1.2f; // Slightly larger than the entity
-
-        poseStack.pushPose();
-        poseStack.translate(0, 0.01, 0); // Just above ground
-        poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
-
-        // Render textured quad with yinyang.png
-        VertexConsumer vc = buffer.getBuffer(RenderType.entityTranslucent(YINYANG_TEXTURE));
-        Matrix4f pose = poseStack.last().pose();
-
-        float halfSize = size / 2.0f;
-        // Draw quad with texture coordinates
-        vc.vertex(pose, -halfSize, 0, -halfSize).color(1.0f, 1.0f, 1.0f, 0.9f).uv(0, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
-        vc.vertex(pose, -halfSize, 0, halfSize).color(1.0f, 1.0f, 1.0f, 0.9f).uv(0, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
-        vc.vertex(pose, halfSize, 0, halfSize).color(1.0f, 1.0f, 1.0f, 0.9f).uv(1, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
-        vc.vertex(pose, halfSize, 0, -halfSize).color(1.0f, 1.0f, 1.0f, 0.9f).uv(1, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 1, 0).endVertex();
-
-        poseStack.popPose();
     }
 }

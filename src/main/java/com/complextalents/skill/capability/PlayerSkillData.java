@@ -23,7 +23,7 @@ public class PlayerSkillData implements IPlayerSkillData, INBTSerializable<Compo
 
     private final ServerPlayer player;
 
-    // Slot assignments: index 0-3 maps to skill IDs
+    // Slot assignments: index 0 maps to skill ID
     private final ResourceLocation[] skillSlots = new ResourceLocation[SLOT_COUNT];
 
     // Active cooldowns: skillId -> expiration game time

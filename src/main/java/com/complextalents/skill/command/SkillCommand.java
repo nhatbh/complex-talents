@@ -43,7 +43,7 @@ public class SkillCommand {
     public static class AssignCommand {
         static com.mojang.brigadier.builder.ArgumentBuilder<CommandSourceStack, ?> register() {
             return Commands.literal("assign")
-                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 1))
                             .then(Commands.argument("skillId", ResourceLocationArgument.id())
                                     .executes(ctx -> assignSkill(
                                             ctx.getSource(),
@@ -96,7 +96,7 @@ public class SkillCommand {
     public static class ClearCommand {
         static com.mojang.brigadier.builder.ArgumentBuilder<CommandSourceStack, ?> register() {
             return Commands.literal("clear")
-                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 1))
                             .executes(ctx -> clearSlot(
                                     ctx.getSource(),
                                     IntegerArgumentType.getInteger(ctx, "slot") - 1
@@ -186,7 +186,7 @@ public class SkillCommand {
     public static class ToggleCommand {
         static com.mojang.brigadier.builder.ArgumentBuilder<CommandSourceStack, ?> register() {
             return Commands.literal("toggle")
-                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 1))
                             .executes(ctx -> toggleSkill(
                                     ctx.getSource(),
                                     IntegerArgumentType.getInteger(ctx, "slot") - 1
@@ -225,7 +225,7 @@ public class SkillCommand {
     public static class ResetCooldownCommand {
         static com.mojang.brigadier.builder.ArgumentBuilder<CommandSourceStack, ?> register() {
             return Commands.literal("resetcd")
-                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 1))
                             .executes(ctx -> resetSlotCooldown(
                                     ctx.getSource(),
                                     IntegerArgumentType.getInteger(ctx, "slot") - 1

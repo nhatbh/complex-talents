@@ -21,6 +21,7 @@ public class PlayerPersistentData extends SavedData {
     private final Map<UUID, CompoundTag> originData = new ConcurrentHashMap<>();
     private final Map<UUID, CompoundTag> skillData = new ConcurrentHashMap<>();
     private final Map<UUID, CompoundTag> passiveData = new ConcurrentHashMap<>();
+    private final Map<UUID, CompoundTag> darkMageData = new ConcurrentHashMap<>();
 
     /**
      * Get or create the PlayerPersistentData for a server level.
@@ -54,6 +55,11 @@ public class PlayerPersistentData extends SavedData {
             data.passiveData.put(UUID.fromString(uuidStr), passiveTag.getCompound(uuidStr));
         }
 
+        CompoundTag darkMageTag = tag.getCompound("darkMageData");
+        for (String uuidStr : darkMageTag.getAllKeys()) {
+            data.darkMageData.put(UUID.fromString(uuidStr), darkMageTag.getCompound(uuidStr));
+        }
+
         return data;
     }
 
@@ -79,6 +85,12 @@ public class PlayerPersistentData extends SavedData {
             passiveTag.put(entry.getKey().toString(), entry.getValue());
         }
         tag.put("passiveData", passiveTag);
+
+        CompoundTag darkMageTag = new CompoundTag();
+        for (var entry : darkMageData.entrySet()) {
+            darkMageTag.put(entry.getKey().toString(), entry.getValue());
+        }
+        tag.put("darkMageData", darkMageTag);
 
         return tag;
     }
@@ -143,12 +155,33 @@ public class PlayerPersistentData extends SavedData {
         setDirty();
     }
 
+    // --- Dark Mage Data Methods ---
+
+    public void saveDarkMageData(UUID playerId, CompoundTag data) {
+        darkMageData.put(playerId, data.copy());
+        setDirty();
+    }
+
+    public CompoundTag getDarkMageData(UUID playerId) {
+        return darkMageData.get(playerId);
+    }
+
+    public boolean hasDarkMageData(UUID playerId) {
+        return darkMageData.containsKey(playerId);
+    }
+
+    public void removeDarkMageData(UUID playerId) {
+        darkMageData.remove(playerId);
+        setDirty();
+    }
+
     // --- Cleanup Methods ---
 
     public void removeAllPlayerData(UUID playerId) {
         originData.remove(playerId);
         skillData.remove(playerId);
         passiveData.remove(playerId);
+        darkMageData.remove(playerId);
         setDirty();
     }
 }

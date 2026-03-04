@@ -28,14 +28,15 @@ import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
 import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
+import com.complextalents.network.yygm.YinYangAnnihilationHitPacket;
 import com.complextalents.network.yygm.YinYangAnnihilationSyncPacket;
-import com.complextalents.network.yygm.YinYangAnnihilationExplosionPacket;
 import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
 import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.EquilibriumSyncPacket;
 import com.complextalents.network.yygm.SwordDanceDashPacket;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
 import com.complextalents.network.highpriest.SpawnBarrierFXPacket;
+import com.complextalents.network.darkmage.SoulSyncPacket;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -303,12 +304,19 @@ public class PacketHandler {
                 YinYangAnnihilationSyncPacket::decode,
                 YinYangAnnihilationSyncPacket::handle);
 
-        // Yin Yang Annihilation explosion packet (triggers explosion animation)
+        // Yin Yang Annihilation hit packet (triggers expanding ring animation on each hit)
         INSTANCE.registerMessage(packetId++,
-                YinYangAnnihilationExplosionPacket.class,
-                YinYangAnnihilationExplosionPacket::encode,
-                YinYangAnnihilationExplosionPacket::decode,
-                YinYangAnnihilationExplosionPacket::handle);
+                YinYangAnnihilationHitPacket.class,
+                YinYangAnnihilationHitPacket::encode,
+                YinYangAnnihilationHitPacket::decode,
+                YinYangAnnihilationHitPacket::handle);
+
+        // Dark Mage soul sync packet
+        INSTANCE.registerMessage(packetId++,
+                SoulSyncPacket.class,
+                SoulSyncPacket::encode,
+                SoulSyncPacket::decode,
+                SoulSyncPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }
