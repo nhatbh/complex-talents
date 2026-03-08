@@ -13,6 +13,8 @@ import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import com.complextalents.impl.highpriest.item.HighPriestItems;
 import com.complextalents.impl.highpriest.origin.HighPriestOrigin;
+import com.complextalents.impl.assassin.effect.AssassinEffects;
+import com.complextalents.impl.assassin.AssassinRegistrar;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.origin.OriginRegistry;
 import com.complextalents.origin.command.OriginCommand;
@@ -46,6 +48,7 @@ public class TalentsMod {
         ElementalEffects.register(modEventBus);
         HighPriestEffects.register(modEventBus);
         YinYangEffects.register(modEventBus);
+        AssassinEffects.register(modEventBus);
 
         // Register custom entities
         ModEntities.register(modEventBus);
@@ -89,6 +92,7 @@ public class TalentsMod {
         HighPriestOrigin.initIntegration();
         YinYangGrandmasterOrigin.register();
         DarkMageRegistrar.register();
+        AssassinRegistrar.register();
         LOGGER.info("Example origins registered");
     }
 

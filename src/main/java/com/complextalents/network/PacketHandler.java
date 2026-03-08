@@ -37,6 +37,8 @@ import com.complextalents.network.yygm.SwordDanceDashPacket;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
 import com.complextalents.network.highpriest.SpawnBarrierFXPacket;
 import com.complextalents.network.darkmage.SoulSyncPacket;
+import com.complextalents.network.assassin.AssassinSyncPacket;
+import com.complextalents.network.assassin.AssassinEntitySyncPacket;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -317,6 +319,19 @@ public class PacketHandler {
                 SoulSyncPacket::encode,
                 SoulSyncPacket::decode,
                 SoulSyncPacket::handle);
+
+        // Assassin sync packet
+        INSTANCE.registerMessage(packetId++,
+                AssassinSyncPacket.class,
+                AssassinSyncPacket::encode,
+                AssassinSyncPacket::decode,
+                AssassinSyncPacket::handle);
+
+        INSTANCE.registerMessage(packetId++,
+                AssassinEntitySyncPacket.class,
+                AssassinEntitySyncPacket::encode,
+                AssassinEntitySyncPacket::decode,
+                AssassinEntitySyncPacket::handle);
 
         TalentsMod.LOGGER.info("Network packets registered");
     }

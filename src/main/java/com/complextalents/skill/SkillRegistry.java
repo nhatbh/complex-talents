@@ -68,7 +68,8 @@ public class SkillRegistry {
      * Register a skill.
      *
      * @param skill The skill to register
-     * @throws IllegalArgumentException if a skill with the same ID is already registered
+     * @throws IllegalArgumentException if a skill with the same ID is already
+     *                                  registered
      */
     public void register(Skill skill) {
         Objects.requireNonNull(skill, "Skill cannot be null");

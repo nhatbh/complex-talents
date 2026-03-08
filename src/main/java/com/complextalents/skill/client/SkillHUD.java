@@ -23,8 +23,8 @@ import net.minecraftforge.fml.common.Mod;
 public class SkillHUD {
 
     // Default icon when skill doesn't have one
-    private static final ResourceLocation DEFAULT_ICON =
-        ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/default_icon.png");
+    private static final ResourceLocation DEFAULT_ICON = ResourceLocation.fromNamespaceAndPath("complextalents",
+            "textures/skill/default_icon.png");
 
     // Layout constants
     private static final int ICON_SIZE = 24;
@@ -34,21 +34,18 @@ public class SkillHUD {
 
     // Colors (ARGB format with alpha)
     private static final int BACKGROUND_COLOR = 0xDD000000;
-    private static final int BORDER_COLOR = 0xDDFFFFFF;
     private static final int COOLDOWN_OVERLAY = 0xCC000000;
-    private static final int KEYBIND_COLOR = 0xFFFFFFFF;
+    private static final int KEYBIND_COLOR = 0x80FFFFFF;
     private static final int COOLDOWN_TEXT_COLOR = 0xFFFFFFFF;
     private static final int EMPTY_SLOT_BG = 0x66000000;
-    private static final int EMPTY_SLOT_BORDER = 0x66FFFFFF;
-    private static final int EMPTY_KEYBIND_COLOR = 0x66FFFFFF;
+    private static final int EMPTY_KEYBIND_COLOR = 0x80FFFFFF;
 
     @SubscribeEvent
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
         event.registerBelow(
                 VanillaGuiOverlay.HOTBAR.id(),
                 "skill_hud",
-                SkillHUD::render
-        );
+                SkillHUD::render);
     }
 
     public static void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int width, int height) {
@@ -82,10 +79,6 @@ public class SkillHUD {
 
         // Background
         graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, BACKGROUND_COLOR);
-        graphics.fill(x, y, x + SLOT_SIZE, y + 1, BORDER_COLOR);
-        graphics.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, BORDER_COLOR);
-        graphics.fill(x, y, x + 1, y + SLOT_SIZE, BORDER_COLOR);
-        graphics.fill(x + SLOT_SIZE - 1, y, x + SLOT_SIZE, y + SLOT_SIZE, BORDER_COLOR);
 
         // Icon
         ResourceLocation icon = skill.getIcon();
@@ -116,10 +109,6 @@ public class SkillHUD {
     private static void renderEmptySlot(GuiGraphics graphics, int slot, int x, int y) {
         // Dim empty slot
         graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, EMPTY_SLOT_BG);
-        graphics.fill(x, y, x + SLOT_SIZE, y + 1, EMPTY_SLOT_BORDER);
-        graphics.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, EMPTY_SLOT_BORDER);
-        graphics.fill(x, y, x + 1, y + SLOT_SIZE, EMPTY_SLOT_BORDER);
-        graphics.fill(x + SLOT_SIZE - 1, y, x + SLOT_SIZE, y + SLOT_SIZE, EMPTY_SLOT_BORDER);
 
         // Dim keybind
         var font = Minecraft.getInstance().font;

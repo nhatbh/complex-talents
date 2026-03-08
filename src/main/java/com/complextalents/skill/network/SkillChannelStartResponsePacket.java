@@ -1,5 +1,7 @@
 package com.complextalents.skill.network;
 
+import com.complextalents.client.ClientInputHandler;
+import com.complextalents.client.KeyBindings;
 import com.complextalents.skill.Skill;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.client.ChannelManager;
@@ -116,6 +118,12 @@ public class SkillChannelStartResponsePacket {
                     // Only show channeling message for skills with actual channel time
                     if (skill.getMaxChannelTime() > 0) {
                         mc.player.displayClientMessage(Component.literal("§eChanneling..."), true);
+                    }
+
+                    // RACE CONDITION FIX: If the user released the key before the server responded,
+                    // we need to trigger the release handling now.
+                    if (slotIndex == 0 && !KeyBindings.SKILL_1.isDown()) {
+                        ClientInputHandler.handleSkillKeyRelease(slotIndex);
                     }
                 }
             } else {

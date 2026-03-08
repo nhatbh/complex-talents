@@ -51,9 +51,11 @@ public class ClientInputHandler {
         }
 
         // Check SKILL_1 key (slot 0)
-        if (event.getAction() == GLFW.GLFW_PRESS && KeyBindings.SKILL_1.consumeClick()) {
-            handleSkillKeyPress(0);
-            return;
+        if (event.getAction() == GLFW.GLFW_PRESS && event.getKey() == getKeyCode(KeyBindings.SKILL_1)) {
+            if (KeyBindings.SKILL_1.consumeClick()) {
+                handleSkillKeyPress(0);
+                return;
+            }
         }
         if (event.getAction() == GLFW.GLFW_RELEASE && event.getKey() == getKeyCode(KeyBindings.SKILL_1)) {
             handleSkillKeyRelease(0);
@@ -119,7 +121,7 @@ public class ClientInputHandler {
     /**
      * Handle skill key release - finish channeling and send packet.
      */
-    private static void handleSkillKeyRelease(int slotIndex) {
+    public static void handleSkillKeyRelease(int slotIndex) {
         // If player released the key before server responded, clear the pending state
         if (SkillCastingClient.hasPendingChannelStart() && SkillCastingClient.getPendingSlot() == slotIndex) {
             SkillCastingClient.clearPendingChannelStart();
