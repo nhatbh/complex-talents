@@ -10,23 +10,28 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ClientSoulData {
 
-    private static int souls = 0;
+    private static double souls = 0;
     private static boolean bloodPactActive = false;
     private static long phylacteryCooldownTicks = 0;
     private static long phylacteryTotalCooldownTicks = 0;
     private static long cooldownSyncTime = 0; // Client time when cooldown was synced
 
+    // Blood Pact combat stats (only meaningful when bloodPactActive)
+    private static float spellPower = 0f;
+    private static float critChance = 0f;
+    private static float critDamage = 0f;
+
     /**
      * Set souls from server sync.
      */
-    public static void setSouls(int value) {
+    public static void setSouls(double value) {
         souls = Math.max(0, value);
     }
 
     /**
      * Get the current soul count.
      */
-    public static int getSouls() {
+    public static double getSouls() {
         return souls;
     }
 
@@ -52,6 +57,19 @@ public class ClientSoulData {
         phylacteryTotalCooldownTicks = totalTicks;
         cooldownSyncTime = System.currentTimeMillis();
     }
+
+    /**
+     * Set Blood Pact combat stats from server sync.
+     */
+    public static void setBloodPactStats(float spellPower, float critChance, float critDamage) {
+        ClientSoulData.spellPower = spellPower;
+        ClientSoulData.critChance = critChance;
+        ClientSoulData.critDamage = critDamage;
+    }
+
+    public static float getSpellPower() { return spellPower; }
+    public static float getCritChance() { return critChance; }
+    public static float getCritDamage() { return critDamage; }
 
     /**
      * Get remaining Phylactery cooldown in ticks (client-side interpolated).
@@ -106,5 +124,8 @@ public class ClientSoulData {
         phylacteryCooldownTicks = 0;
         phylacteryTotalCooldownTicks = 0;
         cooldownSyncTime = 0;
+        spellPower = 0f;
+        critChance = 0f;
+        critDamage = 0f;
     }
 }

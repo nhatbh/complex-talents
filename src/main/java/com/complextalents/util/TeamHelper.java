@@ -7,6 +7,7 @@ public class TeamHelper {
         if (entity1 == null || entity2 == null) {
             return false;
         }
+        if (entity1 == entity2) return true;
         // Use Minecraft's built-in team checking
         return entity1.isAlliedTo(entity2);
     }

@@ -3,7 +3,9 @@ package com.complextalents.impl.darkmage.events;
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.darkmage.data.SoulData;
 import com.complextalents.impl.darkmage.origin.DarkMageOrigin;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -59,6 +61,14 @@ public class SoulSiphonHandler {
 
         // Add souls and sync
         SoulData.addSouls(player, soulsGained);
+
+        // Soul escape particles at the killed mob (more souls = more particles)
+        if (victim.level() instanceof ServerLevel serverLevel) {
+            int count = Math.max(1, Math.min(40, (int) (soulsGained * 2)));
+            serverLevel.sendParticles(ParticleTypes.SOUL,
+                    victim.getX(), victim.getY() + victim.getBbHeight() / 2.0, victim.getZ(),
+                    count, 0.3, 0.4, 0.3, 0.05);
+        }
 
         // Send chat message to player
         double totalSouls = SoulData.getSouls(player);

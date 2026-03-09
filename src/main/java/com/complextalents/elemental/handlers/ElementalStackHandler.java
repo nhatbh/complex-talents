@@ -5,6 +5,9 @@ import com.complextalents.config.ElementalReactionConfig;
 import com.complextalents.elemental.ElementStack;
 import com.complextalents.elemental.ElementalStackTracker;
 import com.complextalents.elemental.ElementType;
+import com.complextalents.elemental.api.OPContext;
+import com.complextalents.elemental.OPElementType;
+import com.complextalents.elemental.OPTargetSelector;
 import com.complextalents.elemental.events.ElementStackAppliedEvent;
 import com.complextalents.elemental.events.ElementStackPreAppliedEvent;
 import com.complextalents.elemental.events.ElementalDamageEvent;
@@ -123,6 +126,22 @@ public class ElementalStackHandler {
             }
 
             TalentsMod.LOGGER.debug("Applied {} stack to {}", element, target.getName().getString());
+
+            // Trigger Overwhelming Power logic
+            if (source instanceof ServerPlayer serverPlayer) {
+                serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    String.format("\u00A78[OP Debug] Elemental Hit Detected: %s on %s, Damage=%.1f", 
+                    element, target.getName().getString(), event.getDamage())
+                ));
+                OPElementType opType = OPElementType.fromBaseType(element);
+                if (opType != null) {
+                    OPTargetSelector.buffer(new OPContext(target, serverPlayer, opType, event.getDamage()));
+                } else {
+                    serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "\u00A78[OP Debug] Failed to map element to OPElementType: " + element
+                    ));
+                }
+            }
 
         } catch (Exception e) {
             TalentsMod.LOGGER.error("Error handling ElementalDamageEvent for entity {}: {}",

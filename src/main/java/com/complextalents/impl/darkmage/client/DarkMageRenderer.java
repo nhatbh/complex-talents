@@ -37,7 +37,7 @@ public class DarkMageRenderer implements OriginRenderer {
 
     // Cache for soul text - only rebuild when value changes
     private static String cachedSoulText = "";
-    private static int lastSoulValue = -1;
+    private static double lastSoulValue = -1;
 
     @Override
     public void renderHUD(GuiGraphics graphics, int screenWidth, int screenHeight) {
@@ -87,7 +87,7 @@ public class DarkMageRenderer implements OriginRenderer {
      */
     private void renderLabels(GuiGraphics graphics, int centerX, int centerY) {
         Minecraft minecraft = Minecraft.getInstance();
-        int souls = ClientSoulData.getSouls();
+        double souls = ClientSoulData.getSouls();
         boolean bloodPactActive = ClientSoulData.isBloodPactActive();
         boolean phylacteryOnCooldown = ClientSoulData.isPhylacteryOnCooldown();
 
@@ -121,7 +121,7 @@ public class DarkMageRenderer implements OriginRenderer {
             graphics.pose().popPose();
         }
 
-        // Blood Pact indicator (left side, only when active)
+        // Blood Pact indicator + stats (left side, only when active)
         if (bloodPactActive) {
             String pactText = "BLOOD PACT";
             int pactTextWidth = minecraft.font.width(pactText);
@@ -138,6 +138,26 @@ public class DarkMageRenderer implements OriginRenderer {
             graphics.pose().scale(0.7f, 0.7f, 0.7f);
             graphics.drawString(minecraft.font, pactText,
                     (int) (pactTextX / 0.7f), (int) (pactTextY / 0.7f), pactColor);
+            graphics.pose().popPose();
+
+            // Combat stats below "BLOOD PACT" label
+            float spellPower = ClientSoulData.getSpellPower();
+            float critChance = ClientSoulData.getCritChance();
+            float critDamage = ClientSoulData.getCritDamage();
+
+            String spellPowerText = String.format("SP: %.2f", spellPower);
+            String critChanceText  = String.format("CC: %.2f%%", critChance * 100f);
+            String critDamageText  = String.format("CD: %.2f%%", critDamage * 100f);
+
+            int statsColor = 0x99FF9999; // Muted red
+
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.6f, 0.6f, 0.6f);
+            int statsX = (int) ((centerX - ARC_OUTER_RADIUS - 6) / 0.6f);
+            int lineH = minecraft.font.lineHeight + 1;
+            graphics.drawString(minecraft.font, spellPowerText, statsX - (int)(minecraft.font.width(spellPowerText)), (int) ((pactTextY + 8) / 0.6f), statsColor);
+            graphics.drawString(minecraft.font, critChanceText,  statsX - (int)(minecraft.font.width(critChanceText)),  (int) ((pactTextY + 8 + lineH) / 0.6f), statsColor);
+            graphics.drawString(minecraft.font, critDamageText,  statsX - (int)(minecraft.font.width(critDamageText)),  (int) ((pactTextY + 8 + lineH * 2) / 0.6f), statsColor);
             graphics.pose().popPose();
         }
     }
@@ -156,13 +176,13 @@ public class DarkMageRenderer implements OriginRenderer {
      * Format soul count for display.
      * Uses K/M suffixes for large numbers.
      */
-    private String formatSoulCount(int souls) {
+    private String formatSoulCount(double souls) {
         if (souls < 1000) {
-            return souls + " Souls";
+            return String.format("%.2f Souls", souls);
         } else if (souls < 1000000) {
-            return String.format("%.1fK Souls", souls / 1000.0);
+            return String.format("%.2fK Souls", souls / 1000.0);
         } else {
-            return String.format("%.1fM Souls", souls / 1000000.0);
+            return String.format("%.2fM Souls", souls / 1000000.0);
         }
     }
 

@@ -30,6 +30,7 @@ public class OriginModIntegrationHandler {
 
         if (isIronSpellbooksLoaded) {
             HolySpellbooksIntegration.init();
+            SpellCritHandler.init();
             TalentsMod.LOGGER.info("Origin: Iron's Spellbooks integration enabled");
         }
     }

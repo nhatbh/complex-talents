@@ -2,8 +2,10 @@ package com.complextalents;
 
 import com.complextalents.config.ElementalReactionConfig;
 import com.complextalents.elemental.effects.ElementalEffects;
+import com.complextalents.elemental.effects.OPEffects;
 import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
+import com.complextalents.elemental.registry.OverwhelmingPowerRegistry;
 import com.complextalents.elemental.registry.ReactionRegistry;
 import com.complextalents.impl.yygm.effect.YinYangEffects;
 import com.complextalents.impl.yygm.entity.YygmEntities;
@@ -19,6 +21,7 @@ import com.complextalents.network.PacketHandler;
 import com.complextalents.origin.OriginRegistry;
 import com.complextalents.origin.command.OriginCommand;
 import com.complextalents.origin.integration.OriginModIntegrationHandler;
+import com.complextalents.origin.integration.SpellCritAttributes;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.command.SkillCommand;
 import com.mojang.logging.LogUtils;
@@ -46,9 +49,13 @@ public class TalentsMod {
 
         // Register custom status effects
         ElementalEffects.register(modEventBus);
+        OPEffects.register(modEventBus);
         HighPriestEffects.register(modEventBus);
         YinYangEffects.register(modEventBus);
         AssassinEffects.register(modEventBus);
+
+        // Register spell crit attributes
+        SpellCritAttributes.register(modEventBus);
 
         // Register custom entities
         ModEntities.register(modEventBus);
@@ -102,7 +109,8 @@ public class TalentsMod {
 
         // Initialize reaction registry with all registered reactions
         ReactionRegistry.getInstance().initialize();
-        LOGGER.info("Reaction registry initialized");
+        OverwhelmingPowerRegistry.getInstance().initialize();
+        LOGGER.info("Reaction and OP registries initialized");
 
         // Register skill commands
         SkillCommand.register(event.getServer().getCommands().getDispatcher());

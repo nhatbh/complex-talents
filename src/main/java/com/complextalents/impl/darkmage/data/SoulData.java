@@ -4,9 +4,13 @@ import com.complextalents.TalentsMod;
 import com.complextalents.network.PacketHandler;
 import com.complextalents.network.darkmage.SoulSyncPacket;
 import com.complextalents.origin.OriginManager;
+import com.complextalents.origin.integration.SpellCritAttributes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -192,7 +196,7 @@ public class SoulData {
      * Sync soul data to a specific client.
      */
     public static void syncToClient(ServerPlayer player) {
-        int souls = getSoulsInt(player.getUUID());
+        double souls = getSouls(player.getUUID());
         boolean bloodPactActive = isBloodPactActive(player.getUUID());
         long currentGameTime = player.level().getGameTime();
         long cooldownRemaining = getPhylacteryCooldownRemaining(player.getUUID(), currentGameTime);
@@ -201,8 +205,27 @@ public class SoulData {
         double cooldownSeconds = OriginManager.getOriginStat(player, "phylacteryCooldown");
         long totalCooldownTicks = (long) (cooldownSeconds * 20);
 
+        // Read Blood Pact combat stats from player attributes
+        float spellPower = readAttribute(player, ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "spell_power"));
+        float critChance = readAttribute(player, SpellCritAttributes.SPELL_CRIT_CHANCE.get());
+        float critDamage = readAttribute(player, SpellCritAttributes.SPELL_CRIT_DAMAGE.get());
+
         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                new SoulSyncPacket(souls, bloodPactActive, cooldownRemaining, totalCooldownTicks));
+                new SoulSyncPacket(souls, bloodPactActive, cooldownRemaining, totalCooldownTicks,
+                        spellPower, critChance, critDamage));
+    }
+
+    private static float readAttribute(ServerPlayer player, ResourceLocation id) {
+        Attribute attr = ForgeRegistries.ATTRIBUTES.getValue(id);
+        if (attr == null) return 0f;
+        var inst = player.getAttributes().getInstance(attr);
+        return inst != null ? (float) inst.getValue() : 0f;
+    }
+
+    private static float readAttribute(ServerPlayer player, Attribute attr) {
+        if (attr == null) return 0f;
+        var inst = player.getAttributes().getInstance(attr);
+        return inst != null ? (float) inst.getValue() : 0f;
     }
 
     /**

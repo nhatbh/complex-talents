@@ -2,6 +2,7 @@ package com.complextalents.impl.darkmage.skill;
 
 import com.complextalents.impl.darkmage.data.SoulData;
 import com.complextalents.origin.OriginManager;
+import com.complextalents.origin.integration.SpellCritAttributes;
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.SkillNature;
 import com.complextalents.targeting.TargetType;
@@ -44,11 +45,14 @@ public class BloodPactSkill {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "blood_pact");
 
     // UUIDs for attribute modifiers
-    private static final UUID CAST_SPEED_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_cast_speed");
-    private static final UUID MANA_REGEN_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_mana_regen");
+    private static final UUID CAST_SPEED_UUID       = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_cast_speed");
+    private static final UUID MANA_REGEN_UUID        = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_mana_regen");
+    private static final UUID SPELL_CRIT_CHANCE_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_spell_crit_chance");
+    private static final UUID SPELL_CRIT_DAMAGE_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_spell_crit_damage");
+    private static final UUID SPELL_POWER_UUID       = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_spell_power");
 
     // Massive mana regen bonus (10.0 = +1000% mana regen, effectively infinite)
-    private static final double MANA_REGEN_BONUS = 10.0;
+    private static final double MANA_REGEN_BONUS = 5.0;
 
     /**
      * Register this skill.
@@ -80,9 +84,11 @@ public class BloodPactSkill {
                     ServerLevel level = serverPlayer.serverLevel();
                     int skillLevel = context.skillLevel();
 
-                    // Apply cast speed and mana regen modifiers
+                    // Apply cast speed, mana regen, spell crit, and spell power modifiers
                     applyCastSpeedBonus(serverPlayer);
                     applyManaRegenBonus(serverPlayer);
+                    applyCritBonus(serverPlayer);
+                    applySpellPowerBonus(serverPlayer);
 
                     // Track Blood Pact active state
                     SoulData.setBloodPactActive(serverPlayer.getUUID(), true);
@@ -110,9 +116,11 @@ public class BloodPactSkill {
                     ServerPlayer serverPlayer = (ServerPlayer) player;
                     ServerLevel level = serverPlayer.serverLevel();
 
-                    // Remove cast speed and mana regen modifiers
+                    // Remove cast speed, mana regen, spell crit, and spell power modifiers
                     removeCastSpeedBonus(serverPlayer);
                     removeManaRegenBonus(serverPlayer);
+                    removeCritBonus(serverPlayer);
+                    removeSpellPowerBonus(serverPlayer);
 
                     // Track Blood Pact inactive state
                     SoulData.setBloodPactActive(serverPlayer.getUUID(), false);
@@ -191,7 +199,7 @@ public class BloodPactSkill {
                         MANA_REGEN_UUID,
                         "Blood Pact Mana Regen",
                         MANA_REGEN_BONUS,
-                        AttributeModifier.Operation.MULTIPLY_TOTAL
+                        AttributeModifier.Operation.ADDITION
                 );
                 attributeInstance.addTransientModifier(modifier);
             }
@@ -209,6 +217,89 @@ public class BloodPactSkill {
             var attributeInstance = player.getAttributes().getInstance(manaRegenAttr);
             if (attributeInstance != null) {
                 attributeInstance.removeModifier(MANA_REGEN_UUID);
+            }
+        }
+    }
+
+    /**
+     * Apply spell crit chance (and overflow crit damage) based on current soul count.
+     * Crit chance = souls × rate, capped at 1.0 (100%).
+     * Any excess beyond 1.0 is applied as additive crit damage bonus.
+     */
+    public static void applyCritBonus(ServerPlayer player) {
+        double souls = SoulData.getSouls(player.getUUID());
+        double rate  = OriginManager.getOriginStat(player, "soulSpellCritPercent");
+        double totalBonus = souls * rate;
+
+        double critChanceBonus = Math.min(totalBonus, 1.0);
+        double critDamageBonus = Math.max(0.0, totalBonus - 1.0);
+
+        var critChanceInst = player.getAttribute(SpellCritAttributes.SPELL_CRIT_CHANCE.get());
+        if (critChanceInst != null) {
+            critChanceInst.removeModifier(SPELL_CRIT_CHANCE_UUID);
+            critChanceInst.addTransientModifier(new AttributeModifier(
+                    SPELL_CRIT_CHANCE_UUID, "Blood Pact Spell Crit Chance",
+                    critChanceBonus, AttributeModifier.Operation.ADDITION));
+        }
+
+        var critDamageInst = player.getAttribute(SpellCritAttributes.SPELL_CRIT_DAMAGE.get());
+        if (critDamageInst != null) {
+            critDamageInst.removeModifier(SPELL_CRIT_DAMAGE_UUID);
+            if (critDamageBonus > 0.0) {
+                critDamageInst.addTransientModifier(new AttributeModifier(
+                        SPELL_CRIT_DAMAGE_UUID, "Blood Pact Spell Crit Damage",
+                        critDamageBonus, AttributeModifier.Operation.ADDITION));
+            }
+        }
+    }
+
+    /**
+     * Remove spell crit chance and damage modifiers applied by Blood Pact.
+     */
+    public static void removeCritBonus(ServerPlayer player) {
+        var critChanceInst = player.getAttribute(SpellCritAttributes.SPELL_CRIT_CHANCE.get());
+        if (critChanceInst != null) critChanceInst.removeModifier(SPELL_CRIT_CHANCE_UUID);
+
+        var critDamageInst = player.getAttribute(SpellCritAttributes.SPELL_CRIT_DAMAGE.get());
+        if (critDamageInst != null) critDamageInst.removeModifier(SPELL_CRIT_DAMAGE_UUID);
+    }
+
+    /**
+     * Apply spell power bonus based on current soul count, locked in at activation.
+     * Bonus = souls × soulDamageBonusPercent, applied as additive spell_power.
+     */
+    public static void applySpellPowerBonus(ServerPlayer player) {
+        double souls = SoulData.getSouls(player.getUUID());
+        double bonusPerSoul = OriginManager.getOriginStat(player, "soulDamageBonusPercent");
+        double bonus = souls * bonusPerSoul;
+
+        ResourceLocation spellPowerAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "spell_power");
+        Attribute spellPowerAttr = ForgeRegistries.ATTRIBUTES.getValue(spellPowerAttrId);
+
+        if (spellPowerAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(spellPowerAttr);
+            if (attributeInstance != null) {
+                attributeInstance.removeModifier(SPELL_POWER_UUID);
+                if (bonus > 0.0) {
+                    attributeInstance.addTransientModifier(new AttributeModifier(
+                            SPELL_POWER_UUID, "Blood Pact Spell Power",
+                            bonus, AttributeModifier.Operation.ADDITION));
+                }
+            }
+        }
+    }
+
+    /**
+     * Remove spell power modifier applied by Blood Pact.
+     */
+    public static void removeSpellPowerBonus(ServerPlayer player) {
+        ResourceLocation spellPowerAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "spell_power");
+        Attribute spellPowerAttr = ForgeRegistries.ATTRIBUTES.getValue(spellPowerAttrId);
+
+        if (spellPowerAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(spellPowerAttr);
+            if (attributeInstance != null) {
+                attributeInstance.removeModifier(SPELL_POWER_UUID);
             }
         }
     }
