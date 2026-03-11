@@ -3,14 +3,14 @@ package com.complextalents.elemental.strategies.op;
 import com.complextalents.elemental.OPElementType;
 import com.complextalents.elemental.api.OPContext;
 import com.complextalents.elemental.api.IOPStrategy;
-import com.complextalents.elemental.effects.OPEffects;
-import com.complextalents.elemental.registry.OverwhelmingPowerRegistry;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.world.effect.MobEffects;
+import com.complextalents.elemental.registry.OverwhelmingPowerRegistry;
+import com.complextalents.registry.SoundRegistry;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import com.complextalents.network.Messages;
+import org.joml.Vector3f;
 import java.util.List;
 
 public class LightningOPStrategy implements IOPStrategy {
@@ -22,14 +22,12 @@ public class LightningOPStrategy implements IOPStrategy {
         LivingEntity attacker = context.getAttacker();
 
         switch (tier) {
-            case 5:
-                applyT5(attacker, target, level, damage);
-            case 4:
-                applyT4(attacker, target, level, damage);
             case 3:
                 applyT3(attacker, target, level, damage);
+                break;
             case 2:
                 applyT2(attacker, target, level, damage);
+                break;
             case 1:
                 applyT1(attacker, target, level, damage);
                 break;
@@ -39,89 +37,113 @@ public class LightningOPStrategy implements IOPStrategy {
     private void applyT1(LivingEntity attacker, LivingEntity target, ServerLevel level, float damage) {
         float scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(1);
         float arcDamage = 15f * scale;
-        
+
         List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4.0));
         int count = 0;
         for (LivingEntity entity : nearby) {
             if (entity != target && !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
                 entity.hurt(level.damageSources().lightningBolt(), arcDamage);
-                
+
                 // Visuals: Iron's lightning particles
-                net.minecraft.core.particles.ParticleOptions lightning = com.complextalents.elemental.handlers.OPTickHandler.getIronParticle("lightning");
+                net.minecraft.core.particles.ParticleOptions lightning = com.complextalents.elemental.handlers.OPTickHandler
+                        .getIronParticle("lightning");
                 if (lightning != null) {
-                    level.sendParticles(lightning, entity.getX(), entity.getY() + 1, entity.getZ(), 5, 0.1, 0.1, 0.1, 0.05);
+                    level.sendParticles(lightning, entity.getX(), entity.getY() + 1, entity.getZ(), 5, 0.1, 0.1, 0.1,
+                            0.05);
                 }
-                
+
                 count++;
-                if (count >= 2) break;
+                if (count >= 3)
+                    break; // T1: 3 targets
             }
         }
     }
 
     private void applyT2(LivingEntity attacker, LivingEntity target, ServerLevel level, float damage) {
         float scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(2);
-        // Chain Extension: Handled by increasing targets or range
-        float arcDamage = 20f * scale;
-        
-        List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(6.0));
+        float arcDamage = 30f * scale; // Higher base damage for T2
+
+        List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(8.0));
         int count = 0;
         for (LivingEntity entity : nearby) {
             if (entity != target && !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
                 entity.hurt(level.damageSources().lightningBolt(), arcDamage);
-                
-                net.minecraft.core.particles.ParticleOptions electricity = com.complextalents.elemental.handlers.OPTickHandler.getIronParticle("electricity");
+
+                net.minecraft.core.particles.ParticleOptions electricity = com.complextalents.elemental.handlers.OPTickHandler
+                        .getIronParticle("electricity");
                 if (electricity != null) {
-                    level.sendParticles(electricity, entity.getX(), entity.getY() + 1, entity.getZ(), 8, 0.2, 0.2, 0.2, 0.05);
+                    level.sendParticles(electricity, entity.getX(), entity.getY() + 1, entity.getZ(), 8, 0.2, 0.2, 0.2,
+                            0.05);
                 }
-                
+
                 count++;
-                if (count >= 4) break; // T2 extends to 4 targets total
+                if (count >= 6)
+                    break; // T2: 6 targets
             }
         }
     }
 
     private void applyT3(LivingEntity attacker, LivingEntity target, ServerLevel level, float damage) {
         float scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(3);
-        int duration = (int) (160 * Math.sqrt(scale));
-        attacker.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, duration, 1)); // Speed II
-        
-        net.minecraft.core.particles.ParticleOptions electricity = com.complextalents.elemental.handlers.OPTickHandler.getIronParticle("electricity");
-        if (electricity != null) {
-            level.sendParticles(electricity, attacker.getX(), attacker.getY() + 1, attacker.getZ(), 15, 0.4, 0.6, 0.4, 0.05);
-        }
-    }
+        float radius = 6.0f * (float) Math.sqrt(scale);
 
-    private void applyT4(LivingEntity attacker, LivingEntity target, ServerLevel level, float damage) {
-        float scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(4);
-        int duration = (int) (100 * Math.sqrt(scale));
-        // Magnetize logic moved to OPTickHandler or handled here for pull
-        List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(8.0));
-        for (LivingEntity entity : nearby) {
-            if (entity != target && !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
-                Vec3 pull = target.position().subtract(entity.position()).normalize().scale(0.4);
-                entity.setDeltaMovement(entity.getDeltaMovement().add(pull));
-                entity.hurtMarked = true;
-                // Use duration for a brief slow to help the grouping
-                entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration / 2, 1));
-            }
-        }
-        
-        net.minecraft.core.particles.ParticleOptions shockwave = com.complextalents.elemental.handlers.OPTickHandler.getIronParticle("shockwave");
-        if (shockwave != null) {
-            level.sendParticles(shockwave, target.getX(), target.getY() + 0.5, target.getZ(), 1, 0, 0, 0, 0);
-        }
-    }
+        float initialDamage = 40f * scale;
+        float strikeDamage = 15f * scale;
 
-    private void applyT5(LivingEntity attacker, LivingEntity target, ServerLevel level, float damage) {
-        float scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(5);
-        target.addEffect(new MobEffectInstance(OPEffects.THUNDERGODS_WRATH.get(), 200, (int)(scale * 10))); // 10s
+        // AAA Particle: Supercell
+        Messages.spawnAAAParticle(level, target.position().add(0, 1.0, 0), "supercell", new Vector3f(0), 2.5f);
         if (attacker != null) {
             target.getPersistentData().putString("OP_Attacker", attacker.getName().getString());
         }
-        
-        net.minecraft.core.particles.ParticleOptions lightning = com.complextalents.elemental.handlers.OPTickHandler.getIronParticle("lightning");
-        if (lightning != null) {
-            level.sendParticles(lightning, target.getX(), target.getY() + 3, target.getZ(), 20, 0.5, 2.0, 0.5, 0);
+
+        // Ambient sound
+        level.playSound(null, target.getX(), target.getY(), target.getZ(), SoundRegistry.SUPERCELL_AMBIENT.get(),
+                SoundSource.PLAYERS, 1.0f, 1.0f);
+
+        // Initial burst at 22 frames = 7 ticks
+        com.complextalents.elemental.handlers.DelayedActionHandler.queueAction(level, 7, () -> {
+            if (attacker instanceof net.minecraft.world.entity.player.Player player) {
+                player.sendSystemMessage(
+                        net.minecraft.network.chat.Component.literal("Supercell Initial Burst: TICK 7"));
+            }
+            level.playSound(null, target.getX(), target.getY(), target.getZ(),
+                    net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT,
+                    SoundSource.PLAYERS, 2.0f, 1.0f);
+            List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
+                    target.getBoundingBox().inflate(radius));
+            for (LivingEntity entity : nearby) {
+                if (attacker == null || !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
+                    entity.hurt(level.damageSources().indirectMagic(attacker, attacker), initialDamage);
+                }
+            }
+        });
+
+        // 10 Chain lightning strikes starting at 331 frames = 110 ticks, every 12
+        // frames = 4 ticks
+        for (int i = 0; i < 10; i++) {
+            int delay = 110 + (i * 4);
+            com.complextalents.elemental.handlers.DelayedActionHandler.queueAction(level, delay, () -> {
+                List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
+                        target.getBoundingBox().inflate(radius));
+                List<LivingEntity> validTargets = new java.util.ArrayList<>();
+                for (LivingEntity entity : nearby) {
+                    if (attacker == null || !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
+                        validTargets.add(entity);
+                    }
+                }
+
+                if (!validTargets.isEmpty()) {
+                    LivingEntity strikeTarget = validTargets.get(level.random.nextInt(validTargets.size()));
+                    level.playSound(null, strikeTarget.getX(), strikeTarget.getY(), strikeTarget.getZ(),
+                            net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.0f, 1.0f);
+                    strikeTarget.hurt(level.damageSources().indirectMagic(attacker, attacker), strikeDamage);
+
+                    if (attacker instanceof net.minecraft.world.entity.player.Player player) {
+                        player.sendSystemMessage(
+                                net.minecraft.network.chat.Component.literal("Supercell Strike: TICK " + delay));
+                    }
+                }
+            });
         }
     }
 
@@ -129,25 +151,16 @@ public class LightningOPStrategy implements IOPStrategy {
     public java.util.List<String> getEffectBreakdown(int tier, float damage) {
         java.util.List<String> breakdown = new java.util.ArrayList<>();
         float scale;
-        if (tier >= 1) {
+        if (tier == 3) {
+            scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(3);
+            breakdown.add(String.format("Thundergod's Wrath: Multi-Target Lightning Strikes (T3 Supercell)"));
+            breakdown.add(String.format("   Random strikes in %.1fm radius", 6.0f * Math.sqrt(scale)));
+        } else if (tier == 2) {
+            scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(2);
+            breakdown.add(String.format("Chain Surge: + %.1f Damage, 6 Targets (T2 Chain Surge)", 30f * scale));
+        } else if (tier == 1) {
             scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(1);
             breakdown.add(String.format("+ %.1f Chain Lightning Damage (T1 Arcing Bolt)", 15f * scale));
-        }
-        if (tier >= 2) {
-            scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(2);
-            breakdown.add(String.format("Chain Extension: +2 Targets (T2 Chain Extension)"));
-        }
-        if (tier >= 3) {
-            scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(3);
-            breakdown.add(String.format("Energize: Speed II for %.1fs (T3 Energize)", 160f * Math.sqrt(scale) / 20f));
-        }
-        if (tier >= 4) {
-            scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(4);
-            breakdown.add(String.format("Magnetize: Grouping enemies for %.1fs (T4 Magnetize)", 100f * Math.sqrt(scale) / 20f));
-        }
-        if (tier >= 5) {
-            scale = damage / (float) OverwhelmingPowerRegistry.getThreshold(5);
-            breakdown.add(String.format("Thundergod's Wrath: %.1f Pulse Damage (T5 Thundergod)", 450f * scale));
         }
         return breakdown;
     }

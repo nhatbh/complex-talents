@@ -74,6 +74,9 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
+            // Disable Mixin refmaps in dev environment to prevent issues with dependencies
+            property 'mixin.env.disableRefMap', 'true'
+
             mods {
                 "${mod_id}" {
                     source sourceSets.main
@@ -165,6 +168,10 @@ repositories {
         url = "https://maven.kosmx.dev/"
     }
 
+    maven {
+        url = "https://api.modrinth.com/maven"
+    }
+
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
     // flatDir {
@@ -184,7 +191,8 @@ dependencies {
     // Using compileOnly to allow compilation without requiring the mod to be present
     // The mod is still required at runtime as specified in mods.toml
     implementation fg.deobf("io.redspace.ironsspellbooks:irons_spellbooks:${irons_spells_version}")
-
+	implementation fg.deobf("maven.modrinth:aaa-particles:1.20.1-1.4.10-forge")
+	implementation fg.deobf("maven.modrinth:architectury-api:9.2.14+forge")
     // Iron's Spellbooks runtime dependencies - Required for :runClient
     runtimeOnly fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
     runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")

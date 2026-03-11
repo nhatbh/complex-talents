@@ -94,5 +94,23 @@
         "stream": false
       }
     ]
+  },
+  "supercell_ambient": {
+    "subtitle": "sounds.complextalents.supercell_ambient",
+    "sounds": [
+      {
+        "name": "complextalents:supercell_ambient",
+        "stream": false
+      }
+    ]
+  },
+  "supercell_thunder": {
+    "subtitle": "sounds.complextalents.supercell_thunder",
+    "sounds": [
+      {
+        "name": "complextalents:supercell_thunder",
+        "stream": false
+      }
+    ]
   }
 }

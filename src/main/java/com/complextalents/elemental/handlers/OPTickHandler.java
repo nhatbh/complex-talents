@@ -4,7 +4,6 @@ import com.complextalents.config.ElementalReactionConfig;
 import com.complextalents.elemental.effects.OPEffects;
 
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,13 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Mod.EventBusSubscriber
 public class OPTickHandler {
-    private static final Map<ServerLevel, List<FlamingGeyser>> activeFlamingGeysers = new ConcurrentHashMap<>();
     private static final Map<ServerLevel, List<ScorchedZone>> activeScorchedZones = new ConcurrentHashMap<>();
-    private static final Map<ServerLevel, List<Whirlpool>> activeWhirlpools = new ConcurrentHashMap<>();
-
-    public static void spawnFlamingGeyser(ServerLevel level, Vec3 pos, float scale, LivingEntity attacker) {
-        activeFlamingGeysers.computeIfAbsent(level, k -> new ArrayList<>()).add(new FlamingGeyser(pos, scale, 120, attacker)); // 6s
-    }
+    private static final Map<ServerLevel, List<WaterColumn>> activeWaterColumns = new ConcurrentHashMap<>();
+    private static final Map<ServerLevel, List<SandTornado>> activeSandTornados = new ConcurrentHashMap<>();
+    private static final Map<ServerLevel, List<MiniatureSun>> activeMiniatureSuns = new ConcurrentHashMap<>();
 
     public static void spawnScorchedZone(ServerLevel level, Vec3 pos, float radius, int duration, float dps,
             LivingEntity attacker) {
@@ -35,39 +31,22 @@ public class OPTickHandler {
                 .add(new ScorchedZone(pos, radius, duration, dps, attacker));
     }
 
-    public static void spawnWhirlpool(ServerLevel level, Vec3 pos, float radius, int duration, float dps, LivingEntity attacker) {
-        activeWhirlpools.computeIfAbsent(level, k -> new ArrayList<>())
-                .add(new Whirlpool(pos, radius, duration, dps, attacker));
+    public static void spawnWaterColumn(ServerLevel level, Vec3 pos, float radius, int duration,
+            LivingEntity attacker) {
+        activeWaterColumns.computeIfAbsent(level, k -> new ArrayList<>())
+                .add(new WaterColumn(pos, radius, duration, attacker));
     }
 
-    private static class Whirlpool {
-        final Vec3 pos;
-        final float radius;
-        final float dps;
-        final LivingEntity attacker;
-        int remainingTicks;
-
-        Whirlpool(Vec3 pos, float radius, int remainingTicks, float dps, LivingEntity attacker) {
-            this.pos = pos;
-            this.radius = radius;
-            this.remainingTicks = remainingTicks;
-            this.dps = dps;
-            this.attacker = attacker;
-        }
+    public static void spawnSandTornado(ServerLevel level, Vec3 pos, float radius, int duration, float dps,
+            LivingEntity attacker) {
+        activeSandTornados.computeIfAbsent(level, k -> new ArrayList<>())
+                .add(new SandTornado(pos, radius, duration, dps, attacker));
     }
 
-    private static class FlamingGeyser {
-        final Vec3 pos;
-        final float scale;
-        final LivingEntity attacker;
-        int remainingTicks;
-
-        FlamingGeyser(Vec3 pos, float scale, int remainingTicks, LivingEntity attacker) {
-            this.pos = pos;
-            this.scale = scale;
-            this.remainingTicks = remainingTicks;
-            this.attacker = attacker;
-        }
+    public static void spawnMiniatureSun(ServerLevel level, Vec3 pos, float radius, int duration, float baseDps,
+            LivingEntity attacker) {
+        activeMiniatureSuns.computeIfAbsent(level, k -> new ArrayList<>())
+                .add(new MiniatureSun(pos, radius, duration, baseDps, attacker));
     }
 
     private static class ScorchedZone {
@@ -82,6 +61,54 @@ public class OPTickHandler {
             this.radius = radius;
             this.remainingTicks = remainingTicks;
             this.dps = dps;
+            this.attacker = attacker;
+        }
+    }
+
+    private static class WaterColumn {
+        final Vec3 pos;
+        final float radius;
+        final LivingEntity attacker;
+        int remainingTicks;
+
+        WaterColumn(Vec3 pos, float radius, int remainingTicks, LivingEntity attacker) {
+            this.pos = pos;
+            this.radius = radius;
+            this.remainingTicks = remainingTicks;
+            this.attacker = attacker;
+        }
+    }
+
+    private static class SandTornado {
+        final Vec3 pos;
+        final float radius;
+        final float dps;
+        final LivingEntity attacker;
+        int remainingTicks;
+
+        SandTornado(Vec3 pos, float radius, int remainingTicks, float dps, LivingEntity attacker) {
+            this.pos = pos;
+            this.radius = radius;
+            this.remainingTicks = remainingTicks;
+            this.dps = dps;
+            this.attacker = attacker;
+        }
+    }
+
+    private static class MiniatureSun {
+        final Vec3 pos;
+        final float radius;
+        final float baseDps;
+        final LivingEntity attacker;
+        int remainingTicks;
+        int totalTicks;
+
+        MiniatureSun(Vec3 pos, float radius, int remainingTicks, float baseDps, LivingEntity attacker) {
+            this.pos = pos;
+            this.radius = radius;
+            this.remainingTicks = remainingTicks;
+            this.totalTicks = remainingTicks;
+            this.baseDps = baseDps;
             this.attacker = attacker;
         }
     }
@@ -103,12 +130,14 @@ public class OPTickHandler {
             return;
         ServerLevel level = (ServerLevel) event.level;
 
-        // Process Flaming Geysers
-        processFlamingGeysers(level);
         // Process Scorched Zones
         processScorchedZones(level);
-        // Process Whirlpools
-        processWhirlpools(level);
+        // Process Water Columns
+        processWaterColumns(level);
+        // Process Sand Tornados
+        processSandTornados(level);
+        // Process Miniature Suns
+        processMiniatureSuns(level);
 
         // Efficient entity processing
         for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
@@ -134,69 +163,35 @@ public class OPTickHandler {
         }
     }
 
-    private static void processFlamingGeysers(ServerLevel level) {
-        List<FlamingGeyser> geysers = activeFlamingGeysers.get(level);
-        if (geysers == null || geysers.isEmpty())
+    private static void processMiniatureSuns(ServerLevel level) {
+        List<MiniatureSun> suns = activeMiniatureSuns.get(level);
+        if (suns == null || suns.isEmpty())
             return;
 
-        Iterator<FlamingGeyser> it = geysers.iterator();
+        Iterator<MiniatureSun> it = suns.iterator();
         while (it.hasNext()) {
-            FlamingGeyser geyser = it.next();
-            geyser.remainingTicks--;
+            MiniatureSun sun = it.next();
+            sun.remainingTicks--;
 
-            // Visuals: Improved Fanning Geyser Eruption (Every 2 ticks)
-            if (level.getGameTime() % 2 == 0) {
-                int jetDensity = 15; // Balanced for server-side performance
-                double power = 0.6 + (geyser.scale * 0.3);
-                double spread = 0.2 + (geyser.scale * 0.1);
-                
-                for (int i = 0; i < jetDensity; i++) {
-                    // 1. Concentrated Spawn Point (Tighter base)
-                    double spawnX = geyser.pos.x + (level.random.nextDouble() - 0.5) * 0.1;
-                    double spawnY = geyser.pos.y + (level.random.nextDouble() * 0.1); 
-                    double spawnZ = geyser.pos.z + (level.random.nextDouble() - 0.5) * 0.1;
-
-                    // 2. Fanning Velocity Math
-                    double angle = level.random.nextDouble() * 2 * Math.PI;
-                    // Magic distribution to keep center thick
-                    double outwardSpeed = Math.pow(level.random.nextDouble(), 2) * spread;
-
-                    double velX = Math.cos(angle) * outwardSpeed;
-                    double velZ = Math.sin(angle) * outwardSpeed;
-                    double velY = power * (0.8 + level.random.nextDouble() * 0.4); 
-
-                    // 3. Spawning Particles
-                    level.sendParticles(ParticleTypes.FLAME, spawnX, spawnY, spawnZ, 0, velX, velY, velZ, 1.0);
-
-                    // 4. Layering Edges (Smoke and Lava)
-                    if (outwardSpeed > spread * 0.5) {
-                        if (level.random.nextFloat() < 0.15f) {
-                            level.sendParticles(ParticleTypes.LAVA, spawnX, spawnY, spawnZ, 0, velX * 1.1, velY * 0.7, velZ * 1.1, 1.0);
-                        }
-                        level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, spawnX, spawnY, spawnZ, 0, velX * 0.8, velY * 0.6, velZ * 0.8, 1.0);
-                    }
-                }
-            }
-
-            // Damage: Every 10 ticks
-            if (geyser.remainingTicks % 10 == 0) {
-                float radius = 4.0f * (float) Math.sqrt(geyser.scale);
-                float damage = 60f * geyser.scale; // Slightly buffed for the geyser theme
+            // Damage every 10 ticks, ramping up
+            if (sun.remainingTicks % 10 == 0) {
+                float progress = 1.0f - ((float) sun.remainingTicks / sun.totalTicks);
+                float rampingMultiplier = 1.0f + (progress * 2.0f); // Up to 3x damage
+                float currentDps = sun.baseDps * rampingMultiplier;
 
                 List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class,
-                        new net.minecraft.world.phys.AABB(geyser.pos.subtract(radius, 1, radius),
-                                geyser.pos.add(radius, 8, radius))); // Vertical cylinder shape
+                        new net.minecraft.world.phys.AABB(sun.pos.subtract(sun.radius, sun.radius, sun.radius),
+                                sun.pos.add(sun.radius, sun.radius, sun.radius)));
 
                 for (LivingEntity target : targets) {
-                    if (geyser.attacker != null && (target == geyser.attacker || (ElementalReactionConfig.enableFriendlyFireProtection.get() 
-                        && com.complextalents.util.TeamHelper.isAlly(geyser.attacker, target))))
+                    if (sun.attacker != null && com.complextalents.util.TeamHelper.isAlly(sun.attacker, target))
                         continue;
-                    target.hurt(level.damageSources().indirectMagic(geyser.attacker, target), damage / 2);
+                    target.hurt(level.damageSources().onFire(), currentDps / 2);
                     target.setSecondsOnFire(5);
                 }
             }
 
-            if (geyser.remainingTicks <= 0) {
+            if (sun.remainingTicks <= 0) {
                 it.remove();
             }
         }
@@ -229,14 +224,17 @@ public class OPTickHandler {
                                 zone.pos.add(zone.radius, 2, zone.radius)));
 
                 for (LivingEntity target : targets) {
-                    if (zone.attacker != null && (target == zone.attacker || (ElementalReactionConfig.enableFriendlyFireProtection.get() 
-                        && com.complextalents.util.TeamHelper.isAlly(zone.attacker, target))))
+                    if (zone.attacker != null
+                            && (target == zone.attacker || (ElementalReactionConfig.enableFriendlyFireProtection.get()
+                                    && com.complextalents.util.TeamHelper.isAlly(zone.attacker, target))))
                         continue;
-                    target.hurt(level.damageSources().indirectMagic(zone.attacker, target), zone.dps / 2); // True damage (magic)
+                    target.hurt(level.damageSources().indirectMagic(zone.attacker, target), zone.dps / 2); // True
+                                                                                                           // damage
+                                                                                                           // (magic)
                     target.setSecondsOnFire(3);
                 }
-                                                                                                           // 
-                                                                                                           // 
+                //
+                //
             }
 
             if (zone.remainingTicks <= 0) {
@@ -245,221 +243,90 @@ public class OPTickHandler {
         }
     }
 
-    private static void processWhirlpools(ServerLevel level) {
-        List<Whirlpool> pools = activeWhirlpools.get(level);
-        if (pools == null || pools.isEmpty())
+    private static void processWaterColumns(ServerLevel level) {
+        List<WaterColumn> columns = activeWaterColumns.get(level);
+        if (columns == null || columns.isEmpty())
             return;
 
-        Iterator<Whirlpool> it = pools.iterator();
+        Iterator<WaterColumn> it = columns.iterator();
         while (it.hasNext()) {
-            Whirlpool pool = it.next();
-            pool.remainingTicks--;
+            WaterColumn column = it.next();
+            column.remainingTicks--;
 
-            // Visuals: Short, Violent, Multi-Particle Vortex
-            if (level.getGameTime() % 2 == 0) {
-                double maxRadius = pool.radius;
-                double maxHeight = maxRadius * 2.5; 
-                double timeOffset = level.getGameTime() * 0.15;
-
-                // 1. The Tornado Core (Curved, Bending, & Messy)
-                for (double y = 0; y < maxHeight; y += 0.5) {
-                    
-                    double heightRatio = y / maxHeight;
-                    // Keep the 1.8 exponent for that flaring trumpet shape
-                    double baseRadiusAtHeight = maxRadius * Math.pow(heightRatio, 1.8);
-                    baseRadiusAtHeight = Math.max(0.4, baseRadiusAtHeight);
-
-                    // Core sway
-                    double swayX = Math.sin(y * 0.6 + timeOffset) * (y * 0.15);
-                    double swayZ = Math.cos(y * 0.4 + timeOffset) * (y * 0.15);
-
-                    int density = (int) Math.max(2, baseRadiusAtHeight * 4); 
-                    for (int i = 0; i < density; i++) {
-                        if (level.random.nextFloat() > 0.6f) continue;
-
-                        double angle = (i * (Math.PI * 2) / density) + timeOffset + (y * 1.5);
-                        double variantRadius = baseRadiusAtHeight * (0.6 + level.random.nextDouble() * 0.8);
-                        double jitterY = (level.random.nextDouble() - 0.5) * 1.5;
-
-                        double centerX = pool.pos.x + swayX;
-                        double centerZ = pool.pos.z + swayZ;
-
-                        double x = centerX + variantRadius * Math.cos(angle);
-                        double z = centerZ + variantRadius * Math.sin(angle);
-                        
-                        double velX = -Math.sin(angle) * 0.15 - (Math.cos(angle) * 0.05);
-                        double velY = 0.08; 
-                        double velZ = Math.cos(angle) * 0.15 - (Math.sin(angle) * 0.05);
-
-                        double finalY = pool.pos.y + y + jitterY;
-
-                        // 2. The Particle Lottery (Mixing Textures)
-                        float particleTypeChoice = level.random.nextFloat();
-                        
-                        if (particleTypeChoice < 0.4f) {
-                            // 40% Chance: Standard condensation clouds
-                            level.sendParticles(ParticleTypes.CLOUD, x, finalY, z, 0, velX, velY, velZ, 1.0);
-                        } else if (particleTypeChoice < 0.7f) {
-                            // 30% Chance: Violent splashing water (looks like mist/spray)
-                            level.sendParticles(ParticleTypes.SPLASH, x, finalY, z, 0, velX * 2, velY, velZ * 2, 1.0);
-                        } else if (particleTypeChoice < 0.9f) {
-                            // 20% Chance: Heavy falling water/rain inside the funnel
-                            level.sendParticles(ParticleTypes.FALLING_WATER, x, finalY, z, 0, 0, 0, 0, 1.0);
-                        } else {
-                            // 10% Chance: Dark debris/smoke mixed into the wind
-                            level.sendParticles(ParticleTypes.LARGE_SMOKE, x, finalY, z, 0, velX, velY, velZ, 1.0);
-                        }
-                    }
-                }
-
-                // 3. The Base Debris & Suction Field
-                int suctionDensity = 12; // Slightly higher density for the ground chaos
-                for (int i = 0; i < suctionDensity; i++) {
-                    if (level.random.nextFloat() > 0.6f) continue;
-
-                    double angle = level.random.nextDouble() * Math.PI * 2;
-                    double radius = maxRadius * (0.8 + level.random.nextDouble() * 0.8);
-                    
-                    double spawnX = pool.pos.x + Math.cos(angle) * radius;
-                    // Keep debris focused strictly at the bottom quarter of the tornado
-                    double spawnY = pool.pos.y + level.random.nextDouble() * (maxHeight * 0.25); 
-                    double spawnZ = pool.pos.z + Math.sin(angle) * radius;
-
-                    Vec3 pPos = new Vec3(spawnX, spawnY, spawnZ);
-                    Vec3 toCenter = pool.pos.add(0, spawnY - pool.pos.y, 0).subtract(pPos).normalize();
-                    Vec3 tangent = new Vec3(-toCenter.z, 0, toCenter.x);
-
-                    double inwardSpeed = 0.6; 
-                    double swirlSpeed = 0.4;
-                    Vec3 velocity = toCenter.scale(inwardSpeed).add(tangent.scale(swirlSpeed));
-
-                    // Ground debris is mostly smoke and splashing water tearing up the dirt
-                    if (level.random.nextBoolean()) {
-                        level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, spawnX, spawnY, spawnZ, 0, velocity.x, velocity.y, velocity.z, 1.0);
-                    } else {
-                        level.sendParticles(ParticleTypes.CLOUD, spawnX, spawnY, spawnZ, 0, velocity.x, velocity.y, velocity.z, 1.0);
-                    }
-                }
-            }
-
-            // Damage and Physics every tick
-            double maxHeight = pool.radius * 2.5;
-            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class,
-                    new net.minecraft.world.phys.AABB(pool.pos.subtract(pool.radius, 1, pool.radius),
-                            pool.pos.add(pool.radius, maxHeight + 1, pool.radius)));
-
-            for (LivingEntity target : targets) {
-                if (pool.attacker != null && (target == pool.attacker || (ElementalReactionConfig.enableFriendlyFireProtection.get() 
-                    && com.complextalents.util.TeamHelper.isAlly(pool.attacker, target))))
-                    continue;
-
-                Vec3 targetPos = target.position();
-                Vec3 toCenter = pool.pos.subtract(targetPos);
-                double distSq = toCenter.x * toCenter.x + toCenter.z * toCenter.z;
-                double pullRadius = pool.radius;
-                
-                if (distSq < pullRadius * pullRadius) {
-                    Vec3 horizontalToCenter = new Vec3(toCenter.x, 0, toCenter.z).normalize();
-                    Vec3 currentVel = target.getDeltaMovement();
-                    
-                    // 1. Core Logic: Lift or Eject
-                    if (distSq < 1.5 * 1.5) {
-                        if (target.getY() > pool.pos.y + (maxHeight * 0.8)) {
-                            // EJECT: Violently throw away from center at the top
-                            Vec3 ejectDir = horizontalToCenter.scale(-1.2).add(0, 0.5, 0);
-                            target.setDeltaMovement(ejectDir);
-                        } else {
-                            // LIFT: Suck up the center
-                            target.setDeltaMovement(new Vec3(currentVel.x * 0.8, 0.45, currentVel.z * 0.8));
-                        }
-                    } else {
-                        // 2. Swirling Pull Logic
-                        Vec3 tangent = new Vec3(-horizontalToCenter.z, 0, horizontalToCenter.x);
-                        double pullStrength = 0.25;
-                        double swirlStrength = 0.35;
-                        
-                        Vec3 force = horizontalToCenter.scale(pullStrength).add(tangent.scale(swirlStrength));
-                        target.setDeltaMovement(currentVel.add(force));
-                    }
+            // Initial Burst (First tick)
+            if (column.remainingTicks % 60 == 59) {
+                List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(column.pos.subtract(column.radius, 1, column.radius),
+                                column.pos.add(column.radius, 10, column.radius)));
+                for (LivingEntity target : targets) {
+                    if (column.attacker != null && com.complextalents.util.TeamHelper.isAlly(column.attacker, target))
+                        continue;
+                    target.hurt(level.damageSources().indirectMagic(column.attacker, target), 40f);
+                    target.setDeltaMovement(target.getDeltaMovement().add(0, 1.5, 0));
                     target.hurtMarked = true;
                 }
+            }
 
-                // Damage every 10 ticks
-                if (pool.remainingTicks % 10 == 0) {
-                    target.hurt(level.damageSources().drown(), pool.dps / 2);
+            // Continuous Lift
+            if (column.remainingTicks % 2 == 0) {
+                List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(column.pos.subtract(column.radius, 1, column.radius),
+                                column.pos.add(column.radius, 12, column.radius)));
+                for (LivingEntity target : targets) {
+                    if (column.attacker != null && com.complextalents.util.TeamHelper.isAlly(column.attacker, target))
+                        continue;
+                    target.setDeltaMovement(target.getDeltaMovement().add(0, 0.15, 0));
+                    target.hurtMarked = true;
                 }
             }
 
-            if (pool.remainingTicks <= 0) {
+            if (column.remainingTicks <= 0) {
+                it.remove();
+            }
+        }
+    }
+
+    private static void processSandTornados(ServerLevel level) {
+        List<SandTornado> tornados = activeSandTornados.get(level);
+        if (tornados == null || tornados.isEmpty())
+            return;
+
+        Iterator<SandTornado> it = tornados.iterator();
+        while (it.hasNext()) {
+            SandTornado tornado = it.next();
+            tornado.remainingTicks--;
+
+            double maxHeight = tornado.radius * 2.5;
+            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class,
+                    new net.minecraft.world.phys.AABB(tornado.pos.subtract(tornado.radius, 1, tornado.radius),
+                            tornado.pos.add(tornado.radius, maxHeight + 1, tornado.radius)));
+
+            for (LivingEntity target : targets) {
+                if (tornado.attacker != null && com.complextalents.util.TeamHelper.isAlly(tornado.attacker, target))
+                    continue;
+
+                // Physics: Pulling
+                Vec3 toCenter = tornado.pos.subtract(target.position());
+                Vec3 pull = new Vec3(toCenter.x, 0, toCenter.z).normalize().scale(0.2);
+                target.setDeltaMovement(target.getDeltaMovement().add(pull).add(0, 0.05, 0));
+                target.hurtMarked = true;
+
+                // Effects
+                target.addEffect(new MobEffectInstance(net.minecraft.world.effect.MobEffects.BLINDNESS, 40, 0));
+                target.addEffect(new MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
+
+                // Damage
+                if (tornado.remainingTicks % 10 == 0) {
+                    target.hurt(level.damageSources().indirectMagic(tornado.attacker, target), tornado.dps / 2);
+                }
+            }
+
+            if (tornado.remainingTicks <= 0) {
                 it.remove();
             }
         }
     }
 
     private static void handlePeriodicEffects(LivingEntity entity, ServerLevel level) {
-        // Fire T5 (Miniature Sun) - MOVED TO LOCATION AOE
-
-        // Nature T5 (Overgrowth Pulse)
-        if (entity.hasEffect(OPEffects.OVERGROWTH.get())) {
-            MobEffectInstance effect = entity.getEffect(OPEffects.OVERGROWTH.get());
-            if (effect != null && entity.tickCount % 60 == 0) { // Every 3s
-                float scale = effect.getAmplifier() / 10f;
-                float damage = 300f * scale; // Approx 20% of 1500 * Scale
-
-                List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
-                        entity.getBoundingBox().inflate(6.0));
-                for (LivingEntity target : nearby) {
-                    if (target == entity)
-                        continue;
-                    // If we have an attacker stored in NBT, use it for friendly fire check
-                    String attackerName = entity.getPersistentData().getString("OP_Attacker");
-                    if (!attackerName.isEmpty()) {
-                        net.minecraft.server.level.ServerPlayer attacker = level.getServer().getPlayerList().getPlayerByName(attackerName);
-                        if (attacker != null) {
-                            if (target == attacker || (ElementalReactionConfig.enableFriendlyFireProtection.get() && com.complextalents.util.TeamHelper.isAlly(attacker, target)))
-                                continue;
-                            target.hurt(level.damageSources().indirectMagic(attacker, target), damage);
-                        } else {
-                            target.hurt(entity.damageSources().magic(), damage);
-                        }
-                    } else {
-                        target.hurt(entity.damageSources().magic(), damage);
-                    }
-                }
-                level.sendParticles(ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY() + 1, entity.getZ(), 20,
-                        1.0, 1.0, 1.0, 0.1);
-            }
-        }
-
-        // Lightning T5 (Thundergod's Wrath Pulse)
-        if (entity.hasEffect(OPEffects.THUNDERGODS_WRATH.get())) {
-            MobEffectInstance effect = entity.getEffect(OPEffects.THUNDERGODS_WRATH.get());
-            if (effect != null && entity.tickCount % 30 == 0) { // Every 1.5s
-                float scale = effect.getAmplifier() / 10f;
-                float damage = 450f * scale; // 30% of 1500 * Scale
-
-                List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
-                        entity.getBoundingBox().inflate(6.0));
-                for (LivingEntity target : nearby) {
-                    if (target == entity)
-                        continue;
-                    String attackerName = entity.getPersistentData().getString("OP_Attacker");
-                    if (!attackerName.isEmpty()) {
-                        net.minecraft.server.level.ServerPlayer attacker = level.getServer().getPlayerList().getPlayerByName(attackerName);
-                        if (attacker != null) {
-                            if (target == attacker || (ElementalReactionConfig.enableFriendlyFireProtection.get() && com.complextalents.util.TeamHelper.isAlly(attacker, target)))
-                                continue;
-                            target.hurt(level.damageSources().indirectMagic(attacker, target), damage);
-                        } else {
-                            target.hurt(entity.damageSources().lightningBolt(), damage);
-                        }
-                    } else {
-                        target.hurt(entity.damageSources().lightningBolt(), damage);
-                    }
-                }
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK, entity.getX(), entity.getY() + 1, entity.getZ(), 20,
-                        0.5, 0.5, 0.5, 0.2);
-            }
-        }
     }
 }

@@ -72,20 +72,14 @@ public class OverwhelmingPowerRegistry {
 
     public static int getThreshold(int tier) {
         return switch (tier) {
-            case 5 -> 50;
-            case 4 -> 40;
-            case 3 -> 30;
-            case 2 -> 20;
+            case 3 -> 50;
+            case 2 -> 30;
             case 1 -> 10;
             default -> 0;
         };
     }
 
     private int calculateTier(float damage) {
-        if (damage >= getThreshold(5))
-            return 5;
-        if (damage >= getThreshold(4))
-            return 4;
         if (damage >= getThreshold(3))
             return 3;
         if (damage >= getThreshold(2))
@@ -115,9 +109,9 @@ public class OverwhelmingPowerRegistry {
         };
 
         int currentReq = getThreshold(tier);
-        int nextReq = (tier < 5) ? getThreshold(tier + 1) : 0;
+        int nextReq = (tier < 3) ? getThreshold(tier + 1) : 0;
 
-        String nextTierInfo = (tier < 5) ? String.format(" (Next Tier: %d)", nextReq) : " (MAX)";
+        String nextTierInfo = (tier < 3) ? String.format(" (Next Tier: %d)", nextReq) : " (MAX)";
 
         player.sendSystemMessage(Component.literal(
                 String.format("%s\u00A7l[\u2741] Overwhelming Power: %s - %s (Tier %d)", color, elementName, tierName,
@@ -138,42 +132,32 @@ public class OverwhelmingPowerRegistry {
         return switch (element) {
             case FIRE -> switch (tier) {
                 case 1 -> "Ignite";
-                case 2 -> "Flare";
-                case 3 -> "Melt";
-                case 4 -> "Scorch";
-                case 5 -> "The Supernova";
+                case 2 -> "Scorch";
+                case 3 -> "The Supernova";
                 default -> "Unknown";
             };
             case AQUA -> switch (tier) {
                 case 1 -> "Splash";
-                case 2 -> "Moisture";
-                case 3 -> "Drenched";
-                case 4 -> "Violent Splash";
-                case 5 -> "The Deluge";
+                case 2 -> "Violent Splash";
+                case 3 -> "The Deluge";
                 default -> "Unknown";
             };
             case NATURE -> switch (tier) {
                 case 1 -> "Parasitic Seed";
-                case 2 -> "Leech";
-                case 3 -> "Aggressive Scaling";
-                case 4 -> "Verdant Burst";
-                case 5 -> "The Verdant Decay";
+                case 2 -> "Spore Burst";
+                case 3 -> "The Verdant Decay";
                 default -> "Unknown";
             };
             case LIGHTNING -> switch (tier) {
                 case 1 -> "Arcing Bolt";
-                case 2 -> "Chain Extension";
-                case 3 -> "Energize";
-                case 4 -> "Magnetize";
-                case 5 -> "The Thundergod";
+                case 2 -> "Chain Surge";
+                case 3 -> "The Thundergod";
                 default -> "Unknown";
             };
             case ICE -> switch (tier) {
-                case 1 -> "Chilled";
-                case 2 -> "Deep Freeze";
-                case 3 -> "Brittle";
-                case 4 -> "Glacial Aura";
-                case 5 -> "The Absolute Zero";
+                case 1 -> "Chilled Burst";
+                case 2 -> "Glacial Aura";
+                case 3 -> "The Absolute Zero";
                 default -> "Unknown";
             };
         };

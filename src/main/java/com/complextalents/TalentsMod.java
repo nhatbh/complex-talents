@@ -14,6 +14,8 @@ import com.complextalents.impl.darkmage.DarkMageRegistrar;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import com.complextalents.impl.highpriest.item.HighPriestItems;
+import com.complextalents.item.ModItems;
+import com.complextalents.item.ModCreativeTabs;
 import com.complextalents.impl.highpriest.origin.HighPriestOrigin;
 import com.complextalents.impl.assassin.effect.AssassinEffects;
 import com.complextalents.impl.assassin.AssassinRegistrar;
@@ -21,6 +23,7 @@ import com.complextalents.network.PacketHandler;
 import com.complextalents.origin.OriginRegistry;
 import com.complextalents.origin.command.OriginCommand;
 import com.complextalents.origin.integration.OriginModIntegrationHandler;
+import com.complextalents.registry.SoundRegistry;
 import com.complextalents.origin.integration.SpellCritAttributes;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.command.SkillCommand;
@@ -62,11 +65,16 @@ public class TalentsMod {
         HighPriestEntities.register(modEventBus);
         YygmEntities.register(modEventBus);
 
-        // Register High Priest items (for model baking)
+        // Register items
+        ModItems.register(modEventBus);
+        ModCreativeTabs.register(modEventBus);
         HighPriestItems.register(modEventBus);
 
         // Register network packets
         PacketHandler.register();
+
+        // Register custom sounds
+        SoundRegistry.register(modEventBus);
 
         // Register ourselves for server and other game events
         MinecraftForge.EVENT_BUS.register(this);
