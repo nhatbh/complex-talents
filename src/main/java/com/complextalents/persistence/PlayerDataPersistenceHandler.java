@@ -3,6 +3,10 @@ package com.complextalents.persistence;
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.darkmage.data.SoulData;
 import com.complextalents.impl.darkmage.origin.DarkMageOrigin;
+import com.complextalents.impl.elementalmage.ElementalMageData;
+import com.complextalents.impl.elementalmage.origin.ElementalMageOrigin;
+import com.complextalents.impl.highpriest.data.FaithData;
+import com.complextalents.impl.highpriest.origin.HighPriestOrigin;
 import com.complextalents.origin.capability.OriginDataProvider;
 import com.complextalents.passive.capability.PassiveStackDataProvider;
 import com.complextalents.skill.capability.SkillDataProvider;
@@ -76,6 +80,27 @@ public class PlayerDataPersistenceHandler {
             if (savedTag != null) {
                 SoulData.deserializeNBT(player, savedTag);
                 LOGGER.info("[PERSISTENCE] Restored Dark Mage soul data for player {}", playerId);
+            }
+        }
+
+        // Restore Elemental Mage stats
+        if (ElementalMageOrigin.isElementalMage(player)) {
+            CompoundTag savedTag = persistentData.getElementalMageData(playerId);
+            if (savedTag != null) {
+                ElementalMageData.deserializeNBT(playerId, savedTag);
+                LOGGER.info("[PERSISTENCE] Restored Elemental Mage stats for player {}", playerId);
+            }
+            ElementalMageData.applyAttributeModifiers(player);
+            // Explicitly sync the restored values to the client HUD
+            ElementalMageData.syncToClient(player);
+        }
+
+        // Restore High Priest faith data
+        if (HighPriestOrigin.isHighPriest(player)) {
+            CompoundTag savedTag = persistentData.getFaithData(playerId);
+            if (savedTag != null) {
+                FaithData.deserializeNBT(player, savedTag);
+                LOGGER.info("[PERSISTENCE] Restored High Priest faith data for player {}", playerId);
             }
         }
     }
@@ -156,6 +181,27 @@ public class PlayerDataPersistenceHandler {
                 LOGGER.info("[CLONE] Restored Dark Mage soul data from SavedData for {}", playerId);
             }
         }
+
+        // Restore Elemental Mage stats from SavedData
+        if (ElementalMageOrigin.isElementalMage(newPlayer)) {
+            CompoundTag savedTag = persistentData.getElementalMageData(playerId);
+            if (savedTag != null) {
+                ElementalMageData.deserializeNBT(playerId, savedTag);
+                LOGGER.info("[CLONE] Restored Elemental Mage stats from SavedData for {}", playerId);
+            }
+            ElementalMageData.applyAttributeModifiers(newPlayer);
+            // Explicitly sync the restored values to the client HUD
+            ElementalMageData.syncToClient(newPlayer);
+        }
+
+        // Restore High Priest faith data from SavedData
+        if (HighPriestOrigin.isHighPriest(newPlayer)) {
+            CompoundTag savedTag = persistentData.getFaithData(playerId);
+            if (savedTag != null) {
+                FaithData.deserializeNBT(newPlayer, savedTag);
+                LOGGER.info("[CLONE] Restored High Priest faith data from SavedData for {}", playerId);
+            }
+        }
     }
 
     // --- PERIODIC SAVE (Backup safety net) ---
@@ -200,6 +246,16 @@ public class PlayerDataPersistenceHandler {
         // Save Dark Mage soul data
         if (DarkMageOrigin.isDarkMage(player)) {
             persistentData.saveDarkMageData(playerId, SoulData.serializeNBT(player));
+        }
+
+        // Save Elemental Mage stats
+        if (ElementalMageOrigin.isElementalMage(player)) {
+            persistentData.saveElementalMageData(playerId, ElementalMageData.serializeNBT(playerId));
+        }
+
+        // Save High Priest faith data
+        if (HighPriestOrigin.isHighPriest(player)) {
+            persistentData.saveFaithData(playerId, FaithData.serializeNBT(player));
         }
     }
 

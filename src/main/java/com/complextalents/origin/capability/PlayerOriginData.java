@@ -90,7 +90,7 @@ public class PlayerOriginData implements IPlayerOriginData {
             Origin origin = getOrigin();
             double max;
             if (origin != null) {
-                max = origin.getMaxResource(originLevel);
+                max = origin.getMaxResource(originLevel, player);
             } else {
                 max = resourceType.getMax();
             }
@@ -121,7 +121,7 @@ public class PlayerOriginData implements IPlayerOriginData {
         double resourceMax;
         Origin origin = getOrigin();
         if (origin != null) {
-            resourceMax = origin.getMaxResource(originLevel);
+            resourceMax = origin.getMaxResource(originLevel, player);
         } else if (resourceType != null) {
             resourceMax = resourceType.getMax();
         } else {

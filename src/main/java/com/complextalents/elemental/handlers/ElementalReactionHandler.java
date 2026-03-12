@@ -62,6 +62,25 @@ public class ElementalReactionHandler {
             return;
         }
 
+        // Only Elemental Mages can trigger reactions
+        if (!com.complextalents.impl.elementalmage.origin.ElementalMageOrigin.isElementalMage(player)) {
+            return;
+        }
+
+        // Check if player has enough Elemental Resonance (25 points)
+        final double REACTION_COST = 25.0;
+        final boolean[] hasEnoughResonance = {false};
+        
+        player.getCapability(com.complextalents.origin.capability.OriginDataProvider.ORIGIN_DATA).ifPresent(data -> {
+            if (data.getResource() >= REACTION_COST) {
+                hasEnoughResonance[0] = true;
+            }
+        });
+
+        if (!hasEnoughResonance[0]) {
+            return; // Not enough resonance
+        }
+
         // Track this entity for the player
         ElementalStackTracker.addTracking(player.getUUID(), targetId);
 
@@ -108,6 +127,16 @@ public class ElementalReactionHandler {
                         reaction, strategy != null ? strategy.getClass().getSimpleName() : "null",
                         strategy != null ? strategy.consumesStacks() : "N/A");
                 }
+
+                // Deduct Elemental Resonance and add 1 Resonance Echo
+                player.getCapability(com.complextalents.origin.capability.OriginDataProvider.ORIGIN_DATA).ifPresent(data -> {
+                    data.modifyResource(-25.0);
+                });
+                player.getCapability(com.complextalents.passive.capability.PassiveStackDataProvider.PASSIVE_STACK_DATA).ifPresent(data -> {
+                    if (data.getPassiveStackCount("resonance_echo") < 5) {
+                        data.modifyPassiveStacks("resonance_echo", 1);
+                    }
+                });
             }
 
             // Only trigger one reaction per stack application

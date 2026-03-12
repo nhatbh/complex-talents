@@ -6,7 +6,7 @@ import com.complextalents.elemental.client.renderers.entities.NatureCoreRenderer
 import com.complextalents.elemental.client.renderers.entities.SpringPotionRenderer;
 import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.impl.highpriest.client.renderer.DivinePunisherRenderer;
-import com.complextalents.impl.highpriest.client.renderer.SeraphsBouncingSwordRenderer;
+import com.complextalents.impl.highpriest.client.renderer.SeraphsEdgeRenderer;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -28,7 +28,7 @@ public class ModEntityRenderers {
 
         // High Priest entities
         event.registerEntityRenderer(HighPriestEntities.DIVINE_PUNISHER.get(), DivinePunisherRenderer::new);
-        event.registerEntityRenderer(HighPriestEntities.SERAPHS_BOUNCING_SWORD.get(), SeraphsBouncingSwordRenderer::new);
+        event.registerEntityRenderer(HighPriestEntities.SERAPHS_EDGE.get(), SeraphsEdgeRenderer::new);
 
         TalentsMod.LOGGER.info("Registering entity renderers");
     }

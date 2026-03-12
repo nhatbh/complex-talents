@@ -8,6 +8,8 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
+import java.util.function.BiFunction;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Built-in implementation of the Origin interface.
@@ -24,6 +26,7 @@ public class BuiltOrigin implements Origin {
     private final Map<String, PassiveStackDef> passiveStacks;
     private final OriginRenderer renderer;
     private final double[] scaledMaxResource;
+    private final BiFunction<Integer, ServerPlayer, Double> dynamicMaxResourceCalc;
 
     /**
      * Create a BuiltOrigin from an OriginBuilder.
@@ -38,6 +41,7 @@ public class BuiltOrigin implements Origin {
         this.passiveStacks = builder.getPassiveStacks();
         this.renderer = builder.getRenderer();
         this.scaledMaxResource = builder.getScaledMaxResource();
+        this.dynamicMaxResourceCalc = builder.getDynamicMaxResourceCalc();
     }
 
     @Override
@@ -86,6 +90,14 @@ public class BuiltOrigin implements Origin {
         // Clamp to valid range
         int index = Math.min(Math.max(level - 1, 0), scaledMaxResource.length - 1);
         return scaledMaxResource[index];
+    }
+
+    @Override
+    public double getMaxResource(int level, ServerPlayer player) {
+        if (this.dynamicMaxResourceCalc != null) {
+            return this.dynamicMaxResourceCalc.apply(level, player);
+        }
+        return getMaxResource(level);
     }
 
     @Override

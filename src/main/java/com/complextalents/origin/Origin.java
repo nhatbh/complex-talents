@@ -81,6 +81,17 @@ public interface Origin extends PassiveOwner {
     }
 
     /**
+     * Get the maximum resource value for a specific origin level, taking into account the player's current state.
+     *
+     * @param level The origin level
+     * @param player The player instance
+     * @return The maximum resource value
+     */
+    default double getMaxResource(int level, net.minecraft.server.level.ServerPlayer player) {
+        return getMaxResource(level);
+    }
+
+    /**
      * Maximum level this origin can be upgraded to.
      * Default is 1 (no leveling).
      */

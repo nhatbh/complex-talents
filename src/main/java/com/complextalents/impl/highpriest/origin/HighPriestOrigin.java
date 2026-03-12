@@ -7,13 +7,15 @@ import com.complextalents.impl.highpriest.events.HolySpellHealEvent;
 import com.complextalents.impl.highpriest.integration.HighPriestIntegration;
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.OriginManager;
-import com.complextalents.origin.ResourceType;
-import com.complextalents.origin.events.HolySpellDamageEvent;
+
 import com.complextalents.origin.events.OriginChangeEvent;
 import com.complextalents.passive.PassiveManager;
 import com.complextalents.passive.PassiveStackDef;
 import com.complextalents.passive.events.PassiveStackChangeEvent;
 import com.complextalents.util.UUIDHelper;
+import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.network.ClientboundSyncMana;
+import io.redspace.ironsspellbooks.setup.Messages;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,59 +37,43 @@ import java.util.UUID;
  * <p>
  * High Risk / High Reward playstyle. You must maintain perfect positioning
  * to keep your resources (Piety) and buffs (Grace stacks) high.
- * A skilled Priest is an immortal raid commander; a sloppy one is a liability with no resources.
+ * A skilled Priest is an immortal raid commander; a sloppy one is a liability
+ * with no resources.
  * </p>
  *
  * <h3>Resource: Piety (0-100/125/150/200 by level)</h3>
  * <ul>
- *   <li><strong>Generation:</strong> Gain Piety when Iron's Spells successfully hit or heal</li>
- *   <li><strong>Punishment:</strong> Lose Piety instantly when taking damage</li>
- *   <li><strong>Economy:</strong> Forces careful aim and dodging</li>
+ * <li><strong>Generation:</strong> Gain Piety when Iron's Spells successfully
+ * hit or heal</li>
+ * <li><strong>Punishment:</strong> Lose Piety instantly when taking damage</li>
+ * <li><strong>Economy:</strong> Forces careful aim and dodging</li>
  * </ul>
  *
  * <h3>Passive: Grace of the Seraphim</h3>
  * <ul>
- *   <li>Passively gain stacks over time (Max 10)</li>
- *   <li>Lose ALL stacks when taking damage</li>
- *   <li><strong>Low Stacks:</strong> Increases Healing Potency</li>
- *   <li><strong>Max Stacks (10):</strong> Converts Healing Power into Spell Damage (DPS mode)</li>
+ * <li>Passively gain stacks over time (Max 10)</li>
+ * <li>Lose ALL stacks when taking damage</li>
+ * <li><strong>Low Stacks:</strong> Increases Healing Potency</li>
+ * <li><strong>Max Stacks (10):</strong> Converts Healing Power into Spell
+ * Damage (DPS mode)</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = TalentsMod.MODID)
 public class HighPriestOrigin {
 
-    private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "high_priest");
-    private static final UUID CAST_TIME_REDUCTION_UUID = UUIDHelper.generateAttributeModifierUUID("high_priest", "grace_cast_speed");
-    private static final UUID HOLY_SPELL_POWER_UUID = UUIDHelper.generateAttributeModifierUUID("high_priest", "holy_spell_power");
-
-    // Tracker for Piety gained from healing in the current second (per player)
-    private static final java.util.HashMap<UUID, PietyGainTracker> PIETY_GAIN_TRACKERS = new java.util.HashMap<>();
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "high_priest");
+    private static final UUID CAST_TIME_REDUCTION_UUID = UUIDHelper.generateAttributeModifierUUID("high_priest",
+            "grace_cast_speed");
+    private static final UUID HOLY_SPELL_POWER_UUID = UUIDHelper.generateAttributeModifierUUID("high_priest",
+            "faith_divine_retribution");
+    private static final UUID MAX_MANA_UUID = UUIDHelper.generateAttributeModifierUUID("high_priest", "faith_max_mana");
 
     /**
-     * Tracker for Piety gained from healing to enforce per-second cap.
+     * Check if a player is a High Priest.
      */
-    private static class PietyGainTracker {
-        private double pietyGainedThisSecond = 0;
-        private long lastSecond = -1;
-        double addGain(double amount, double cap, long currentSecond) {
-            if (lastSecond != currentSecond) {
-                lastSecond = currentSecond;
-                pietyGainedThisSecond = 0;
-            }
-            double actualGain = Math.min(amount, cap - pietyGainedThisSecond);
-            pietyGainedThisSecond += actualGain;
-            return actualGain;
-        }
+    public static boolean isHighPriest(ServerPlayer player) {
+        return ID.equals(OriginManager.getOriginId(player));
     }
-
-    // Define Piety resource type (gold color)
-    public static final ResourceType PIETY = ResourceType.register(
-            ResourceLocation.fromNamespaceAndPath("complextalents", "piety"),
-            "Piety",
-            0,
-            100,
-            0xFFFFD700  // Gold color
-    );
 
     /**
      * Initializes the Iron's Spellbooks integration for holy heal detection.
@@ -105,59 +91,35 @@ public class HighPriestOrigin {
         OriginBuilder.create("complextalents", "high_priest")
                 .displayName("High Priest")
                 .description(Component.literal("Holy Judgment - Divine Retribution through perfect positioning"))
-                .resourceType(PIETY)
-                .scaledMaxResource(new double[]{100.0, 125.0, 150.0, 200.0})  // Max Piety by level: 100/125/150/200
                 .maxLevel(5)
                 // Grace stacks - gain over time, lose on damage
                 .passiveStack("grace", PassiveStackDef.create("grace")
                         .maxStacks(10)
                         .displayName("Grace")
-                        .color(0xFFE6F0FF).build())  // Light blue
-                // Custom HUD renderer for Piety bar + Grace stacks
+                        .color(0xFFE6F0FF).build()) // Light blue
+                // Custom HUD renderer for Faith + Grace stacks
                 .renderer(new HighPriestRenderer())
-                // Piety gained on holy spell hit: [5, 8, 12, 15, 20]
-                .scaledStat("pietyOnHolyHit", new double[]{5.0, 8.0, 12.0, 15.0, 20.0})
-                // Piety gained on holy heal: [5, 8, 12, 15, 20]
-                .scaledStat("pietyOnHolyHeal", new double[]{5.0, 8.0, 12.0, 15.0, 20.0})
-                // Piety lost when hurt (decreases with level): [20, 18, 15, 12, 10]
-                .scaledStat("pietyLostOnDamage", new double[]{20.0, 18.0, 15.0, 12.0, 10.0})
                 // Grace tick interval in ticks (decreases with level): [100, 90, 80, 70, 60]
-                .scaledStat("graceTickInterval", new double[]{100.0, 90.0, 80.0, 70.0, 60.0})
+                .scaledStat("graceTickInterval", new double[] { 100.0, 90.0, 80.0, 70.0, 60.0 })
                 // Cast time reduction per Grace stack: [2%, 3%, 4%, 5%, 6%]
-                .scaledStat("castTimeReductionPerGrace", new double[]{0.04, 0.05, 0.06, 0.07, 0.08})
+                .scaledStat("castTimeReductionPerGrace", new double[] { 0.04, 0.05, 0.06, 0.07, 0.08 })
                 // Healing potency per Grace stack: [5%, 6%, 7%, 8%, 10%]
-                .scaledStat("healingPotencyPerGrace", new double[]{0.05, 0.06, 0.07, 0.08, 0.10})
-                // Overheal to absorption conversion rate at max Grace: [30%, 40%, 50%, 60%, 75%]
-                .scaledStat("overhealToAbsorptionRate", new double[]{0.30, 0.40, 0.50, 0.60, 0.75})
-                // Absorption duration in ticks at max Grace: [600, 800, 1000, 1200, 1500] (30-75 seconds)
-                .scaledStat("absorptionDuration", new double[]{600.0, 800.0, 1000.0, 1200.0, 1500.0})
-                // Spell damage multiplier at max Grace: [150%, 175%, 200%, 225%, 250%]
-                .scaledStat("holySpellPowerAtMaxGrace", new double[]{1.5, 1.75, 2.0, 2.25, 2.5})
+                .scaledStat("healingPotencyPerGrace", new double[] { 0.05, 0.06, 0.07, 0.08, 0.10 })
+                // Overheal to absorption conversion rate at max Grace: [30%, 40%, 50%, 60%,
+                // 75%]
+                .scaledStat("overhealToAbsorptionRate", new double[] { 0.30, 0.40, 0.50, 0.60, 0.75 })
+                // Absorption duration in ticks at max Grace: [600, 800, 1000, 1200, 1500]
+                // (30-75 seconds)
+                .scaledStat("absorptionDuration", new double[] { 600.0, 800.0, 1000.0, 1200.0, 1500.0 })
+                // Max mana increase per Faith (previously 10/15/20/25/30)
+                .scaledStat("manaPerFaith", new double[] { 0.1, 0.15, 0.2, 0.25, 0.3 })
                 .register();
     }
 
     /**
-     * Event handler for holy spell damage from Iron's Spellbooks.
-     * High Priests gain Piety when dealing holy spell damage.
-     */
-    @SubscribeEvent
-    public static void onHolySpellDamage(HolySpellDamageEvent event) {
-        if (event.getCaster() instanceof ServerPlayer player) {
-            if (!ID.equals(OriginManager.getOriginId(player))) {
-                return;
-            }
-
-            // Get scaled stat based on origin level
-            double pietyGain = OriginManager.getOriginStat(player, "pietyOnHolyHit");
-            if (pietyGain > 0) {
-                OriginManager.modifyResource(player, pietyGain);
-            }
-        }
-    }
-
-    /**
      * Event handler for holy spell heals from Iron's Spellbooks.
-     * High Priests gain Piety, bonus healing potency, and overheal-to-absorption conversion.
+     * High Priests gain Piety, bonus healing potency, and overheal-to-absorption
+     * conversion.
      */
     @SubscribeEvent
     public static void onHolySpellHeal(HolySpellHealEvent event) {
@@ -190,7 +152,8 @@ public class HighPriestOrigin {
             // Apply the bonus healing
             target.heal(bonusHeal);
 
-            TalentsMod.LOGGER.debug("High Priest applied healing potency: {} stacks = {}x multiplier (original: {}, bonus: {}, effective: {}, overheal: {})",
+            TalentsMod.LOGGER.debug(
+                    "High Priest applied healing potency: {} stacks = {}x multiplier (original: {}, bonus: {}, effective: {}, overheal: {})",
                     graceStacks, bonusMultiplier, originalHealAmount, bonusHeal, effectiveHeal, overheal);
 
             // At max Grace (10 stacks): convert overheal to absorption hearts
@@ -198,29 +161,13 @@ public class HighPriestOrigin {
                 applyOverhealToAbsorption(player, target, overheal);
             }
         }
-
-        // Gain Piety from holy heals (uses original amount, not bonus)
-        // Capped at 2x pietyOnHolyHeal per second
-        double pietyOnHolyHeal = OriginManager.getOriginStat(player, "pietyOnHolyHeal");
-        if (pietyOnHolyHeal > 0) {
-            UUID playerId = player.getUUID();
-            PietyGainTracker tracker = PIETY_GAIN_TRACKERS.computeIfAbsent(playerId, k -> new PietyGainTracker());
-
-            long currentSecond = player.level().getGameTime() / 20;
-            double cap = 2.0 * pietyOnHolyHeal;
-            double actualGain = tracker.addGain(pietyOnHolyHeal, cap, currentSecond);
-
-            if (actualGain > 0) {
-                OriginManager.modifyResource(player, actualGain);
-            }
-        }
     }
 
     /**
      * Apply overheal-to-absorption conversion for High Priest at max Grace.
      *
-     * @param player  The High Priest casting the heal
-     * @param target  The target entity receiving the overheal
+     * @param player   The High Priest casting the heal
+     * @param target   The target entity receiving the overheal
      * @param overheal The amount of overheal to convert
      */
     private static void applyOverhealToAbsorption(ServerPlayer player, LivingEntity target, float overheal) {
@@ -239,12 +186,11 @@ public class HighPriestOrigin {
 
             // Apply Seraphic Grace effect to track expiration
             MobEffectInstance effectInstance = new MobEffectInstance(
-                HighPriestEffects.SERAPHIC_GRACE.get(),
-                absorptionDuration,
-                0,
-                false,
-                true
-            );
+                    HighPriestEffects.SERAPHIC_GRACE.get(),
+                    absorptionDuration,
+                    0,
+                    false,
+                    true);
             target.addEffect(effectInstance);
 
             TalentsMod.LOGGER.debug("High Priest converted overheal to absorption: {} health (duration: {} ticks)",
@@ -254,7 +200,7 @@ public class HighPriestOrigin {
 
     /**
      * Event handler for server-side ticking.
-     * Handles Grace stack generation, passive Piety regeneration, and cast time reduction updates.
+     * Handles Grace stack generation.
      */
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -278,26 +224,28 @@ public class HighPriestOrigin {
 
         // Grace generation: gain 1 stack every interval ticks
         if (gameTime % tickInterval == 0) {
-            int currentGrace = OriginManager.getPassiveStacks(player, "grace");
+            int currentGrace = PassiveManager.getPassiveStacks(player, "grace");
             if (currentGrace < 10) {
-                OriginManager.modifyPassiveStacks(player, "grace", 1);
+                PassiveManager.modifyPassiveStacks(player, "grace", 1);
             }
         }
     }
 
     /**
-     * Update the player's cast time reduction and holy spell power based on current Grace stacks.
-     * Uses Iron's Spellbooks cast_time_reduction and holy_spell_power attributes.
-     * Only updates when the Grace count actually changes (lazy update).
+     * Update the player's cast time reduction, max mana, and holy spell power based
+     * on current Grace and Faith stacks.
+     * Uses Iron's Spellbooks cast_time_reduction, holy_spell_power, and max_mana
+     * attributes.
      */
-    private static void updateCastTimeReduction(ServerPlayer player) {
-        int graceStacks = OriginManager.getPassiveStacks(player, "grace");
+    public static void updateAttributes(ServerPlayer player) {
+        int graceStacks = PassiveManager.getPassiveStacks(player, "grace");
 
         // Update cast time reduction (applies at any Grace stack)
         double reductionPerStack = OriginManager.getOriginStat(player, "castTimeReductionPerGrace");
         double totalReduction = reductionPerStack * graceStacks;
 
-        ResourceLocation castTimeAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "cast_time_reduction");
+        ResourceLocation castTimeAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks",
+                "cast_time_reduction");
         Attribute castTimeAttr = ForgeRegistries.ATTRIBUTES.getValue(castTimeAttrId);
 
         if (castTimeAttr != null) {
@@ -307,18 +255,55 @@ public class HighPriestOrigin {
 
                 if (graceStacks > 0 && totalReduction > 0) {
                     AttributeModifier modifier = new AttributeModifier(
-                        CAST_TIME_REDUCTION_UUID,
-                        "High Priest Grace Cast Speed",
-                        totalReduction,
-                        AttributeModifier.Operation.ADDITION
-                    );
+                            CAST_TIME_REDUCTION_UUID,
+                            "High Priest Grace Cast Speed",
+                            totalReduction,
+                            AttributeModifier.Operation.ADDITION);
                     attributeInstance.addTransientModifier(modifier);
                 }
             }
         }
 
+        // Background: Faith increases Holy Spell Power when Grace is at max (10
+        // stacks).
+        // Faith increases Max Mana permanently.
+
+        double faith = com.complextalents.impl.highpriest.data.FaithData.getFaith(player);
+
+        // Update Max Mana (always applies)
+        ResourceLocation maxManaAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "max_mana");
+        Attribute maxManaAttr = ForgeRegistries.ATTRIBUTES.getValue(maxManaAttrId);
+
+        if (maxManaAttr != null) {
+            var attributeInstance = player.getAttributes().getInstance(maxManaAttr);
+            if (attributeInstance != null) {
+                attributeInstance.removeModifier(MAX_MANA_UUID);
+
+                double manaPerFaith = OriginManager.getOriginStat(player, "manaPerFaith");
+                double totalManaBonus = faith * manaPerFaith;
+
+                if (totalManaBonus > 0) {
+                    AttributeModifier modifier = new AttributeModifier(
+                            MAX_MANA_UUID,
+                            "High Priest Faith Max Mana",
+                            totalManaBonus,
+                            AttributeModifier.Operation.ADDITION);
+                    attributeInstance.addTransientModifier(modifier);
+                }
+
+                // Sync mana to client after max mana changes
+                try {
+                    MagicData magicData = MagicData.getPlayerMagicData(player);
+                    Messages.sendToPlayer(new ClientboundSyncMana(magicData), player);
+                } catch (Exception e) {
+                    // Iron's Spellbooks not loaded or error
+                }
+            }
+        }
+
         // Update holy spell power (only applies at max Grace - 10 stacks)
-        ResourceLocation holyPowerAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "holy_spell_power");
+        ResourceLocation holyPowerAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks",
+                "holy_spell_power");
         Attribute holyPowerAttr = ForgeRegistries.ATTRIBUTES.getValue(holyPowerAttrId);
 
         if (holyPowerAttr != null) {
@@ -326,17 +311,17 @@ public class HighPriestOrigin {
             if (attributeInstance != null) {
                 attributeInstance.removeModifier(HOLY_SPELL_POWER_UUID);
 
-                if (graceStacks >= 10) {
-                    double spellPowerMultiplier = OriginManager.getOriginStat(player, "holySpellPowerAtMaxGrace");
-                    // Convert multiplier to bonus (e.g., 1.5 = +50% bonus)
-                    double spellPowerBonus = spellPowerMultiplier - 1.0;
+                if (graceStacks >= 10 && faith > 0) {
+                    // Faith directly increases Holy Spell Power.
+                    // Previously 1 Faith = +1% Holy Spell Power (0.01).
+                    // Now 1 Faith = +0.01% Holy Spell Power (0.0001).
+                    double spellPowerBonus = faith * 0.0001;
 
                     AttributeModifier modifier = new AttributeModifier(
-                        HOLY_SPELL_POWER_UUID,
-                        "High Priest Divine Retribution",
-                        spellPowerBonus,
-                        AttributeModifier.Operation.MULTIPLY_BASE
-                    );
+                            HOLY_SPELL_POWER_UUID,
+                            "High Priest Faith Divine Retribution",
+                            spellPowerBonus,
+                            AttributeModifier.Operation.MULTIPLY_BASE);
                     attributeInstance.addTransientModifier(modifier);
                 }
             }
@@ -345,7 +330,7 @@ public class HighPriestOrigin {
 
     /**
      * Event handler for when player takes damage.
-     * Lose Piety and ALL Grace stacks when hurt - punishment mechanic.
+     * Lose ALL Grace stacks when hurt - punishment mechanic.
      * PassiveStackChangeEvent will handle attribute updates.
      * <p>
      * EXCEPTION: Players protected by Covenant of Protection do NOT lose resources.
@@ -357,15 +342,9 @@ public class HighPriestOrigin {
                 return;
             }
 
-            // Lose Piety when hurt (amount scales with level - gets better at higher levels)
-            double pietyLoss = OriginManager.getOriginStat(player, "pietyLostOnDamage");
-            if (pietyLoss > 0) {
-                OriginManager.modifyResource(player, -pietyLoss);
-            }
-
             // Lose ALL Grace stacks when taking damage
             // PassiveStackChangeEvent will handle attribute updates
-            OriginManager.setPassiveStacks(player, "grace", 0);
+            PassiveManager.setPassiveStacks(player, "grace", 0);
         }
     }
 
@@ -384,17 +363,15 @@ public class HighPriestOrigin {
         }
 
         // Initialize attributes on join
-        updateCastTimeReduction(player);
+        updateAttributes(player);
     }
 
     /**
      * Event handler for player logout.
-     * Clean up tracker data when player leaves.
      */
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            PIETY_GAIN_TRACKERS.remove(player.getUUID());
         }
     }
 
@@ -413,7 +390,7 @@ public class HighPriestOrigin {
         }
 
         // Re-apply attributes after respawn
-        updateCastTimeReduction(player);
+        updateAttributes(player);
     }
 
     /**
@@ -428,8 +405,8 @@ public class HighPriestOrigin {
 
         ServerPlayer player = event.getPlayer();
         if (event.getChangeType() == OriginChangeEvent.ChangeType.LEVEL_CHANGE) {
-            // Update attributes when level changes (scaled stat changes)
-            updateCastTimeReduction(player);
+            // Update attributes when level changes
+            updateAttributes(player);
         }
     }
 
@@ -449,6 +426,6 @@ public class HighPriestOrigin {
         }
 
         // Update attributes when Grace stacks change
-        updateCastTimeReduction(player);
+        updateAttributes(player);
     }
 }

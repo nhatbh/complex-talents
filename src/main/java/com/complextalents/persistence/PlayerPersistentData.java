@@ -22,6 +22,8 @@ public class PlayerPersistentData extends SavedData {
     private final Map<UUID, CompoundTag> skillData = new ConcurrentHashMap<>();
     private final Map<UUID, CompoundTag> passiveData = new ConcurrentHashMap<>();
     private final Map<UUID, CompoundTag> darkMageData = new ConcurrentHashMap<>();
+    private final Map<UUID, CompoundTag> elementalMageData = new ConcurrentHashMap<>();
+    private final Map<UUID, CompoundTag> faithData = new ConcurrentHashMap<>();
 
     /**
      * Get or create the PlayerPersistentData for a server level.
@@ -60,6 +62,16 @@ public class PlayerPersistentData extends SavedData {
             data.darkMageData.put(UUID.fromString(uuidStr), darkMageTag.getCompound(uuidStr));
         }
 
+        CompoundTag elementalMageTag = tag.getCompound("elementalMageData");
+        for (String uuidStr : elementalMageTag.getAllKeys()) {
+            data.elementalMageData.put(UUID.fromString(uuidStr), elementalMageTag.getCompound(uuidStr));
+        }
+
+        CompoundTag faithTag = tag.getCompound("faithData");
+        for (String uuidStr : faithTag.getAllKeys()) {
+            data.faithData.put(UUID.fromString(uuidStr), faithTag.getCompound(uuidStr));
+        }
+
         return data;
     }
 
@@ -91,6 +103,18 @@ public class PlayerPersistentData extends SavedData {
             darkMageTag.put(entry.getKey().toString(), entry.getValue());
         }
         tag.put("darkMageData", darkMageTag);
+
+        CompoundTag elementalMageTag = new CompoundTag();
+        for (var entry : elementalMageData.entrySet()) {
+            elementalMageTag.put(entry.getKey().toString(), entry.getValue());
+        }
+        tag.put("elementalMageData", elementalMageTag);
+
+        CompoundTag faithTag = new CompoundTag();
+        for (var entry : faithData.entrySet()) {
+            faithTag.put(entry.getKey().toString(), entry.getValue());
+        }
+        tag.put("faithData", faithTag);
 
         return tag;
     }
@@ -175,6 +199,46 @@ public class PlayerPersistentData extends SavedData {
         setDirty();
     }
 
+    // --- Elemental Mage Data Methods ---
+
+    public void saveElementalMageData(UUID playerId, CompoundTag data) {
+        elementalMageData.put(playerId, data.copy());
+        setDirty();
+    }
+
+    public CompoundTag getElementalMageData(UUID playerId) {
+        return elementalMageData.get(playerId);
+    }
+
+    public boolean hasElementalMageData(UUID playerId) {
+        return elementalMageData.containsKey(playerId);
+    }
+
+    public void removeElementalMageData(UUID playerId) {
+        elementalMageData.remove(playerId);
+        setDirty();
+    }
+
+    // --- High Priest Faith Data Methods ---
+
+    public void saveFaithData(UUID playerId, CompoundTag data) {
+        faithData.put(playerId, data.copy());
+        setDirty();
+    }
+
+    public CompoundTag getFaithData(UUID playerId) {
+        return faithData.get(playerId);
+    }
+
+    public boolean hasFaithData(UUID playerId) {
+        return faithData.containsKey(playerId);
+    }
+
+    public void removeFaithData(UUID playerId) {
+        faithData.remove(playerId);
+        setDirty();
+    }
+
     // --- Cleanup Methods ---
 
     public void removeAllPlayerData(UUID playerId) {
@@ -182,6 +246,8 @@ public class PlayerPersistentData extends SavedData {
         skillData.remove(playerId);
         passiveData.remove(playerId);
         darkMageData.remove(playerId);
+        elementalMageData.remove(playerId);
+        faithData.remove(playerId);
         setDirty();
     }
 }

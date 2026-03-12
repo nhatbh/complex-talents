@@ -81,7 +81,11 @@ public class ClientTargetingPreview {
         TargetingRequest.Builder requestBuilder = TargetingRequest.builder(player)
                 .maxRange(skill.getMaxRange());
 
-        // Set allowed types based on skill's targeting type
+        // Set allowed types and shared filters
+        requestBuilder.allowTargetSelf(skill.allowsSelfTarget())
+                .targetAllyOnly(skill.targetsAllyOnly())
+                .targetPlayerOnly(skill.targetsPlayerOnly());
+
         switch (currentTargetingType) {
             case NONE -> {
                 // No preview for self-target skills
@@ -91,18 +95,12 @@ public class ClientTargetingPreview {
             }
             case DIRECTION -> {
                 requestBuilder.allowedTypes(TargetType.DIRECTION, TargetType.POSITION);
-                break;
             }
             case POSITION -> {
                 requestBuilder.allowedTypes(TargetType.POSITION);
-                break;
             }
             case ENTITY -> {
-                requestBuilder.allowedTypes(TargetType.ENTITY, TargetType.POSITION)
-                        .allowTargetSelf(skill.allowsSelfTarget())
-                        .targetAllyOnly(skill.targetsAllyOnly())
-                        .targetPlayerOnly(skill.targetsPlayerOnly());
-                break;
+                requestBuilder.allowedTypes(TargetType.ENTITY, TargetType.POSITION);
             }
         }
 
@@ -131,7 +129,13 @@ public class ClientTargetingPreview {
         // Render based on targeting type
         switch (currentTargetingType) {
             case ENTITY -> renderEntityReticle(pose, buffer);
-            case POSITION -> renderPositionReticle(pose, buffer);
+            case POSITION -> {
+                if (snapshot.hasEntity()) {
+                    renderEntityReticle(pose, buffer);
+                } else {
+                    renderPositionReticle(pose, buffer);
+                }
+            }
             case DIRECTION -> renderDirectionReticle(pose, buffer);
             case NONE -> {
                 // No preview for self-target skills

@@ -90,14 +90,18 @@ public class LightningOPStrategy implements IOPStrategy {
         float initialDamage = 40f * scale;
         float strikeDamage = 15f * scale;
 
+        // Cache target position and bounding box to ensure effects play even if target is dead/removed
+        net.minecraft.world.phys.Vec3 targetPos = target.position();
+        net.minecraft.world.phys.AABB targetBox = target.getBoundingBox();
+
         // AAA Particle: Supercell
-        Messages.spawnAAAParticle(level, target.position().add(0, 1.0, 0), "supercell", new Vector3f(0), 2.5f);
+        Messages.spawnAAAParticle(level, targetPos.add(0, 1.0, 0), "supercell", new Vector3f(0), 2.5f);
         if (attacker != null) {
             target.getPersistentData().putString("OP_Attacker", attacker.getName().getString());
         }
 
         // Ambient sound
-        level.playSound(null, target.getX(), target.getY(), target.getZ(), SoundRegistry.SUPERCELL_AMBIENT.get(),
+        level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundRegistry.SUPERCELL_AMBIENT.get(),
                 SoundSource.PLAYERS, 1.0f, 1.0f);
 
         // Initial burst at 22 frames = 7 ticks
@@ -106,11 +110,11 @@ public class LightningOPStrategy implements IOPStrategy {
                 player.sendSystemMessage(
                         net.minecraft.network.chat.Component.literal("Supercell Initial Burst: TICK 7"));
             }
-            level.playSound(null, target.getX(), target.getY(), target.getZ(),
+            level.playSound(null, targetPos.x, targetPos.y, targetPos.z,
                     net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT,
                     SoundSource.PLAYERS, 2.0f, 1.0f);
             List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
-                    target.getBoundingBox().inflate(radius));
+                    targetBox.inflate(radius));
             for (LivingEntity entity : nearby) {
                 if (attacker == null || !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
                     entity.hurt(level.damageSources().indirectMagic(attacker, attacker), initialDamage);
@@ -124,24 +128,21 @@ public class LightningOPStrategy implements IOPStrategy {
             int delay = 110 + (i * 4);
             com.complextalents.elemental.handlers.DelayedActionHandler.queueAction(level, delay, () -> {
                 List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
-                        target.getBoundingBox().inflate(radius));
+                        targetBox.inflate(radius));
                 List<LivingEntity> validTargets = new java.util.ArrayList<>();
                 for (LivingEntity entity : nearby) {
                     if (attacker == null || !com.complextalents.util.TeamHelper.isAlly(attacker, entity)) {
                         validTargets.add(entity);
                     }
                 }
-
+                
+                // Play sound at cached target position
+                level.playSound(null, targetPos.x, targetPos.y, targetPos.z,
+                        net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.0f, 1.0f);
+                
                 if (!validTargets.isEmpty()) {
                     LivingEntity strikeTarget = validTargets.get(level.random.nextInt(validTargets.size()));
-                    level.playSound(null, strikeTarget.getX(), strikeTarget.getY(), strikeTarget.getZ(),
-                            net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.0f, 1.0f);
                     strikeTarget.hurt(level.damageSources().indirectMagic(attacker, attacker), strikeDamage);
-
-                    if (attacker instanceof net.minecraft.world.entity.player.Player player) {
-                        player.sendSystemMessage(
-                                net.minecraft.network.chat.Component.literal("Supercell Strike: TICK " + delay));
-                    }
                 }
             });
         }

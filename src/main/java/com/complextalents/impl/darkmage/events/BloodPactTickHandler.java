@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Handles:
  * <ul>
  *   <li>HP drain per second</li>
- *   <li>Infinite mana (set to max each tick)</li>
+ *   <li>Soul-scaled mana regeneration</li>
  *   <li>Auto-deactivate at critical HP</li>
  *   <li>Soul damage bonus during Blood Pact</li>
  * </ul>
@@ -49,7 +49,6 @@ public class BloodPactTickHandler {
     /**
      * Server tick handler for Blood Pact effects.
      * - HP drain per second
-     * - Infinite mana (set to max each tick)
      * - Auto-deactivate if HP drops to critical
      */
     @SubscribeEvent
@@ -116,8 +115,7 @@ public class BloodPactTickHandler {
                 // Drain HP
                 serverPlayer.setHealth(serverPlayer.getHealth() - hpToDrain);
 
-                // Set mana to max (infinite mana effect)
-                setManaToMax(serverPlayer);
+
 
                 // Bleeding particle effect every 10 ticks
                 if (gameTime % 10 == 0) {
@@ -127,22 +125,7 @@ public class BloodPactTickHandler {
         }
     }
 
-    /**
-     * Set player's mana to maximum using Iron's Spellbooks API.
-     * Uses the MAX_MANA attribute to determine the maximum value.
-     */
-    private static void setManaToMax(ServerPlayer player) {
-        try {
-            io.redspace.ironsspellbooks.api.magic.MagicData magicData =
-                    io.redspace.ironsspellbooks.api.magic.MagicData.getPlayerMagicData(player);
-            // Get max mana from player's attribute
-            double maxMana = player.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.MAX_MANA.get());
-            magicData.setMana((float) maxMana);
-        } catch (Exception e) {
-            // Iron's Spellbooks not loaded or other issue - silently ignore
-            TalentsMod.LOGGER.trace("Could not set mana for Blood Pact: {}", e.getMessage());
-        }
-    }
+
 
     /**
      * Spawn two-layer blood particle effect on the player while Blood Pact is active.

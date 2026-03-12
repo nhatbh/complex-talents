@@ -123,27 +123,27 @@ public class SkillCastingClient {
         TargetType targetingType = skill.getTargetingType();
         double maxRange = skill.getMaxRange();
 
+        TargetingRequest.Builder requestBuilder = TargetingRequest.builder(MC.player)
+                .maxRange(maxRange)
+                .allowTargetSelf(skill.allowsSelfTarget())
+                .targetAllyOnly(skill.targetsAllyOnly())
+                .targetPlayerOnly(skill.targetsPlayerOnly());
+
         return switch (targetingType) {
             case NONE -> TargetingSnapshot.createMinimal(
                     MC.player.getEyePosition(),
                     MC.player.getLookAngle(),
                     MC.player.position()
             );
-            case DIRECTION -> RESOLVER.resolve(TargetingRequest.builder(MC.player)
-                    .maxRange(maxRange)
+            case DIRECTION -> RESOLVER.resolve(requestBuilder
                     .allowedTypes(TargetType.DIRECTION, TargetType.POSITION)
                     .build());
-            case POSITION -> RESOLVER.resolve(TargetingRequest.builder(MC.player)
-                    .maxRange(maxRange)
+            case POSITION -> RESOLVER.resolve(requestBuilder
                     .allowedTypes(TargetType.POSITION)
                     .build());
-            case ENTITY -> RESOLVER.resolve(TargetingRequest.builder(MC.player)
-                    .maxRange(maxRange)
+            case ENTITY -> RESOLVER.resolve(requestBuilder
                     .allowedTypes(TargetType.ENTITY, TargetType.POSITION)
                     .relationFilter(TargetRelation.ANY)
-                    .allowTargetSelf(skill.allowsSelfTarget())
-                    .targetAllyOnly(skill.targetsAllyOnly())
-                    .targetPlayerOnly(skill.targetsPlayerOnly())
                     .build());
         };
     }

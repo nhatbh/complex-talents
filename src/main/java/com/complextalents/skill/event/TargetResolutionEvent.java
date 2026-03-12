@@ -105,36 +105,7 @@ public class TargetResolutionEvent extends SkillEvent {
                 );
             }
 
-            case DIRECTION -> {
-                // Direction skills use aim direction and position at target
-                player.sendSystemMessage(Component.literal("§7[DEBUG]   §7Rule: DIRECTION → Aim + pos at distance"));
-                yield new ResolvedTargetData(
-                        player,
-                        player,
-                        targetPosition,
-                        aimDirection,
-                        true,
-                        true,
-                        snapshot.getDistance()
-                );
-            }
-
-            case POSITION -> {
-                // Position skills use the exact hit position
-                player.sendSystemMessage(Component.literal("§7[DEBUG]   §7Rule: POSITION → Exact hit position"));
-                yield new ResolvedTargetData(
-                        player,
-                        player,
-                        targetPosition,
-                        aimDirection,
-                        true,
-                        true,
-                        snapshot.getDistance()
-                );
-            }
-
-            case ENTITY -> {
-                // Entity skills use the entity from snapshot (client handles fallback)
+            case DIRECTION, POSITION, ENTITY -> {
                 Entity targetEntity = null;
                 boolean isAlly = false;
                 boolean isSelfTarget = false;
@@ -145,16 +116,13 @@ public class TargetResolutionEvent extends SkillEvent {
                         targetEntity = hitEntity;
                         isAlly = snapshot.isAlly();
                         isSelfTarget = (hitEntity == player);
-                        player.sendSystemMessage(Component.literal("§7[DEBUG]   §aRule: ENTITY → " +
-                                (isSelfTarget ? "SELF (client fallback)" : hitEntity.getName().getString())));
+                        player.sendSystemMessage(Component.literal("§7[DEBUG]   §aRule: " + targetingType + " → " +
+                                (isSelfTarget ? "SELF" : hitEntity.getName().getString())));
                     } else {
-                        // Entity from snapshot is no longer valid - this is unusual since
-                        // client should have validated, but handle gracefully
-                        player.sendSystemMessage(Component.literal("§7[DEBUG]   §cRule: ENTITY → Entity from snapshot no longer valid"));
+                        player.sendSystemMessage(Component.literal("§7[DEBUG]   §cRule: " + targetingType + " → Entity from snapshot no longer valid"));
                     }
                 } else {
-                    // Client sent no entity (skill doesn't allow fallback)
-                    player.sendSystemMessage(Component.literal("§7[DEBUG]   §7Rule: ENTITY → No entity (client decided no target)"));
+                    player.sendSystemMessage(Component.literal("§7[DEBUG]   §7Rule: " + targetingType + " → No entity"));
                 }
 
                 yield new ResolvedTargetData(

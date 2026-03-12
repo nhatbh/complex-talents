@@ -2,8 +2,7 @@ package com.complextalents.impl.highpriest.client;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.highpriest.client.renderer.DivinePunisherRenderer;
-import com.complextalents.impl.highpriest.client.renderer.SanctuaryBarrierRenderer;
-import com.complextalents.impl.highpriest.client.renderer.SeraphsBouncingSwordRenderer;
+import com.complextalents.impl.highpriest.client.renderer.SeraphsEdgeRenderer;
 import com.complextalents.impl.highpriest.entity.HighPriestEntities;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -21,25 +20,17 @@ public class HighPriestClient {
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(
                 HighPriestEntities.DIVINE_PUNISHER.get(),
-                DivinePunisherRenderer::new
-        );
+                DivinePunisherRenderer::new);
         event.registerEntityRenderer(
-                HighPriestEntities.SERAPHS_BOUNCING_SWORD.get(),
-                SeraphsBouncingSwordRenderer::new
-        );
-        event.registerEntityRenderer(
-                HighPriestEntities.SANCTUARY_BARRIER.get(),
-                SanctuaryBarrierRenderer::new
-        );
+                HighPriestEntities.SERAPHS_EDGE.get(),
+                SeraphsEdgeRenderer::new);
         TalentsMod.LOGGER.info("Registered High Priest entity renderers");
     }
 
     /**
      * Client-side event handler for game tick events.
-     * Note: Covenant link animation is handled directly in CovenantLinkRenderer.
      */
     @Mod.EventBusSubscriber(modid = TalentsMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
     public static class ClientEvents {
-        // Covenant link ticks are handled via @SubscribeEvent in CovenantLinkRenderer
     }
 }

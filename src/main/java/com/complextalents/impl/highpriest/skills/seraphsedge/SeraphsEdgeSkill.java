@@ -1,106 +1,101 @@
 package com.complextalents.impl.highpriest.skills.seraphsedge;
 
-import com.complextalents.impl.highpriest.entity.SeraphsBouncingSwordEntity;
+import com.complextalents.impl.highpriest.data.SeraphSwordData;
+import com.complextalents.impl.highpriest.entity.SeraphsEdgeEntity;
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.SkillNature;
 import com.complextalents.skill.event.ResolvedTargetData;
 import com.complextalents.targeting.TargetType;
-
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.ForgeRegistries;
 
 /**
- * Seraph's Edge - A spectral sword that patrols the battlefield, shielding friends and smiting foes.
+ * Seraph's Edge - A spectral sword that embeds itself in the ground.
  * <p>
- * The sword bounces between targets up to 3/4/5/6 times based on skill level. It prefers enemies
- * but can heal/shield allies. Cannot hit the same ally twice in a row without hitting an enemy in between.
- * <p>
- * <strong>Properties:</strong>
- * <ul>
- *   <li>Resource: Piety (15/20/25/30 cost by level)</li>
- *   <li>Cooldown: 10/9/8/7 seconds (by level)</li>
- *   <li>Channel Time: 1 second</li>
- *   <li>Range: 32 blocks</li>
- *   <li>Max Level: 4</li>
- *   <li>Max Hits: 3/4/5/6 (by level)</li>
- *   <li>Damage per hit: 8/10/12/15 (by level)</li>
- *   <li>Heal per ally hit: 4/6/8/10 (by level)</li>
- *   <li>Damage Falloff: 15% per bounce</li>
- *   <li>Search Radius: 10 blocks</li>
- * </ul>
- *
- * @see SeraphsBouncingSwordEntity
+ * When cast on block/entity, move the sword to that position.
+ * Damages/Debuffs enemies and Shields/Buffs allies on its path.
  */
 public class SeraphsEdgeSkill {
 
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "seraphs_edge");
 
-    /**
-     * Register this skill.
-     */
     public static void register() {
         SkillBuilder.create("complextalents", "seraphs_edge")
                 .nature(SkillNature.ACTIVE)
-                .targeting(TargetType.ENTITY)
-                .icon(ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/highpriest/seraphs_edge.png"))
+                .targeting(TargetType.POSITION)
+                .allowSelfTarget(true)
+                .icon(ResourceLocation.fromNamespaceAndPath("complextalents",
+                        "textures/skill/highpriest/seraphs_edge.png"))
                 .maxRange(32.0)
-                .minChannelTime(1.0)  // 1 second channel
-                .maxChannelTime(1.0)  // Fixed 1 second
-                .scaledCooldown(new double[]{10.0, 9.0, 8.0, 7.0})  // 10/9/8/7 second cooldown by level
-                .scaledResourceCost(new double[]{15.0, 20.0, 25.0, 30.0}, "complextalents:piety")  // 15/20/25/30 piety cost by level
-                .setMaxLevel(4)
-                .scaledStat("hits", new double[]{3, 4, 5, 6})      // Max bounces per level
-                .scaledStat("damage", new double[]{8, 10, 12, 15}) // Damage per hit
-                .scaledStat("heal", new double[]{4, 6, 8, 10})     // Heal per ally hit
-                .scaledStat("range", new double[]{10.0, 10.0, 10.0, 10.0}) // Search radius
+                .minChannelTime(1.0)
+                .maxChannelTime(1.0)
+                .scaledCooldown(new double[] { 2, 2, 2, 2, 2 })
+                .setMaxLevel(5)
+                .scaledStat("damage", new double[] { 8, 10, 12, 15, 20 })
+                .scaledStat("shield", new double[] { 4, 6, 8, 10, 15 })
                 .onActive((context, rawPlayer) -> {
                     ServerPlayer player = (ServerPlayer) rawPlayer;
                     ResolvedTargetData targetData = context.target().getAs(ResolvedTargetData.class);
+                    if (targetData == null)
+                        return;
 
-                    // Get scaled stats based on skill level
-                    int maxBounces = (int) context.getStat("hits");
+                    double faith = com.complextalents.impl.highpriest.data.FaithData.getFaith(player);
                     double baseDamage = context.getStat("damage");
-                    double healAmount = context.getStat("heal");
-                    double searchRadius = context.getStat("range");
+                    double shieldAmount = context.getStat("shield");
 
-                    // Create bouncing sword entity with owner
-                    SeraphsBouncingSwordEntity sword = new SeraphsBouncingSwordEntity(
-                            player.level(),
-                            player
-                    );
+                    // Faith scaling
+                    baseDamage *= (1.0 + (faith * 0.0005));
+                    shieldAmount *= (1.0 + (faith * 0.0005));
 
-                    sword.setOwner(player);
-
-                    // Configure bouncing behavior
-                    sword.configureBouncing(maxBounces, (float) baseDamage, (float) healAmount, searchRadius);
-
-                    // Set homing target if available
-                    if (targetData != null && targetData.hasEntity() &&
-                        targetData.getTargetEntity() instanceof LivingEntity livingTarget) {
-                        sword.setTarget(livingTarget);
+                    Attribute holyPowerAttr = ForgeRegistries.ATTRIBUTES.getValue(
+                            ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "holy_spell_power"));
+                    if (holyPowerAttr != null) {
+                        double holySpellPower = player.getAttributeValue(holyPowerAttr);
+                        baseDamage *= holySpellPower;
+                        shieldAmount *= holySpellPower;
                     }
 
-                    // Calculate initial direction from player's look
-                    Vec3 aimDir = targetData != null
-                        ? targetData.getAimDirection()
-                        : player.getLookAngle();
+                    Vec3 targetPos;
+                    Entity targetEntity = null;
+                    if (targetData.hasEntity()) {
+                        targetEntity = targetData.getTargetEntity();
+                        targetPos = targetEntity.position();
+                    } else {
+                        targetPos = targetData.getTargetPosition();
+                    }
 
-                    // Shoot with calculated direction
-                    sword.shoot(aimDir.x, aimDir.y, aimDir.z, 0.2f, 0.0f);
+                    SeraphsEdgeEntity sword = SeraphSwordData.getActiveSword(player);
 
-                    // Spawn 2.5 blocks in front of player's eye position
-                    Vec3 eyePos = player.getEyePosition(1.0f);
-                    Vec3 spawnPos = eyePos.add(aimDir.scale(2.5));
-                    sword.setPos(spawnPos.x, spawnPos.y - 0.2, spawnPos.z);
+                    // Case 1: Target is the sword itself -> Pull
+                    if (sword != null && targetEntity == sword) {
+                        sword.pullEnemies();
+                        player.level().playSound(null, sword.getX(), sword.getY(), sword.getZ(),
+                                SoundEvents.TRIDENT_RETURN, SoundSource.PLAYERS, 1.0f, 1.5f);
+                        return;
+                    }
 
-                    // Add entity to world
-                    player.level().addFreshEntity(sword);
+                    // Case 2: No sword or sword too far -> Spawn at player
+                    if (sword == null || sword.distanceToSqr(player) > 64 * 64) {
+                        sword = new SeraphsEdgeEntity(player.level(), player);
+                        sword.configure((float) baseDamage, (float) shieldAmount);
 
-                    // Play sound
+                        Vec3 spawnPos = player.getEyePosition().add(player.getLookAngle().scale(1.5));
+                        sword.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
+
+                        player.level().addFreshEntity(sword);
+                        SeraphSwordData.setActiveSword(player, sword);
+                    }
+
+                    // Move sword to target
+                    sword.moveTo(targetPos);
+
+                    // Sound
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.TRIDENT_THROW, SoundSource.PLAYERS, 1.0f, 1.0f);
                 })

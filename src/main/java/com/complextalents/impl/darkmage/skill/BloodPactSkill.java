@@ -51,8 +51,7 @@ public class BloodPactSkill {
     private static final UUID SPELL_CRIT_DAMAGE_UUID = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_spell_crit_damage");
     private static final UUID SPELL_POWER_UUID       = UUIDHelper.generateAttributeModifierUUID("dark_mage", "blood_pact_spell_power");
 
-    // Massive mana regen bonus (10.0 = +1000% mana regen, effectively infinite)
-    private static final double MANA_REGEN_BONUS = 5.0;
+
 
     /**
      * Register this skill.
@@ -194,11 +193,14 @@ public class BloodPactSkill {
                 // Remove existing modifier if present
                 attributeInstance.removeModifier(MANA_REGEN_UUID);
 
-                // Add massive mana regen modifier (+1000%)
+                // Add mana regen modifier: 1.0 + (souls / 200.0)
+                double souls = SoulData.getSouls(player.getUUID());
+                double bonus = 1.0 + (souls / 200.0);
+                
                 AttributeModifier modifier = new AttributeModifier(
                         MANA_REGEN_UUID,
                         "Blood Pact Mana Regen",
-                        MANA_REGEN_BONUS,
+                        bonus,
                         AttributeModifier.Operation.ADDITION
                 );
                 attributeInstance.addTransientModifier(modifier);

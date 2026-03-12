@@ -2,8 +2,10 @@ package com.complextalents.impl.highpriest.entity;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.highpriest.sound.HighPriestSounds;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -25,27 +27,26 @@ public class HighPriestEntities {
                             .fireImmune()
                             .build("divine_punisher"));
 
-    public static final RegistryObject<EntityType<SeraphsBouncingSwordEntity>> SERAPHS_BOUNCING_SWORD =
-            ENTITY_TYPES.register("seraphs_bouncing_sword",
-                    () -> EntityType.Builder.<SeraphsBouncingSwordEntity>of(SeraphsBouncingSwordEntity::new, MobCategory.MISC)
+    public static final RegistryObject<EntityType<SeraphsEdgeEntity>> SERAPHS_EDGE =
+            ENTITY_TYPES.register("seraphs_edge",
+                    () -> EntityType.Builder.<SeraphsEdgeEntity>of(SeraphsEdgeEntity::new, MobCategory.MISC)
                             .sized(0.8f, 0.8f)
                             .clientTrackingRange(8)
                             .updateInterval(1)
                             .fireImmune()
-                            .build("seraphs_bouncing_sword"));
+                            .build("seraphs_edge"));
 
-    public static final RegistryObject<EntityType<SanctuaryBarrierEntity>> SANCTUARY_BARRIER =
-            ENTITY_TYPES.register("sanctuary_barrier",
-                    () -> EntityType.Builder.<SanctuaryBarrierEntity>of(SanctuaryBarrierEntity::new, MobCategory.MISC)
-                            .sized(1.0f, 1.0f)
-                            .clientTrackingRange(8)
-                            .updateInterval(1)
-                            .fireImmune()
-                            .build("sanctuary_barrier"));
+
 
     public static void register(IEventBus modEventBus) {
         ENTITY_TYPES.register(modEventBus);
         HighPriestSounds.register(modEventBus);
+        modEventBus.addListener(HighPriestEntities::registerAttributes);
         TalentsMod.LOGGER.info("Registered High Priest entity types");
+    }
+
+    public static void registerAttributes(EntityAttributeCreationEvent event) {
+        event.put((EntityType<? extends LivingEntity>) (EntityType<?>) DIVINE_PUNISHER.get(), LivingEntity.createLivingAttributes().build());
+        event.put((EntityType<? extends LivingEntity>) (EntityType<?>) SERAPHS_EDGE.get(), LivingEntity.createLivingAttributes().build());
     }
 }

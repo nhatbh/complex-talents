@@ -35,10 +35,11 @@ import com.complextalents.network.yygm.ExposedStateSyncPacket;
 import com.complextalents.network.yygm.EquilibriumSyncPacket;
 import com.complextalents.network.yygm.SwordDanceDashPacket;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
-import com.complextalents.network.highpriest.SpawnBarrierFXPacket;
 import com.complextalents.network.darkmage.SoulSyncPacket;
 import com.complextalents.network.assassin.AssassinSyncPacket;
-import com.complextalents.network.assassin.AssassinEntitySyncPacket;
+
+import com.complextalents.network.elementalmage.ElementalMageSyncPacket;
+import com.complextalents.network.highpriest.FaithSyncPacket;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -182,12 +183,6 @@ public class PacketHandler {
                                 SpawnSeraphSwordFXPacket::handle);
 
                 // Sanctuary Barrier FX packet
-                INSTANCE.registerMessage(packetId++,
-                                SpawnBarrierFXPacket.class,
-                                SpawnBarrierFXPacket::encode,
-                                SpawnBarrierFXPacket::decode,
-                                SpawnBarrierFXPacket::handle);
-
                 // Holy Beam packets - Covenant of Protection visual effects
                 INSTANCE.registerMessage(packetId++,
                                 ActivateBeamPacket.class,
@@ -330,16 +325,24 @@ public class PacketHandler {
                                 AssassinSyncPacket::handle);
 
                 INSTANCE.registerMessage(packetId++,
-                                AssassinEntitySyncPacket.class,
-                                AssassinEntitySyncPacket::encode,
-                                AssassinEntitySyncPacket::decode,
-                                AssassinEntitySyncPacket::handle);
-
-                INSTANCE.registerMessage(packetId++,
                                 S2CSpawnAAAParticlePacket.class,
                                 S2CSpawnAAAParticlePacket::encode,
                                 S2CSpawnAAAParticlePacket::decode,
                                 S2CSpawnAAAParticlePacket::handle);
+
+                // Elemental Mage attribute sync packet
+                INSTANCE.registerMessage(packetId++,
+                                ElementalMageSyncPacket.class,
+                                ElementalMageSyncPacket::encode,
+                                ElementalMageSyncPacket::decode,
+                                ElementalMageSyncPacket::handle);
+
+                // High Priest faith sync packet
+                INSTANCE.registerMessage(packetId++,
+                                FaithSyncPacket.class,
+                                FaithSyncPacket::encode,
+                                FaithSyncPacket::decode,
+                                FaithSyncPacket::handle);
 
                 TalentsMod.LOGGER.info("Network packets registered");
         }

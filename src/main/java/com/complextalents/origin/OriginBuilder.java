@@ -8,6 +8,8 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Builder for creating origin definitions.
@@ -35,6 +37,7 @@ public class OriginBuilder {
     private final Map<String, PassiveStackDef> passiveStacks = new HashMap<>();
     private OriginRenderer renderer;
     private double[] scaledMaxResource = null;
+    private BiFunction<Integer, ServerPlayer, Double> dynamicMaxResourceCalc = null;
 
     /**
      * Create a new origin builder.
@@ -193,6 +196,18 @@ public class OriginBuilder {
     }
 
     /**
+     * Provide a lambda to dynamically calculate the max resource based on both the player's origin level
+     * and their current player state. This overrides `scaledMaxResource` if provided.
+     *
+     * @param calc A function that takes (Level, ServerPlayer) and returns the max resource value.
+     * @return this builder
+     */
+    public OriginBuilder dynamicMaxResource(BiFunction<Integer, ServerPlayer, Double> calc) {
+        this.dynamicMaxResourceCalc = calc;
+        return this;
+    }
+
+    /**
      * Build the origin and return a BuiltOrigin instance.
      * Call OriginRegistry.register() with the result to register it.
      */
@@ -259,5 +274,9 @@ public class OriginBuilder {
 
     double[] getScaledMaxResource() {
         return scaledMaxResource;
+    }
+
+    BiFunction<Integer, ServerPlayer, Double> getDynamicMaxResourceCalc() {
+        return dynamicMaxResourceCalc;
     }
 }

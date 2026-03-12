@@ -66,6 +66,18 @@ public class SpellCritHandler {
                 return;
 
             double critChance = critChanceInst.getValue();
+
+            // Inject Harmonic Convergence Buffs for the tracked spell
+            double convergenceDamBonus = 0.0;
+            if (com.complextalents.impl.elementalmage.origin.ElementalMageOrigin.isElementalMage(caster)) {
+                com.complextalents.impl.elementalmage.ElementalMageData.ConvergenceBuff buff = 
+                        com.complextalents.impl.elementalmage.ElementalMageData.getConvergenceBuff(caster.getUUID());
+                if (buff.buffWindowTicks > 0 && source.spell() != null && source.spell().getSpellId().equals(buff.buffedSpellId)) {
+                    critChance += buff.cachedCritChanceOffset;
+                    convergenceDamBonus = buff.cachedCritDamageBonus;
+                }
+            }
+
             if (critChance <= 0.0)
                 return;
 
@@ -77,6 +89,7 @@ public class SpellCritHandler {
             // Crit! Apply damage multiplier
             AttributeInstance critDamageInst = caster.getAttribute(SpellCritAttributes.SPELL_CRIT_DAMAGE.get());
             double critDamage = (critDamageInst != null) ? critDamageInst.getValue() : 1.5;
+            critDamage += convergenceDamBonus;
 
             float originalDamage = event.getAmount();
             float newDamage = (float) (originalDamage * critDamage);

@@ -370,17 +370,19 @@ public class ReactionRegistry {
     }
 
     /**
-     * Calculates elemental mastery using the geometric mean of spell power attributes.
-     * This provides a balanced overall power metric that considers all elements equally.
+     * Calculates elemental mastery using an array-rank weighted sum of spell power attributes.
+     * Elements are sorted by power.
+     * Top element: 40%
+     * 2nd element: 20%
+     * 3rd element: 15%
+     * 4th element: 10%
+     * 5th element: 10%
+     * 6th element: 5%
      *
-     * Geometric mean is calculated as: (product of all values)^(1/n)
-     * This is better than arithmetic mean for this use case because:
-     * - It penalizes having very low values in any element
-     * - It prevents extremely high single-element stats from skewing the result
-     * - It better represents overall elemental proficiency
+     * This ensures focusing on just 2 elements yields ~60% of absolute mastery potential.
      *
      * @param player The player to calculate mastery for
-     * @return The geometric mean of all spell power attributes, or 1.0 if no attributes found
+     * @return The weighted sum of all spell power attributes, or 1.0 if no attributes found
      */
     public float calculateElementalMastery(ServerPlayer player) {
         // List of all spell power attributes to include in calculation
@@ -393,63 +395,53 @@ public class ReactionRegistry {
             ResourceLocation.fromNamespaceAndPath("traveloptics", "aqua_spell_power")
         );
 
-        float product = 1.0f;
-        int validAttributes = 0;
-
-        // Collect attribute values and calculate product
-        for (ResourceLocation attrId : spellPowerAttributes) {
-            Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(attrId);
-
-            if (attribute != null) {
-                double value = player.getAttributeValue(attribute);
-                product *= value;
-                validAttributes++;
-
-                TalentsMod.LOGGER.debug("Attribute {} = {}", attrId, value);
-            } else {
-                TalentsMod.LOGGER.warn("Attribute not found: {}", attrId);
-            }
-        }
-
-        // If no valid attributes found, return default
-        if (validAttributes == 0) {
-            TalentsMod.LOGGER.warn("No valid spell power attributes found for player {}", player.getName().getString());
-            return 0;
-        }
-
-        // Calculate geometric mean: nth root of the product
-        double geometricMean = Math.pow(product, 1.0 / validAttributes);
-
-        TalentsMod.LOGGER.debug("Elemental mastery for {}: {} (based on {} attributes)",
-            player.getName().getString(), geometricMean, validAttributes);
-
-        return (float)geometricMean;
+        return (float) calculateElementalMastery(player, spellPowerAttributes);
     }
 
     /**
-     * Calculates elemental mastery with a custom attribute list.
-     * Useful for testing or specialized calculations.
+     * Calculates elemental mastery with a custom attribute list using array-rank weights.
      *
      * @param player The player to calculate mastery for
      * @param attributes Custom list of attribute IDs to include
-     * @return The geometric mean of the specified attributes
+     * @return The weighted sum of the specified attributes
      */
     public double calculateElementalMastery(ServerPlayer player, List<ResourceLocation> attributes) {
-        double product = 1.0;
-        int validAttributes = 0;
+        List<Double> values = new ArrayList<>();
 
         for (ResourceLocation attrId : attributes) {
             Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(attrId);
 
             if (attribute != null) {
-                double value = player.getAttributeValue(attribute);
-                double safeValue = Math.max(1.0, value);
-                product *= safeValue;
-                validAttributes++;
+                // Ensure base value isn't functionally 0
+                double value = Math.max(1.0, player.getAttributeValue(attribute));
+                values.add(value);
             }
         }
 
-        return validAttributes > 0 ? Math.pow(product, 1.0 / validAttributes) : 1.0;
+        if (values.isEmpty()) {
+            return 1.0;
+        }
+
+        // Sort descending (highest value first)
+        values.sort(Collections.reverseOrder());
+
+        // Weights summing to 1.0 (assuming max 6 elements)
+        // Adjust array dynamically if custom attributes list isn't exactly 6
+        double[] weights;
+        if (values.size() == 6) {
+            weights = new double[]{0.40, 0.20, 0.15, 0.10, 0.10, 0.05};
+        } else {
+            // Fallback for custom ranges - equal weighting
+            weights = new double[values.size()];
+            Arrays.fill(weights, 1.0 / values.size());
+        }
+
+        double totalMastery = 0.0;
+        for (int i = 0; i < values.size(); i++) {
+            totalMastery += values.get(i) * weights[i];
+        }
+
+        return totalMastery;
     }
 
     /**

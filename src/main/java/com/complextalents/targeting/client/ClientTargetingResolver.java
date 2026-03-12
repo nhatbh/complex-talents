@@ -26,7 +26,8 @@ public class ClientTargetingResolver {
     private static final ClientTargetingResolver INSTANCE = new ClientTargetingResolver();
     private final Minecraft minecraft = Minecraft.getInstance();
 
-    private ClientTargetingResolver() {}
+    private ClientTargetingResolver() {
+    }
 
     public static ClientTargetingResolver getInstance() {
         return INSTANCE;
@@ -47,6 +48,7 @@ public class ClientTargetingResolver {
         boolean hasEntity = false;
         boolean isAlly = false;
         double distance = request.getMaxRange();
+        boolean hitBlock = false;
 
         /* -------------------- BLOCK RAYCAST -------------------- */
         if (request.getAllowedTypes().contains(TargetType.POSITION)) {
@@ -54,18 +56,19 @@ public class ClientTargetingResolver {
             if (blockHit.getType() != HitResult.Type.MISS) {
                 targetPosition = blockHit.getLocation();
                 distance = origin.distanceTo(targetPosition);
-                resolvedTypes.add(TargetType.POSITION);
+                hitBlock = true;
             }
+            resolvedTypes.add(TargetType.POSITION);
         }
 
         /* -------------------- ENTITY RAYCAST -------------------- */
-        if (request.getAllowedTypes().contains(TargetType.ENTITY)) {
+        if (request.getAllowedTypes().contains(TargetType.ENTITY)
+                || request.getAllowedTypes().contains(TargetType.POSITION)) {
             EntityHitResult entityHit = raycastEntities(
                     level,
                     origin,
                     targetPosition,
-                    createEntityPredicate(request)
-            );
+                    createEntityPredicate(request));
 
             if (entityHit != null && entityHit.getType() == HitResult.Type.ENTITY) {
                 Entity hit = entityHit.getEntity();
@@ -88,17 +91,18 @@ public class ClientTargetingResolver {
                 }
             }
 
-            // Target yourself if there is no target
-            if (!hasEntity && request.isTargetSelfAllowed()) {
-                targetEntityId = player.getId();
-                hasEntity = true;
-                targetPosition = player.position();
-                distance = 0.0;
-                isAlly = true;
+        }
 
-                resolvedTypes.add(TargetType.ENTITY);
-                resolvedTypes.add(TargetType.POSITION);
-            }
+        if (!hasEntity && (!resolvedTypes.contains(TargetType.POSITION) || !hitBlock) &&
+                request.isTargetSelfAllowed()) {
+            targetEntityId = player.getId();
+            hasEntity = true;
+            targetPosition = player.position();
+            distance = 0.0;
+            isAlly = true;
+
+            resolvedTypes.add(TargetType.ENTITY);
+            resolvedTypes.add(TargetType.POSITION);
         }
 
         return new TargetingSnapshot(
@@ -109,15 +113,13 @@ public class ClientTargetingResolver {
                 hasEntity,
                 isAlly,
                 distance,
-                resolvedTypes
-        );
+                resolvedTypes);
     }
 
     public TargetingSnapshot resolveForLocalPlayer(
             double maxRange,
             EnumSet<TargetType> allowedTypes,
-            TargetRelation relationFilter
-    ) {
+            TargetRelation relationFilter) {
         Player localPlayer = minecraft.player;
         if (localPlayer == null) {
             return TargetingSnapshot.createEmpty();
@@ -138,8 +140,7 @@ public class ClientTargetingResolver {
         return new Vec3(
                 player.getX(),
                 player.getEyeY(),
-                player.getZ()
-        );
+                player.getZ());
     }
 
     private BlockHitResult raycastBlocks(Level level, Vec3 start, Vec3 end) {
@@ -148,8 +149,7 @@ public class ClientTargetingResolver {
                 end,
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
-                null
-        ));
+                null));
     }
 
     /**
@@ -159,8 +159,7 @@ public class ClientTargetingResolver {
             Level level,
             Vec3 start,
             Vec3 end,
-            Predicate<Entity> predicate
-    ) {
+            Predicate<Entity> predicate) {
         return ProjectileUtil.getEntityHitResult(
                 level,
                 null, // no projectile owner
@@ -169,8 +168,7 @@ public class ClientTargetingResolver {
                 new AABB(start, end).inflate(1.0D),
                 entity -> predicate.test(entity)
                         && entity.isPickable()
-                        && !entity.isSpectator()
-        );
+                        && !entity.isSpectator());
     }
 
     /* ========================================================= */
@@ -213,18 +211,15 @@ public class ClientTargetingResolver {
             Level level,
             Vec3 start,
             Vec3 end,
-            Entity target
-    ) {
+            Entity target) {
         BlockHitResult result = level.clip(new ClipContext(
                 start,
                 end,
                 ClipContext.Block.COLLIDER,
                 ClipContext.Fluid.NONE,
-                target
-        ));
+                target));
 
         return result.getType() == HitResult.Type.MISS
-                || result.getLocation().distanceTo(start)
-                >= end.distanceTo(start) - 0.1;
+                || result.getLocation().distanceTo(start) >= end.distanceTo(start) - 0.1;
     }
 }

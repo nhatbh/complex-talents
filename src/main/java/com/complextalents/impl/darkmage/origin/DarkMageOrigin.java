@@ -38,7 +38,7 @@ import net.minecraftforge.fml.common.Mod;
  * <ul>
  *   <li>HP drain per second: 8%/7%/6%/5%/4% (by level)</li>
  *   <li>Cast Speed bonus: +10%/20%/30%/40%/50% (by level)</li>
- *   <li>Infinite Mana while active</li>
+ *   <li>Soul-scaled Mana Regeneration while active: 1.0 + (souls / 200.0)</li>
  *   <li>Soul damage bonus: +0.05%/0.1%/0.15%/0.2%/0.25% per soul (by level)</li>
  *   <li>30 second cooldown after toggling off</li>
  * </ul>

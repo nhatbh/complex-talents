@@ -80,7 +80,7 @@ public class IceOPStrategy implements IOPStrategy {
         int duration = (int) (300 * Math.sqrt(scale));
 
         // AAA Particle: Nifthelm
-        Messages.spawnAAAParticle(level, target.position().add(0, 1.0, 0), "nifthelm", new Vector3f(0), 3.0f);
+        Messages.spawnAAAParticle(level, target.position().add(0, 1.0, 0), "nifthelm", new Vector3f(0), 5.0f);
 
         com.complextalents.elemental.handlers.DelayedActionHandler.queueAction(level, 30, () -> {
             List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,

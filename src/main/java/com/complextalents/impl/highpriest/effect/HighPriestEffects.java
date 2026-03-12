@@ -16,18 +16,6 @@ public class HighPriestEffects {
     public static final RegistryObject<MobEffect> SERAPHIC_GRACE = EFFECTS.register("seraphic_grace",
         () -> new SeraphicGraceEffect());
 
-    public static final RegistryObject<MobEffect> COVENANT_PROTECTION = EFFECTS.register("covenant_protection",
-        () -> new CovenantProtectionEffect());
-
-    public static final RegistryObject<MobEffect> DIVINE_EXALTATION = EFFECTS.register("divine_exaltation",
-        () -> new DivineExaltationEffect());
-
-    public static final RegistryObject<MobEffect> DIVINE_ASCENDANCE = EFFECTS.register("divine_ascendance",
-        () -> new DivineAscendanceEffect());
-
-    public static final RegistryObject<MobEffect> DIVINE_ASCENDANCE_FLIGHT = EFFECTS.register("divine_ascendance_flight",
-        () -> new DivineAscendanceFlightEffect());
-
     public static void register(net.minecraftforge.eventbus.api.IEventBus modEventBus) {
         EFFECTS.register(modEventBus);
         TalentsMod.LOGGER.info("Registered High Priest mob effects");
