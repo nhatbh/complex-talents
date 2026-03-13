@@ -245,7 +245,7 @@ public class SkillRegistry {
         TalentsMod.LOGGER.info("Registering example skills...");
 
         // Register High Priest skills
-        com.complextalents.impl.highpriest.skills.seraphsedge.SeraphsEdgeSkill.register();
+        com.complextalents.impl.highpriest.skills.seraphsedge.SeraphicEchoSkill.register();
 
         // Register Yin Yang Grandmaster skills
         com.complextalents.impl.yygm.skill.SwordDanceSkill.register();

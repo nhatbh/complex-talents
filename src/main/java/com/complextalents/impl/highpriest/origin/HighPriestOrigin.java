@@ -2,6 +2,7 @@ package com.complextalents.impl.highpriest.origin;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.highpriest.client.HighPriestRenderer;
+import com.complextalents.impl.highpriest.data.SeraphSwordData;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
 import com.complextalents.impl.highpriest.events.HolySpellHealEvent;
 import com.complextalents.impl.highpriest.integration.HighPriestIntegration;
@@ -92,24 +93,34 @@ public class HighPriestOrigin {
                 .displayName("High Priest")
                 .description(Component.literal("Holy Judgment - Divine Retribution through perfect positioning"))
                 .maxLevel(5)
-                // Grace stacks - gain over time, lose on damage
+                // Grace stack - binary state (ON/OFF), lost on damage
                 .passiveStack("grace", PassiveStackDef.create("grace")
-                        .maxStacks(10)
+                        .maxStacks(1)
                         .displayName("Grace")
-                        .color(0xFFE6F0FF).build()) // Light blue
-                // Custom HUD renderer for Faith + Grace stacks
+                        .color(0xFFE6F0FF).build())
+                // Command stacks - gain over time, consumed by Seraphic Echo
+                .passiveStack("command", PassiveStackDef.create("command")
+                        .maxStacks(10)
+                        .displayName("Command")
+                        .color(0xFFFFD700).build()) // Gold
+                // Grace recovery cooldown stack (synced timer)
+                .passiveStack("grace_cooldown", PassiveStackDef.create("grace_cooldown")
+                        .maxStacks(600)
+                        .displayName("Grace Recovery")
+                        .color(0xFFAAAAAA).build())
+                // Custom HUD renderer for Faith + Command + Grace state
                 .renderer(new HighPriestRenderer())
-                // Grace tick interval in ticks (decreases with level): [100, 90, 80, 70, 60]
-                .scaledStat("graceTickInterval", new double[] { 100.0, 90.0, 80.0, 70.0, 60.0 })
-                // Cast time reduction per Grace stack: [2%, 3%, 4%, 5%, 6%]
-                .scaledStat("castTimeReductionPerGrace", new double[] { 0.04, 0.05, 0.06, 0.07, 0.08 })
-                // Healing potency per Grace stack: [5%, 6%, 7%, 8%, 10%]
-                .scaledStat("healingPotencyPerGrace", new double[] { 0.05, 0.06, 0.07, 0.08, 0.10 })
-                // Overheal to absorption conversion rate at max Grace: [30%, 40%, 50%, 60%,
-                // 75%]
+                // Command tick interval in ticks (decreases with level): [60, 50, 40, 30, 20]
+                .scaledStat("commandTickInterval", new double[] { 200.0, 180.0, 160.0, 140.0, 100.0 })
+                // Grace recovery cooldown in ticks: fixed 100 ticks (5s)
+                .scaledStat("graceRecoveryDuration", new double[] { 600.0, 600.0, 600.0, 600.0, 600.0 })
+                // Cast time reduction when Grace is active
+                .scaledStat("castTimeReduction", new double[] { 0.20, 0.30, 0.40, 0.50, 0.60 })
+                // Healing potency when Grace is active
+                .scaledStat("healingPotency", new double[] { 0.30, 0.50, 0.70, 0.90, 1.25 })
+                // Overheal to absorption conversion rate when Grace is active
                 .scaledStat("overhealToAbsorptionRate", new double[] { 0.30, 0.40, 0.50, 0.60, 0.75 })
-                // Absorption duration in ticks at max Grace: [600, 800, 1000, 1200, 1500]
-                // (30-75 seconds)
+                // Absorption duration in ticks when Grace is active
                 .scaledStat("absorptionDuration", new double[] { 600.0, 800.0, 1000.0, 1200.0, 1500.0 })
                 // Max mana increase per Faith (previously 10/15/20/25/30)
                 .scaledStat("manaPerFaith", new double[] { 0.1, 0.15, 0.2, 0.25, 0.3 })
@@ -131,13 +142,10 @@ public class HighPriestOrigin {
             return;
         }
 
-        // Get Grace stacks
-        int graceStacks = PassiveManager.getPassiveStacks(player, "grace");
-
-        if (graceStacks > 0) {
+        // Check if Grace is on (binary state)
+        if (PassiveManager.getPassiveStacks(player, "grace") > 0) {
             // Calculate healing potency bonus
-            double potencyPerGrace = OriginManager.getOriginStat(player, "healingPotencyPerGrace");
-            double bonusMultiplier = potencyPerGrace * graceStacks;
+            double bonusMultiplier = OriginManager.getOriginStat(player, "healingPotency");
             float originalHealAmount = event.getHealAmount();
             float bonusHeal = originalHealAmount * (float) bonusMultiplier;
             float totalHeal = originalHealAmount + bonusHeal;
@@ -152,12 +160,8 @@ public class HighPriestOrigin {
             // Apply the bonus healing
             target.heal(bonusHeal);
 
-            TalentsMod.LOGGER.debug(
-                    "High Priest applied healing potency: {} stacks = {}x multiplier (original: {}, bonus: {}, effective: {}, overheal: {})",
-                    graceStacks, bonusMultiplier, originalHealAmount, bonusHeal, effectiveHeal, overheal);
-
-            // At max Grace (10 stacks): convert overheal to absorption hearts
-            if (graceStacks >= 10 && overheal > 0) {
+            // convert overheal to absorption hearts
+            if (overheal > 0) {
                 applyOverhealToAbsorption(player, target, overheal);
             }
         }
@@ -218,15 +222,25 @@ public class HighPriestOrigin {
 
         long gameTime = player.level().getGameTime();
 
-        // Get the tick interval for Grace generation (scales with level)
-        double interval = OriginManager.getOriginStat(player, "graceTickInterval");
-        int tickInterval = (int) interval;
+        // 1. Command generation: gain 1 stack every interval ticks (scales with level)
+        double interval = OriginManager.getOriginStat(player, "commandTickInterval");
+        int commandInterval = (int) interval;
 
-        // Grace generation: gain 1 stack every interval ticks
-        if (gameTime % tickInterval == 0) {
-            int currentGrace = PassiveManager.getPassiveStacks(player, "grace");
-            if (currentGrace < 10) {
-                PassiveManager.modifyPassiveStacks(player, "grace", 1);
+        if (gameTime % commandInterval == 0) {
+            int currentCommand = PassiveManager.getPassiveStacks(player, "command");
+            if (currentCommand < 10) {
+                PassiveManager.modifyPassiveStacks(player, "command", 1);
+            }
+        }
+
+        // 2. Grace recovery logic (stack-based for easy syncing)
+        int currentGrace = PassiveManager.getPassiveStacks(player, "grace");
+        if (currentGrace == 0) {
+            int cooldownTicks = PassiveManager.getPassiveStacks(player, "grace_cooldown");
+            if (cooldownTicks > 0) {
+                PassiveManager.modifyPassiveStacks(player, "grace_cooldown", -1);
+            } else {
+                PassiveManager.setPassiveStacks(player, "grace", 1);
             }
         }
     }
@@ -238,11 +252,10 @@ public class HighPriestOrigin {
      * attributes.
      */
     public static void updateAttributes(ServerPlayer player) {
-        int graceStacks = PassiveManager.getPassiveStacks(player, "grace");
+        boolean hasGrace = PassiveManager.getPassiveStacks(player, "grace") > 0;
 
-        // Update cast time reduction (applies at any Grace stack)
-        double reductionPerStack = OriginManager.getOriginStat(player, "castTimeReductionPerGrace");
-        double totalReduction = reductionPerStack * graceStacks;
+        // Update cast time reduction (applies only when Grace is active)
+        double totalReduction = hasGrace ? OriginManager.getOriginStat(player, "castTimeReduction") : 0;
 
         ResourceLocation castTimeAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks",
                 "cast_time_reduction");
@@ -253,7 +266,7 @@ public class HighPriestOrigin {
             if (attributeInstance != null) {
                 attributeInstance.removeModifier(CAST_TIME_REDUCTION_UUID);
 
-                if (graceStacks > 0 && totalReduction > 0) {
+                if (totalReduction > 0) {
                     AttributeModifier modifier = new AttributeModifier(
                             CAST_TIME_REDUCTION_UUID,
                             "High Priest Grace Cast Speed",
@@ -311,10 +324,8 @@ public class HighPriestOrigin {
             if (attributeInstance != null) {
                 attributeInstance.removeModifier(HOLY_SPELL_POWER_UUID);
 
-                if (graceStacks >= 10 && faith > 0) {
-                    // Faith directly increases Holy Spell Power.
-                    // Previously 1 Faith = +1% Holy Spell Power (0.01).
-                    // Now 1 Faith = +0.01% Holy Spell Power (0.0001).
+                if (hasGrace && faith > 0) {
+                    // Faith directly increases Holy Spell Power when Grace is ON.
                     double spellPowerBonus = faith * 0.0001;
 
                     AttributeModifier modifier = new AttributeModifier(
@@ -342,9 +353,11 @@ public class HighPriestOrigin {
                 return;
             }
 
-            // Lose ALL Grace stacks when taking damage
-            // PassiveStackChangeEvent will handle attribute updates
+            // Lose Grace state when taking damage
             PassiveManager.setPassiveStacks(player, "grace", 0);
+            // Start recovery cooldown timer (synced stack)
+            int cooldownDuration = (int) OriginManager.getOriginStat(player, "graceRecoveryDuration");
+            PassiveManager.setPassiveStacks(player, "grace_cooldown", cooldownDuration);
         }
     }
 
@@ -372,6 +385,8 @@ public class HighPriestOrigin {
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Cleanup Seraph's Beacon when player logs out
+            SeraphSwordData.cleanup(player.getUUID());
         }
     }
 
@@ -416,7 +431,7 @@ public class HighPriestOrigin {
      */
     @SubscribeEvent
     public static void onPassiveStackChange(PassiveStackChangeEvent event) {
-        if (!"grace".equals(event.getStackTypeName())) {
+        if (!"grace".equals(event.getStackTypeName()) && !"command".equals(event.getStackTypeName())) {
             return;
         }
 
@@ -425,7 +440,8 @@ public class HighPriestOrigin {
             return;
         }
 
-        // Update attributes when Grace stacks change
+        // Update attributes when Grace or Command stacks change (Command might affect
+        // renderer/etc)
         updateAttributes(player);
     }
 }

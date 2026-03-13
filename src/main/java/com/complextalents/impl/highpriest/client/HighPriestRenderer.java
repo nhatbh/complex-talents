@@ -1,6 +1,5 @@
 package com.complextalents.impl.highpriest.client;
 
-
 import com.complextalents.origin.client.OriginRenderer;
 import com.complextalents.passive.client.ClientPassiveStackData;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -13,7 +12,8 @@ import net.minecraft.client.renderer.GameRenderer;
 
 /**
  * Custom HUD renderer for the High Priest origin.
- * Displays the Faith resource bar and Grace passive stack indicators as symmetric arc segments.
+ * Displays the Faith resource bar and Grace passive stack indicators as
+ * symmetric arc segments.
  * Faith (right) and Grace (left) are mirrored around the center of the screen.
  * <p>
  * Performance optimizations:
@@ -37,17 +37,20 @@ public class HighPriestRenderer implements OriginRenderer {
     private static final int FAITH_TEXT_COLOR = 0x99FFD700; // Gold
 
     private static final int GRACE_BG_COLOR = 0x99000000;
-    private static final int GRACE_FILL_COLOR = 0x99E6F0FF; // Light blue
-    private static final int GRACE_FULL_COLOR = 0x9900BFFF; // Deep sky blue when maxed
-    private static final int GRACE_DIVIDER_COLOR = 0x99000000; // Dark divider lines
+    private static final int COMMAND_FILL_COLOR = 0x99FFD700; // Gold
+    private static final int COMMAND_FULL_COLOR = 0x99FFAA00; // Bright Gold when maxed
+    private static final int COMMAND_DIVIDER_COLOR = 0x99000000; // Dark divider lines
 
     // Cache for Faith text - only rebuild when values change
     private static String cachedFaithText = "";
     private static double lastFaithValue = -1;
 
-    // Cache for Grace text
-    private static String cachedGraceText = "";
+    // Cache for Command text
+    private static String cachedCommandText = "";
+    private static int lastCommandValue = -1;
     private static int lastGraceValue = -1;
+    private static int lastGraceCooldown = -1;
+    private static String cachedGraceCooldownText = "";
 
     @Override
     public void renderHUD(GuiGraphics graphics, int screenWidth, int screenHeight) {
@@ -55,49 +58,52 @@ public class HighPriestRenderer implements OriginRenderer {
         int centerY = screenHeight / 2;
 
         RenderSystem.enableBlend();
-        renderGraceArc(graphics, centerX, centerY);
+        renderCommandArc(graphics, centerX, centerY);
         RenderSystem.disableBlend();
         renderLabels(graphics, centerX, centerY);
     }
 
-
-
     /**
-     * Render Grace stacks as arc segments on the LEFT side.
-     * Spans from 240° (bottom-left) through 180° to 120° (top-left).
-     * Fills from bottom (240°) upward toward top (120°).
-     * Each of 10 stacks occupies 12° of the arc.
+     * Render Command stacks as arc segments on the LEFT side.
+     * Repurposed from Grace arc.
      */
-    private void renderGraceArc(GuiGraphics graphics, int centerX, int centerY) {
-        int grace = ClientPassiveStackData.getStackCount("grace");
-        int maxGrace = 10;
+    private void renderCommandArc(GuiGraphics graphics, int centerX, int centerY) {
+        int command = ClientPassiveStackData.getStackCount("command");
+        int maxCommand = 10;
+        boolean hasGrace = ClientPassiveStackData.getStackCount("grace") > 0;
 
-        float segmentAngleLength = ARC_LENGTH / maxGrace; // 12° per stack
+        float segmentAngleLength = ARC_LENGTH / maxCommand; // 12° per stack
 
-        // Draw empty stacks (background) - from bottom to top
-        for (int i = 0; i < maxGrace; i++) {
-            // Start from bottom (240°) and go up (counter-clockwise, so subtract)
+        // Draw empty stacks (background)
+        for (int i = 0; i < maxCommand; i++) {
             float startAngle = GRACE_BOTTOM_ANGLE - (i * segmentAngleLength);
             drawArcSegment(graphics, centerX, centerY, ARC_INNER_RADIUS, ARC_OUTER_RADIUS,
                     startAngle - segmentAngleLength + 0.8f, startAngle,
                     3, GRACE_BG_COLOR);
         }
 
-        // Draw filled stacks - from bottom upward
-        boolean isMaxed = grace >= maxGrace;
-        int fillColor = isMaxed ? GRACE_FULL_COLOR : GRACE_FILL_COLOR;
+        // Draw filled stacks
+        int fillColor = command >= maxCommand ? COMMAND_FULL_COLOR : COMMAND_FILL_COLOR;
 
-        for (int i = 0; i < grace && i < maxGrace; i++) {
+        // Visual indicator for Grace - glow if active
+        if (hasGrace) {
+            drawArcSegment(graphics, centerX, centerY, ARC_INNER_RADIUS - 1.5f, ARC_OUTER_RADIUS + 1.5f,
+                    GRACE_BOTTOM_ANGLE - ARC_LENGTH, GRACE_BOTTOM_ANGLE,
+                    16, 0x33E6F0FF); // Subtle blue glow for Grace
+        }
+
+        for (int i = 0; i < command && i < maxCommand; i++) {
             float startAngle = GRACE_BOTTOM_ANGLE - (i * segmentAngleLength);
             drawArcSegment(graphics, centerX, centerY, ARC_INNER_RADIUS, ARC_OUTER_RADIUS,
                     startAngle - segmentAngleLength + 0.8f, startAngle,
                     3, fillColor);
         }
 
-        // Draw thicker divider lines between stacks
-        for (int i = 1; i < maxGrace; i++) {
+        // Draw dividers
+        for (int i = 1; i < maxCommand; i++) {
             float dividerAngle = GRACE_BOTTOM_ANGLE - (i * segmentAngleLength);
-            drawThickLine(graphics, centerX, centerY, ARC_INNER_RADIUS, ARC_OUTER_RADIUS, dividerAngle, GRACE_DIVIDER_COLOR);
+            drawThickLine(graphics, centerX, centerY, ARC_INNER_RADIUS, ARC_OUTER_RADIUS, dividerAngle,
+                    COMMAND_DIVIDER_COLOR);
         }
     }
 
@@ -123,25 +129,48 @@ public class HighPriestRenderer implements OriginRenderer {
                 (int) (faithTextX / 0.7f), (int) (faithTextY / 0.7f), FAITH_TEXT_COLOR);
         graphics.pose().popPose();
 
-        // Grace value (left side) - just the count/max
+        // Command value (left side)
+        int command = ClientPassiveStackData.getStackCount("command");
         int grace = ClientPassiveStackData.getStackCount("grace");
-        int maxGrace = 10;
+        int maxCommand = 10;
 
-        if (grace != lastGraceValue) {
+        if (command != lastCommandValue || grace != lastGraceValue) {
+            lastCommandValue = command;
             lastGraceValue = grace;
-            cachedGraceText = grace + "/" + maxGrace;
+            cachedCommandText = "Command: " + command + "/" + maxCommand;
         }
 
-        int graceTextWidth = minecraft.font.width(cachedGraceText);
-        int graceTextX = (int) (centerX - ARC_OUTER_RADIUS - 6 - graceTextWidth * 0.7f);
-        int graceTextY = centerY - 3;
-        int graceColor = grace >= 10 ? 0x99FFAA00 : 0x99FFFFFF;
+        int commandTextWidth = minecraft.font.width(cachedCommandText);
+        int commandTextX = (int) (centerX - ARC_OUTER_RADIUS - 8 - commandTextWidth * 0.7f);
+        int commandTextY = centerY - 3;
+
+        // Color based on Grace active state
+        int textColor = grace > 0 ? 0x99E6F0FF : 0x99AAAAAA; // Bright blue if active, gray if inactive
 
         graphics.pose().pushPose();
         graphics.pose().scale(0.7f, 0.7f, 0.7f);
-        graphics.drawString(minecraft.font, cachedGraceText,
-                (int) (graceTextX / 0.7f), (int) (graceTextY / 0.7f), graceColor);
+        graphics.drawString(minecraft.font, cachedCommandText,
+                (int) (commandTextX / 0.7f), (int) (commandTextY / 0.7f), textColor);
         graphics.pose().popPose();
+
+        // Grace Cooldown Timer (below Command text)
+        int graceCooldown = ClientPassiveStackData.getStackCount("grace_cooldown");
+        if (graceCooldown > 0) {
+            if (graceCooldown != lastGraceCooldown) {
+                lastGraceCooldown = graceCooldown;
+                cachedGraceCooldownText = String.format("%.1fs", graceCooldown / 20.0f);
+            }
+
+            int cooldownWidth = minecraft.font.width(cachedGraceCooldownText);
+            int cooldownX = (int) (centerX - ARC_OUTER_RADIUS - 8 - cooldownWidth * 0.6f);
+            int cooldownY = centerY + 5;
+
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.6f, 0.6f, 0.6f);
+            graphics.drawString(minecraft.font, cachedGraceCooldownText,
+                    (int) (cooldownX / 0.6f), (int) (cooldownY / 0.6f), 0x99AAAAAA);
+            graphics.pose().popPose();
+        }
     }
 
     /**
@@ -160,7 +189,8 @@ public class HighPriestRenderer implements OriginRenderer {
     /**
      * Draw a thick radial line (divider between Grace stacks).
      */
-    private void drawThickLine(GuiGraphics graphics, float cx, float cy, float innerRadius, float outerRadius, float angleDegrees, int color) {
+    private void drawThickLine(GuiGraphics graphics, float cx, float cy, float innerRadius, float outerRadius,
+            float angleDegrees, int color) {
         int a = (color >> 24) & 0xFF;
         int r = (color >> 16) & 0xFF;
         int g = (color >> 8) & 0xFF;
@@ -213,18 +243,18 @@ public class HighPriestRenderer implements OriginRenderer {
      * Creates a thick curved bar between two radii.
      * Handles angle wrapping (angles can exceed 360°).
      *
-     * @param graphics The GUI graphics context
-     * @param cx Center X
-     * @param cy Center Y
+     * @param graphics    The GUI graphics context
+     * @param cx          Center X
+     * @param cy          Center Y
      * @param innerRadius Inner radius of the ring
      * @param outerRadius Outer radius of the ring
-     * @param startAngle Start angle in degrees
-     * @param endAngle End angle in degrees (can be > 360)
-     * @param segments Number of segments for smoothness
-     * @param color ARGB color
+     * @param startAngle  Start angle in degrees
+     * @param endAngle    End angle in degrees (can be > 360)
+     * @param segments    Number of segments for smoothness
+     * @param color       ARGB color
      */
     private void drawArcSegment(GuiGraphics graphics, float cx, float cy, float innerRadius, float outerRadius,
-                                float startAngle, float endAngle, int segments, int color) {
+            float startAngle, float endAngle, int segments, int color) {
 
         int a = (color >> 24) & 0xFF;
         int r = (color >> 16) & 0xFF;

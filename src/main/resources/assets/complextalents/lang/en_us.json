@@ -43,5 +43,8 @@
   "skill.complextalents.sword_dance.desc": "A lightning-fast dash of 8 blocks that activates gates. Dashing through your harmonized target activates two gates. Correct gate hits refund cooldown. Empty gates don't cost Equilibrium.",
 
   "entity.complextalents.pincer_dagger": "Pincer Dagger",
-  "entity.complextalents.pincer_spear": "Pincer Spear"
+  "entity.complextalents.pincer_spear": "Pincer Spear",
+
+  "skill.complextalents.seraphic_echo": "Seraphic Echo",
+  "skill.complextalents.seraphic_echo.desc": "Divine Orb: Move the seraphic orb to a target location. Damages and slows enemies, while granting speed and absorption to allies on its path. Cast on the orb itself to pull nearby enemies."
 }

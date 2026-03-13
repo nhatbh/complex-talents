@@ -16,28 +16,28 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 
 /**
- * Seraph's Edge - A spectral sword that embeds itself in the ground.
+ * Seraphic Echo - A divine orb of light that hovers and moves through space.
  * <p>
- * When cast on block/entity, move the sword to that position.
+ * When cast on block/entity, move the beacon to that position.
  * Damages/Debuffs enemies and Shields/Buffs allies on its path.
  */
-public class SeraphsEdgeSkill {
+public class SeraphicEchoSkill {
 
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "seraphs_edge");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("complextalents", "seraphic_echo");
 
     public static void register() {
-        SkillBuilder.create("complextalents", "seraphs_edge")
+        SkillBuilder.create("complextalents", "seraphic_echo")
                 .nature(SkillNature.ACTIVE)
                 .targeting(TargetType.POSITION)
                 .allowSelfTarget(true)
                 .icon(ResourceLocation.fromNamespaceAndPath("complextalents",
-                        "textures/skill/highpriest/seraphs_edge.png"))
+                        "textures/skill/highpriest/seraphs_echo.png"))
                 .maxRange(32.0)
-                .minChannelTime(1.0)
-                .maxChannelTime(1.0)
+                .minChannelTime(0.3)
+                .maxChannelTime(0.3)
                 .scaledCooldown(new double[] { 2, 2, 2, 2, 2 })
                 .setMaxLevel(5)
-                .scaledStat("damage", new double[] { 8, 10, 12, 15, 20 })
+                .scaledStat("damage", new double[] { 5, 7, 10, 12, 15 })
                 .scaledStat("shield", new double[] { 4, 6, 8, 10, 15 })
                 .onActive((context, rawPlayer) -> {
                     ServerPlayer player = (ServerPlayer) rawPlayer;
@@ -74,11 +74,24 @@ public class SeraphsEdgeSkill {
 
                     // Case 1: Target is the sword itself -> Pull
                     if (sword != null && targetEntity == sword) {
+                        if (!com.complextalents.passive.PassiveManager.hasPassiveStacks(player, "command", 5)) {
+                            player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cNot enough Command (5 required)"), true);
+                            return;
+                        }
+                        com.complextalents.passive.PassiveManager.modifyPassiveStacks(player, "command", -5);
+
                         sword.pullEnemies();
                         player.level().playSound(null, sword.getX(), sword.getY(), sword.getZ(),
                                 SoundEvents.TRIDENT_RETURN, SoundSource.PLAYERS, 1.0f, 1.5f);
                         return;
                     }
+
+                    // Otherwise -> Move/Spawn
+                    if (!com.complextalents.passive.PassiveManager.hasPassiveStacks(player, "command", 1)) {
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cNot enough Command (1 required)"), true);
+                        return;
+                    }
+                    com.complextalents.passive.PassiveManager.modifyPassiveStacks(player, "command", -1);
 
                     // Case 2: No sword or sword too far -> Spawn at player
                     if (sword == null || sword.distanceToSqr(player) > 64 * 64) {

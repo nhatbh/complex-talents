@@ -55,4 +55,26 @@ public class CustomRenderTypes extends RenderType {
     public static RenderType solidNoCull() {
         return SOLID_NO_CULL;
     }
+
+    // Translucent sphere with additive blending for glow effect
+    private static final RenderType SPHERE_GLOW = RenderType.create(
+            "sphere_glow",
+            DefaultVertexFormat.POSITION_COLOR_NORMAL,
+            VertexFormat.Mode.TRIANGLES,
+            256,
+            false,
+            true,  // sortOnUpload for translucency
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setLightmapState(RenderStateShard.LIGHTMAP)
+                    .setOverlayState(RenderStateShard.OVERLAY)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false)
+    );
+
+    public static RenderType sphereGlow() {
+        return SPHERE_GLOW;
+    }
 }
