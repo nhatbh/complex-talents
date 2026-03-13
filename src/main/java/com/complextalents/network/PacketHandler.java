@@ -37,6 +37,7 @@ import com.complextalents.network.yygm.SwordDanceDashPacket;
 import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
 import com.complextalents.network.darkmage.SoulSyncPacket;
 import com.complextalents.network.assassin.AssassinSyncPacket;
+import com.complextalents.network.assassin.AssassinEntitySyncPacket;
 
 import com.complextalents.network.elementalmage.ElementalMageSyncPacket;
 import com.complextalents.network.highpriest.FaithSyncPacket;
@@ -323,6 +324,12 @@ public class PacketHandler {
                                 AssassinSyncPacket::encode,
                                 AssassinSyncPacket::decode,
                                 AssassinSyncPacket::handle);
+
+                INSTANCE.registerMessage(packetId++,
+                                AssassinEntitySyncPacket.class,
+                                AssassinEntitySyncPacket::encode,
+                                AssassinEntitySyncPacket::decode,
+                                AssassinEntitySyncPacket::handle);
 
                 INSTANCE.registerMessage(packetId++,
                                 S2CSpawnAAAParticlePacket.class,
