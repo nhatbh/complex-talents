@@ -28,6 +28,7 @@ public class SeraphicEchoSkill {
     public static void register() {
         SkillBuilder.create("complextalents", "seraphic_echo")
                 .nature(SkillNature.ACTIVE)
+                .description("A divine orb of light. Move the beacon to damage and slow enemies, or shield and buff allies on its path. Scales with Faith and Holy Spell Power. Pulls enemies if cast on self with high Command.")
                 .targeting(TargetType.POSITION)
                 .allowSelfTarget(true)
                 .icon(ResourceLocation.fromNamespaceAndPath("complextalents",

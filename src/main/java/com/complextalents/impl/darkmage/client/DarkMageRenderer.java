@@ -158,6 +158,17 @@ public class DarkMageRenderer implements OriginRenderer {
             graphics.drawString(minecraft.font, spellPowerText, statsX - (int)(minecraft.font.width(spellPowerText)), (int) ((pactTextY + 8) / 0.6f), statsColor);
             graphics.drawString(minecraft.font, critChanceText,  statsX - (int)(minecraft.font.width(critChanceText)),  (int) ((pactTextY + 8 + lineH) / 0.6f), statsColor);
             graphics.drawString(minecraft.font, critDamageText,  statsX - (int)(minecraft.font.width(critDamageText)),  (int) ((pactTextY + 8 + lineH * 2) / 0.6f), statsColor);
+
+            // Multipliers (Drain and Soul Power)
+            float drainMult = ClientSoulData.getDrainMultiplier();
+            float soulMult = ClientSoulData.getSoulMultiplier();
+            String drainText = String.format("Drain: %.2fx", drainMult);
+            String soulText = String.format("Power: %.2fx", soulMult);
+
+            int multColor = 0x99FFAA00; // Orange/gold for power/cost
+            graphics.drawString(minecraft.font, drainText, statsX - (int)(minecraft.font.width(drainText)), (int) ((pactTextY + 8 + lineH * 3) / 0.6f), multColor);
+            graphics.drawString(minecraft.font, soulText,  statsX - (int)(minecraft.font.width(soulText)),  (int) ((pactTextY + 8 + lineH * 4) / 0.6f), multColor);
+
             graphics.pose().popPose();
         }
     }

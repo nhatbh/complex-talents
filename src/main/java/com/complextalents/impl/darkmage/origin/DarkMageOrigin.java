@@ -19,6 +19,10 @@ import net.minecraftforge.fml.common.Mod;
  * The longer you fight and kill, the stronger you become.
  * Death is punishing but not permanent - Phylactery saves you at the cost of souls.
  * </p>
+ * <p>
+ * Offers exponential HP-for-Power scaling. Use Blood Pact to tap into your soul reserves,
+ * granting increased cast speed and soul-scaled mana regeneration.
+ * </p>
  *
  * <h3>Passive: Soul Siphon</h3>
  * <ul>
@@ -55,7 +59,7 @@ public class DarkMageOrigin {
     public static void register() {
         OriginBuilder.create("complextalents", "dark_mage")
                 .displayName("Dark Mage")
-                .description(Component.literal("Soul harvester with infinite scaling power"))
+                .description(Component.literal("Soul harvester with infinite scaling power and high-risk mechanics. Harvest souls to power Blood Pact. Death-Defy (Phylactery) is free, but actual death results in a 30% soul loss."))
                 .maxLevel(5)
                 // HP drain rates for Blood Pact: 8%/7%/6%/5%/4% per second
                 .scaledStat("bloodPactHpDrainPercent", new double[]{0.08, 0.07, 0.06, 0.05, 0.04})

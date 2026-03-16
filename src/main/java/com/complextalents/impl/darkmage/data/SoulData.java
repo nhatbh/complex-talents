@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Server-side tracking for Dark Mage Soul stacks.
  * Souls are UNCAPPED - no maximum limit.
  * Gained from kills: 3 × √(HP/10) - 5 with ±10% variance
- * Lost: 50% on Phylactery trigger
+ * Lost: 30% on actual death (Phylactery trigger is free)
  */
 public class SoulData {
 
@@ -32,6 +32,10 @@ public class SoulData {
 
     // Blood Pact active state tracking
     private static final ConcurrentHashMap<UUID, Boolean> BLOOD_PACT_ACTIVE = new ConcurrentHashMap<>();
+
+    // Multipliers for Blood Pact (Drain and Soul Effect)
+    private static final ConcurrentHashMap<UUID, Float> BLOOD_PACT_DRAIN_MULTIPLIER = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Float> BLOOD_PACT_SOUL_MULTIPLIER = new ConcurrentHashMap<>();
 
     /**
      * Get the current soul count for a player (as decimal).
@@ -193,6 +197,22 @@ public class SoulData {
     }
 
     /**
+     * Update Blood Pact multipliers for a player.
+     */
+    public static void setBloodPactMultipliers(UUID playerUuid, float drainMult, float soulMult) {
+        BLOOD_PACT_DRAIN_MULTIPLIER.put(playerUuid, drainMult);
+        BLOOD_PACT_SOUL_MULTIPLIER.put(playerUuid, soulMult);
+    }
+
+    public static float getDrainMultiplier(UUID playerUuid) {
+        return BLOOD_PACT_DRAIN_MULTIPLIER.getOrDefault(playerUuid, 1.0f);
+    }
+
+    public static float getSoulMultiplier(UUID playerUuid) {
+        return BLOOD_PACT_SOUL_MULTIPLIER.getOrDefault(playerUuid, 1.0f);
+    }
+
+    /**
      * Sync soul data to a specific client.
      */
     public static void syncToClient(ServerPlayer player) {
@@ -210,9 +230,13 @@ public class SoulData {
         float critChance = readAttribute(player, SpellCritAttributes.SPELL_CRIT_CHANCE.get());
         float critDamage = readAttribute(player, SpellCritAttributes.SPELL_CRIT_DAMAGE.get());
 
+        // Get multipliers
+        float drainMult = getDrainMultiplier(player.getUUID());
+        float soulMult = getSoulMultiplier(player.getUUID());
+
         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
                 new SoulSyncPacket(souls, bloodPactActive, cooldownRemaining, totalCooldownTicks,
-                        spellPower, critChance, critDamage));
+                        spellPower, critChance, critDamage, drainMult, soulMult));
     }
 
     private static float readAttribute(ServerPlayer player, ResourceLocation id) {
@@ -235,6 +259,8 @@ public class SoulData {
         SOUL_STACKS.remove(playerUuid);
         PHYLACTERY_COOLDOWN.remove(playerUuid);
         BLOOD_PACT_ACTIVE.remove(playerUuid);
+        BLOOD_PACT_DRAIN_MULTIPLIER.remove(playerUuid);
+        BLOOD_PACT_SOUL_MULTIPLIER.remove(playerUuid);
         TalentsMod.LOGGER.debug("Cleaned up Dark Mage data for player {}", playerUuid);
     }
 
@@ -257,6 +283,12 @@ public class SoulData {
         // Note: Blood Pact active state and Phylactery cooldown are NOT persisted
         // Blood Pact should be re-activated manually after login/respawn
         // Phylactery cooldown resets on logout
+        // Death handler tasks:
+        // - [x] Modify Phylactery soul loss mechanic <!-- id: 33 -->
+        // - [x] Draft implementation plan for soul loss shift <!-- id: 34 -->
+        // - [x] Remove soul loss from `PhylacteryHandler` <!-- id: 35 -->
+        // - [x] Implement 30% soul loss on actual death <!-- id: 36 -->
+        // - [x] Update documentation and in-game descriptions <!-- id: 37 -->
         return tag;
     }
 

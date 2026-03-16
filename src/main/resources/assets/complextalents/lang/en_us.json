@@ -26,25 +26,26 @@
   "sounds.complextalents.highpriest.sword_clang": "Sword Clang",
   "sounds.complextalents.highpriest.sword_hit": "Sword Hit",
 
-  "origin.complextalents.yygm": "Yin Yang Grandmaster",
-  "effect.complextalents.harmonized": "Harmonized",
-  "effect.complextalents.exposed": "Exposed",
-  "effect.complextalents.yin_yang_annihilation": "Yin Yang Annihilation",
-  "passive.complextalents.yang": "Yang",
-  "passive.complextalents.yin": "Yin",
-
-  "skill.complextalents.eight_formation_battle_array": "Eight Formation Battle Array",
-  "skill.complextalents.eight_formation_battle_array.desc": "Ultimate: Requires 8 Equilibrium. Applies Exposed with all 8 gates. Complete all 8 gates to trigger Yin Yang Annihilation - true damage from any angle.",
-
-  "skill.complextalents.pincer_lunge": "Pincer Lunge",
-  "skill.complextalents.pincer_lunge.desc": "Channel to dash. Channel < 1s: Quick dash + dagger throw (1 Yang). Channel 1s+: Long dash with line damage + spear impale (2 Yang).",
-
-  "skill.complextalents.sword_dance": "Sword Dance",
-  "skill.complextalents.sword_dance.desc": "A lightning-fast dash of 8 blocks that activates gates. Dashing through your harmonized target activates two gates. Correct gate hits refund cooldown. Empty gates don't cost Equilibrium.",
-
-  "entity.complextalents.pincer_dagger": "Pincer Dagger",
-  "entity.complextalents.pincer_spear": "Pincer Spear",
+  "origin.complextalents.high_priest": "High Priest",
+  "origin.complextalents.assassin": "Assassin",
+  "origin.complextalents.dark_mage": "Dark Mage",
+  "origin.complextalents.elemental_mage": "Elemental Mage",
+  "origin.complextalents.warrior": "Warrior",
 
   "skill.complextalents.seraphic_echo": "Seraphic Echo",
-  "skill.complextalents.seraphic_echo.desc": "Divine Orb: Move the seraphic orb to a target location. Damages and slows enemies, while granting speed and absorption to allies on its path. Cast on the orb itself to pull nearby enemies."
+  "skill.complextalents.seraphic_echo.desc": "Divine Orb: Move the seraphic orb to a target location. Damages and slows enemies, while granting speed and absorption to allies on its path. Cast on the orb itself to pull nearby enemies.",
+  
+  "skill.complextalents.shadow_walk": "Shadow Walk",
+  "skill.complextalents.shadow_walk.desc": "Phase into the shadows to become nearly invisible. Gain increased movement speed and a massive damage bonus on your next strike.",
+  
+  "skill.complextalents.blood_pact": "Blood Pact",
+  "skill.complextalents.blood_pact.desc": "Toggle to fuel magic with life force. Grants soul-scaled mana regen and massive power. Phylactery (Death-Defy) is free while active, but dying costs 30% of souls.",
+  
+  "skill.complextalents.harmonic_convergence": "Harmonic Convergence",
+  "skill.complextalents.harmonic_convergence.desc": "Converge your elemental echos to restore mana and supercharge your next spell with increased critical strike chance and damage.",
+  
+  "skill.complextalents.challengers_retribution": "Challenger's Retribution",
+  "skill.complextalents.challengers_retribution.desc": "Adopt a defensive stance, taunting nearby enemies into a magical shield. Release the charge to unleash all absorbed damage in a powerful burst.",
+
+  "entity.complextalents.seraphs_edge": "Seraph's Edge"
 }

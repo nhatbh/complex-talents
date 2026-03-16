@@ -44,8 +44,7 @@ public class ElementalMageOrigin {
 
         OriginBuilder.create("complextalents", "elemental_mage")
                 .displayName("Elemental Mage")
-                .description(Component
-                        .literal("Masters of raw elemental magic. Deals elemental damage to fuel their mastery. Triggers potent elemental reactions."))
+                .description(Component.literal("Masters of raw elemental magic. Utilize Elemental Resonance as a resource. Deal elemental damage to generate echoes and mastery-scaled regeneration (up to 2.5 + 2.0*Mastery per second)."))
                 .resourceType(resonanceType)
                 .maxLevel(5) // Max level is now 5
                 .dynamicMaxResource((level, player) -> {

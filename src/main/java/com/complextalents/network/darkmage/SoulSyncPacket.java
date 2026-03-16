@@ -22,9 +22,11 @@ public class SoulSyncPacket {
     private final float spellPower;
     private final float critChance;
     private final float critDamage;
+    private final float drainMultiplier;
+    private final float soulMultiplier;
 
     public SoulSyncPacket(double souls, boolean bloodPactActive, long phylacteryCooldownTicks, long phylacteryTotalCooldownTicks,
-                          float spellPower, float critChance, float critDamage) {
+                          float spellPower, float critChance, float critDamage, float drainMultiplier, float soulMultiplier) {
         this.souls = souls;
         this.bloodPactActive = bloodPactActive;
         this.phylacteryCooldownTicks = phylacteryCooldownTicks;
@@ -32,6 +34,8 @@ public class SoulSyncPacket {
         this.spellPower = spellPower;
         this.critChance = critChance;
         this.critDamage = critDamage;
+        this.drainMultiplier = drainMultiplier;
+        this.soulMultiplier = soulMultiplier;
     }
 
     // Decode constructor
@@ -43,6 +47,8 @@ public class SoulSyncPacket {
         this.spellPower = buffer.readFloat();
         this.critChance = buffer.readFloat();
         this.critDamage = buffer.readFloat();
+        this.drainMultiplier = buffer.readFloat();
+        this.soulMultiplier = buffer.readFloat();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -53,6 +59,8 @@ public class SoulSyncPacket {
         buffer.writeFloat(spellPower);
         buffer.writeFloat(critChance);
         buffer.writeFloat(critDamage);
+        buffer.writeFloat(drainMultiplier);
+        buffer.writeFloat(soulMultiplier);
     }
 
     public static SoulSyncPacket decode(FriendlyByteBuf buffer) {
@@ -71,8 +79,9 @@ public class SoulSyncPacket {
         ClientSoulData.setBloodPactActive(bloodPactActive);
         ClientSoulData.setPhylacteryCooldown(phylacteryCooldownTicks, phylacteryTotalCooldownTicks);
         ClientSoulData.setBloodPactStats(spellPower, critChance, critDamage);
-        TalentsMod.LOGGER.debug("Received SoulSyncPacket: {} souls, bloodPactActive: {}, phylacteryCooldown: {}/{}",
-                souls, bloodPactActive, phylacteryCooldownTicks, phylacteryTotalCooldownTicks);
+        ClientSoulData.setBloodPactMultipliers(drainMultiplier, soulMultiplier);
+        TalentsMod.LOGGER.debug("Received SoulSyncPacket: {} souls, bloodPactActive: {}, multipliers: {}/{}",
+                souls, bloodPactActive, drainMultiplier, soulMultiplier);
     }
 
     public double getSouls() {

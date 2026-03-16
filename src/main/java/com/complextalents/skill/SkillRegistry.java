@@ -247,10 +247,6 @@ public class SkillRegistry {
         // Register High Priest skills
         com.complextalents.impl.highpriest.skills.seraphsedge.SeraphicEchoSkill.register();
 
-        // Register Yin Yang Grandmaster skills
-        com.complextalents.impl.yygm.skill.SwordDanceSkill.register();
-        com.complextalents.impl.yygm.skill.EightFormationBattleArraySkill.register();
-
         TalentsMod.LOGGER.info("Example skills registered successfully");
     }
 }

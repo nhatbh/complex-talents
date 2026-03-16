@@ -27,7 +27,7 @@ public class AssassinOrigin {
     public static void register() {
         OriginBuilder.create("complextalents", "assassin")
                 .displayName("Assassin")
-                .description(net.minecraft.network.chat.Component.literal("Master of stealth and surgical strikes"))
+                .description(net.minecraft.network.chat.Component.literal("Stealth-based burst damage dealer. Melee attacks from behind apply 'Exposed', amplifying damage by up to 80% and granting move speed on disengagement."))
                 .maxLevel(5)
                 .renderer(new AssassinRenderer())
                 // Passive: Expose Weakness

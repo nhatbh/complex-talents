@@ -89,40 +89,31 @@ public class HighPriestOrigin {
      * Call this during mod initialization.
      */
     public static void register() {
-        OriginBuilder.create("complextalents", "high_priest")
+        OriginBuilder.create(ID)
                 .displayName("High Priest")
-                .description(Component.literal("Holy Judgment - Divine Retribution through perfect positioning"))
+                .description(Component.literal("Holy commander focusing on perfect positioning and divine retribution. Utilize Grace to gain massive cast speed and healing potency, but lose focus upon taking damage. Build Command stacks to control the Seraphic Echo."))
                 .maxLevel(5)
                 // Grace stack - binary state (ON/OFF), lost on damage
-                .passiveStack("grace", PassiveStackDef.create("grace")
+                .passiveStack("grace", PassiveStackDef.create("Grace")
                         .maxStacks(1)
-                        .displayName("Grace")
-                        .color(0xFFE6F0FF).build())
+                        .build())
                 // Command stacks - gain over time, consumed by Seraphic Echo
-                .passiveStack("command", PassiveStackDef.create("command")
+                .passiveStack("command", PassiveStackDef.create("Command")
                         .maxStacks(10)
-                        .displayName("Command")
-                        .color(0xFFFFD700).build()) // Gold
+                        .build())
                 // Grace recovery cooldown stack (synced timer)
-                .passiveStack("grace_cooldown", PassiveStackDef.create("grace_cooldown")
+                .passiveStack("grace_cooldown", PassiveStackDef.create("Grace Recovery")
                         .maxStacks(600)
-                        .displayName("Grace Recovery")
-                        .color(0xFFAAAAAA).build())
-                // Custom HUD renderer for Faith + Command + Grace state
+                        .build())
+                // Custom HUD renderer
                 .renderer(new HighPriestRenderer())
-                // Command tick interval in ticks (decreases with level): [60, 50, 40, 30, 20]
+                // Scaled Stats
                 .scaledStat("commandTickInterval", new double[] { 200.0, 180.0, 160.0, 140.0, 100.0 })
-                // Grace recovery cooldown in ticks: fixed 100 ticks (5s)
                 .scaledStat("graceRecoveryDuration", new double[] { 600.0, 600.0, 600.0, 600.0, 600.0 })
-                // Cast time reduction when Grace is active
                 .scaledStat("castTimeReduction", new double[] { 0.20, 0.30, 0.40, 0.50, 0.60 })
-                // Healing potency when Grace is active
                 .scaledStat("healingPotency", new double[] { 0.30, 0.50, 0.70, 0.90, 1.25 })
-                // Overheal to absorption conversion rate when Grace is active
                 .scaledStat("overhealToAbsorptionRate", new double[] { 0.30, 0.40, 0.50, 0.60, 0.75 })
-                // Absorption duration in ticks when Grace is active
                 .scaledStat("absorptionDuration", new double[] { 600.0, 800.0, 1000.0, 1200.0, 1500.0 })
-                // Max mana increase per Faith (previously 10/15/20/25/30)
                 .scaledStat("manaPerFaith", new double[] { 0.1, 0.15, 0.2, 0.25, 0.3 })
                 .register();
     }

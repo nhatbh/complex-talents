@@ -18,7 +18,7 @@ public class WarriorOrigin {
         // Build and register Warrior origin
         OriginBuilder.create(ID)
                 .displayName("Warrior")
-                .description("A master of combat who thrives in the heat of battle. Build Style to unleash devastating power.")
+                .description("A master of combat who thrives in battle by building Style. Style ranks (D to SSS) provide massive damage multipliers (up to 1.5x at level 5). High Style also resets shield breaks.")
                 .resourceType(styleType)
                 .maxLevel(5)
                 // Passive Skill: Vanguard's Momentum - Damage Scaling

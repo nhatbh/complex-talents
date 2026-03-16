@@ -69,7 +69,7 @@ public class ChallengersRetribution {
     public static void register() {
         SkillBuilder.create(ID)
                 .displayName("Challenger's Retribution")
-                .description("Hold to shield and taunt. Release to reflect absorbed damage. Breaks if shield fails.")
+                .description("Adopt a defensive stance, taunting nearby enemies into a magical shield. Release to unleash up to 160% of all absorbed damage. Shield health scales immensely with Style Rank.")
                 .nature(SkillNature.CHARGE)
                 .maxChannelTime(5.0) // Maximum 5 second charge
                 .scaledStat("tauntRange", new double[] { 5, 6, 7, 8, 10 })

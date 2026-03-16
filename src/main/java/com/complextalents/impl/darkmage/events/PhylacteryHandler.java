@@ -94,16 +94,12 @@ public class PhylacteryHandler {
         // 2. Set HP to 1
         player.setHealth(1.0f);
 
-        // 3. Lose 50% of souls
-        double soulsLost = SoulData.loseSouls(player, 0.5);
-        double remainingSouls = SoulData.getSouls(player.getUUID());
-
-        // 4. Set internal cooldown (from scaled stats - 5 minutes)
+        // 3. Set internal cooldown (from scaled stats - 5 minutes)
         double cooldownSeconds = OriginManager.getOriginStat(player, "phylacteryCooldown");
         long cooldownTicks = (long) (cooldownSeconds * 20);
         SoulData.setPhylacteryCooldown(player.getUUID(), currentTime + cooldownTicks);
 
-        // 5. Visual and audio feedback
+        // 4. Visual and audio feedback
         if (player.level() instanceof ServerLevel level) {
             // Totem-like effect
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -114,13 +110,12 @@ public class PhylacteryHandler {
                     SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 1.0f, 0.5f);
         }
 
-        // 6. Message
+        // 5. Message
         player.sendSystemMessage(Component.literal(
-                "\u00A75\u00A7lPHYLACTERY TRIGGERED!\u00A7r \u00A7dLost " + String.format("%.1f", soulsLost) +
-                        " souls to cheat death! (" + String.format("%.1f", remainingSouls) + " remaining)"
+                "\u00A75\u00A7lPHYLACTERY TRIGGERED!\u00A7r \u00A7dYou cheated death! (" + String.format("%.1f", souls) + " souls remaining)"
         ));
 
-        TalentsMod.LOGGER.info("Dark Mage {} triggered Phylactery! Souls: {:.2f} -> {:.2f} (lost {:.2f})",
-                player.getName().getString(), souls, remainingSouls, soulsLost);
+        TalentsMod.LOGGER.info("Dark Mage {} triggered Phylactery! Souls: {:.2f}",
+                player.getName().getString(), souls);
     }
 }

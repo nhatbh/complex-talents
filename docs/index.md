@@ -25,7 +25,8 @@
 ### Key Statistics
 - **Java Files**: 94
 - **Packages**: 14
-- **Talents**: 12 registered (7 mastery + 5 Elemental Mage)
+- **Talents Registered**: 22 (7 mastery, 5 Elemental Mage, 5 Origins, 5 Skills)
+- **Origins Support**: 5 (Assassin, Dark Mage, Elemental Mage, High Priest, Warrior)
 - **Elements**: 6 (Fire, Aqua, Ice, Lightning, Nature, Ender)
 - **Reactions**: 16 standard + 6 super-reactions
 - **Custom Effects**: 10
@@ -49,6 +50,8 @@
 ### Core Documentation
 - **[Project Overview](./project-overview.md)** - Executive summary, features, statistics
 - **[Architecture](./architecture.md)** - Complete architectural overview, data flows, systems
+- **[Origins and Skills](./origins-and-skills.md)** - Detailed guide for all 5 origins and skills
+- **[Skill Mechanics](./SKILL_MECHANICS.md)** - Technical scaling and formula reference
 - **[Source Tree Analysis](./source-tree-analysis.md)** - Annotated directory structure
 - **[Development Guide](./development-guide.md)** - Setup, build, testing, development workflow
 - **[Component Inventory](./component-inventory.md)** - All 94 classes cataloged by package
@@ -263,6 +266,8 @@ public void onReaction(ElementalReactionEvent event) { }
 - Iron's Spellbooks integration
 - Command system
 - Configuration system
+- 5 Specialized Origins (Assassin, Dark Mage, Elemental Mage, High Priest, Warrior)
+- Signature active and passive skills for each origin
 - Elemental Mage talent set
 
 ### In Development ⏳

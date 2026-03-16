@@ -7,9 +7,6 @@ import com.complextalents.elemental.entity.ModEntities;
 import com.complextalents.elemental.integration.ModIntegrationHandler;
 import com.complextalents.elemental.registry.OverwhelmingPowerRegistry;
 import com.complextalents.elemental.registry.ReactionRegistry;
-import com.complextalents.impl.yygm.effect.YinYangEffects;
-import com.complextalents.impl.yygm.entity.YygmEntities;
-import com.complextalents.impl.yygm.origin.YinYangGrandmasterOrigin;
 import com.complextalents.impl.darkmage.DarkMageRegistrar;
 import com.complextalents.impl.elementalmage.origin.ElementalMageOrigin;
 import com.complextalents.impl.highpriest.effect.HighPriestEffects;
@@ -55,7 +52,6 @@ public class TalentsMod {
         ElementalEffects.register(modEventBus);
         OPEffects.register(modEventBus);
         HighPriestEffects.register(modEventBus);
-        YinYangEffects.register(modEventBus);
         AssassinEffects.register(modEventBus);
 
         // Register spell crit attributes
@@ -64,7 +60,6 @@ public class TalentsMod {
         // Register custom entities
         ModEntities.register(modEventBus);
         HighPriestEntities.register(modEventBus);
-        YygmEntities.register(modEventBus);
 
         // Register items
         ModItems.register(modEventBus);
@@ -106,7 +101,6 @@ public class TalentsMod {
         // Register example origins
         HighPriestOrigin.register();
         HighPriestOrigin.initIntegration();
-        YinYangGrandmasterOrigin.register();
         DarkMageRegistrar.register();
         AssassinRegistrar.register();
         ElementalMageOrigin.register();

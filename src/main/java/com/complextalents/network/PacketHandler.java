@@ -27,14 +27,6 @@ import com.complextalents.network.elemental.SpawnSpringReactionPacket;
 import com.complextalents.network.elemental.SpawnSuperconductReactionPacket;
 import com.complextalents.network.elemental.SpawnVaporizeReactionPacket;
 import com.complextalents.network.elemental.SpawnVoidfireReactionPacket;
-import com.complextalents.network.yygm.SpawnYinYangGateFXPacket;
-import com.complextalents.network.yygm.YinYangAnnihilationHitPacket;
-import com.complextalents.network.yygm.YinYangAnnihilationSyncPacket;
-import com.complextalents.network.yygm.YinYangGateStateSyncPacket;
-import com.complextalents.network.yygm.ExposedStateSyncPacket;
-import com.complextalents.network.yygm.EquilibriumSyncPacket;
-import com.complextalents.network.yygm.SwordDanceDashPacket;
-import com.complextalents.network.yygm.SwordDanceGateActivatePacket;
 import com.complextalents.network.darkmage.SoulSyncPacket;
 import com.complextalents.network.assassin.AssassinSyncPacket;
 import com.complextalents.network.assassin.AssassinEntitySyncPacket;
@@ -253,63 +245,6 @@ public class PacketHandler {
                                 SkillChannelStartResponsePacket::encode,
                                 SkillChannelStartResponsePacket::decode,
                                 SkillChannelStartResponsePacket::handle);
-
-                // Yin Yang Grandmaster gate state sync packet
-                INSTANCE.registerMessage(packetId++,
-                                YinYangGateStateSyncPacket.class,
-                                YinYangGateStateSyncPacket::encode,
-                                YinYangGateStateSyncPacket::decode,
-                                YinYangGateStateSyncPacket::handle);
-
-                // Yin Yang Grandmaster gate FX packet (Yang hit, Yin hit, Discord, Gate spawn)
-                INSTANCE.registerMessage(packetId++,
-                                SpawnYinYangGateFXPacket.class,
-                                SpawnYinYangGateFXPacket::encode,
-                                SpawnYinYangGateFXPacket::decode,
-                                SpawnYinYangGateFXPacket::handle);
-
-                // Yin Yang Grandmaster Equilibrium sync packet
-                INSTANCE.registerMessage(packetId++,
-                                EquilibriumSyncPacket.class,
-                                EquilibriumSyncPacket::encode,
-                                EquilibriumSyncPacket::decode,
-                                EquilibriumSyncPacket::handle);
-
-                // Sword Dance dash visualization packet
-                INSTANCE.registerMessage(packetId++,
-                                SwordDanceDashPacket.class,
-                                SwordDanceDashPacket::encode,
-                                SwordDanceDashPacket::decode,
-                                SwordDanceDashPacket::handle);
-
-                // Sword Dance gate activation packet
-                INSTANCE.registerMessage(packetId++,
-                                SwordDanceGateActivatePacket.class,
-                                SwordDanceGateActivatePacket::encode,
-                                SwordDanceGateActivatePacket::decode,
-                                SwordDanceGateActivatePacket::handle);
-
-                // Exposed state sync packet (Eight Formation Battle Array Ultimate)
-                INSTANCE.registerMessage(packetId++,
-                                ExposedStateSyncPacket.class,
-                                ExposedStateSyncPacket::encode,
-                                ExposedStateSyncPacket::decode,
-                                ExposedStateSyncPacket::handle);
-
-                // Yin Yang Annihilation sync packet (spinning texture during Annihilation)
-                INSTANCE.registerMessage(packetId++,
-                                YinYangAnnihilationSyncPacket.class,
-                                YinYangAnnihilationSyncPacket::encode,
-                                YinYangAnnihilationSyncPacket::decode,
-                                YinYangAnnihilationSyncPacket::handle);
-
-                // Yin Yang Annihilation hit packet (triggers expanding ring animation on each
-                // hit)
-                INSTANCE.registerMessage(packetId++,
-                                YinYangAnnihilationHitPacket.class,
-                                YinYangAnnihilationHitPacket::encode,
-                                YinYangAnnihilationHitPacket::decode,
-                                YinYangAnnihilationHitPacket::handle);
 
                 // Dark Mage soul sync packet
                 INSTANCE.registerMessage(packetId++,

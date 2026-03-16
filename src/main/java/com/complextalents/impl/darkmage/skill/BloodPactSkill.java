@@ -29,7 +29,7 @@ import java.util.UUID;
  * <ul>
  *   <li>HP drain per second: 8%/7%/6%/5%/4% (by level)</li>
  *   <li>Cast Speed bonus: +10%/20%/30%/40%/50% (by level)</li>
- *   <li>Infinite Mana (set to max each tick)</li>
+ *   <li>Soul-scaled Mana Regeneration: 1.0 + (souls / 200.0)</li>
  *   <li>Soul damage bonus: +0.05%/0.1%/0.15%/0.2%/0.25% per soul (by level)</li>
  * </ul>
  * <p>
@@ -59,6 +59,7 @@ public class BloodPactSkill {
     public static void register() {
         SkillBuilder.create("complextalents", "blood_pact")
                 .nature(SkillNature.ACTIVE)
+                .description("Toggle to fuel magic with life force. Grants soul-scaled mana regeneration (1.0 + souls/200), increased cast speed (up to +50%), and massive scaling damage based on harvested souls (up to +0.25%/soul). Drains 4-8% HP/sec.")
                 .targeting(TargetType.NONE)
                 .icon(ResourceLocation.fromNamespaceAndPath("complextalents", "textures/skill/darkmage/bloodpact.png"))
                 .toggleable(true)
@@ -83,11 +84,9 @@ public class BloodPactSkill {
                     ServerLevel level = serverPlayer.serverLevel();
                     int skillLevel = context.skillLevel();
 
-                    // Apply cast speed, mana regen, spell crit, and spell power modifiers
+                    // Apply cast speed (fixed), mana regen, spell crit, and spell power modifiers (scaled)
                     applyCastSpeedBonus(serverPlayer);
-                    applyManaRegenBonus(serverPlayer);
-                    applyCritBonus(serverPlayer);
-                    applySpellPowerBonus(serverPlayer);
+                    updateScaledBonuses(serverPlayer, 1.0);
 
                     // Track Blood Pact active state
                     SoulData.setBloodPactActive(serverPlayer.getUUID(), true);
@@ -181,9 +180,18 @@ public class BloodPactSkill {
     }
 
     /**
+     * Update all soul-scaled bonuses (mana regen, crit, spell power) with a multiplier.
+     */
+    public static void updateScaledBonuses(ServerPlayer player, double soulMultiplier) {
+        applyManaRegenBonus(player, soulMultiplier);
+        applyCritBonus(player, soulMultiplier);
+        applySpellPowerBonus(player, soulMultiplier);
+    }
+
+    /**
      * Apply massive mana regeneration bonus (simulates infinite mana).
      */
-    public static void applyManaRegenBonus(ServerPlayer player) {
+    public static void applyManaRegenBonus(ServerPlayer player, double multiplier) {
         ResourceLocation manaRegenAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "mana_regen");
         Attribute manaRegenAttr = ForgeRegistries.ATTRIBUTES.getValue(manaRegenAttrId);
 
@@ -193,9 +201,9 @@ public class BloodPactSkill {
                 // Remove existing modifier if present
                 attributeInstance.removeModifier(MANA_REGEN_UUID);
 
-                // Add mana regen modifier: 1.0 + (souls / 200.0)
+                // Add mana regen modifier: (1.0 + (souls / 200.0)) * multiplier
                 double souls = SoulData.getSouls(player.getUUID());
-                double bonus = 1.0 + (souls / 200.0);
+                double bonus = (1.0 + (souls / 200.0)) * multiplier;
                 
                 AttributeModifier modifier = new AttributeModifier(
                         MANA_REGEN_UUID,
@@ -206,6 +214,10 @@ public class BloodPactSkill {
                 attributeInstance.addTransientModifier(modifier);
             }
         }
+    }
+
+    public static void applyManaRegenBonus(ServerPlayer player) {
+        applyManaRegenBonus(player, 1.0);
     }
 
     /**
@@ -225,13 +237,13 @@ public class BloodPactSkill {
 
     /**
      * Apply spell crit chance (and overflow crit damage) based on current soul count.
-     * Crit chance = souls × rate, capped at 1.0 (100%).
+     * Crit chance = souls × rate × multiplier, capped at 1.0 (100%).
      * Any excess beyond 1.0 is applied as additive crit damage bonus.
      */
-    public static void applyCritBonus(ServerPlayer player) {
+    public static void applyCritBonus(ServerPlayer player, double multiplier) {
         double souls = SoulData.getSouls(player.getUUID());
         double rate  = OriginManager.getOriginStat(player, "soulSpellCritPercent");
-        double totalBonus = souls * rate;
+        double totalBonus = souls * rate * multiplier;
 
         double critChanceBonus = Math.min(totalBonus, 1.0);
         double critDamageBonus = Math.max(0.0, totalBonus - 1.0);
@@ -255,6 +267,10 @@ public class BloodPactSkill {
         }
     }
 
+    public static void applyCritBonus(ServerPlayer player) {
+        applyCritBonus(player, 1.0);
+    }
+
     /**
      * Remove spell crit chance and damage modifiers applied by Blood Pact.
      */
@@ -268,12 +284,12 @@ public class BloodPactSkill {
 
     /**
      * Apply spell power bonus based on current soul count, locked in at activation.
-     * Bonus = souls × soulDamageBonusPercent, applied as additive spell_power.
+     * Bonus = souls × soulDamageBonusPercent × multiplier, applied as additive spell_power.
      */
-    public static void applySpellPowerBonus(ServerPlayer player) {
+    public static void applySpellPowerBonus(ServerPlayer player, double multiplier) {
         double souls = SoulData.getSouls(player.getUUID());
         double bonusPerSoul = OriginManager.getOriginStat(player, "soulDamageBonusPercent");
-        double bonus = souls * bonusPerSoul;
+        double bonus = souls * bonusPerSoul * multiplier;
 
         ResourceLocation spellPowerAttrId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "spell_power");
         Attribute spellPowerAttr = ForgeRegistries.ATTRIBUTES.getValue(spellPowerAttrId);
@@ -289,6 +305,10 @@ public class BloodPactSkill {
                 }
             }
         }
+    }
+
+    public static void applySpellPowerBonus(ServerPlayer player) {
+        applySpellPowerBonus(player, 1.0);
     }
 
     /**

@@ -43,7 +43,8 @@ Event-driven Minecraft Forge mod architecture with capability-based persistence 
 - **3 Talent Types**: Passive, Active, Hybrid
 - **Branching Progression**: Up to 4-way branch choices
 - **Custom Resource Bars**: Configurable resource systems per Definition talent
-- **12 Base Talents**: Including 7 elemental mastery talents and 5 Elemental Mage talents
+- **Base Talents**: 7 elemental mastery talents, 5 Elemental Mage talents
+- **Origins & Skills**: 5 unique origins (Assassin, Dark Mage, etc.) each with signature skills and resources
 
 ### 2. Elemental System
 - **6 Elements**: Fire, Aqua, Ice, Lightning, Nature, Ender
@@ -119,6 +120,7 @@ boolean has = TalentAPI.hasTalent(player, talentId);
 
 ### Generated Documentation
 - [Architecture](./architecture.md) - Complete architectural overview
+- [Origins and Skills](./origins-and-skills.md) - Detailed guide for all origins and mechanics
 - [Source Tree Analysis](./source-tree-analysis.md) - Annotated file structure
 - [Development Guide](./development-guide.md) - Setup and build instructions
 - [Component Inventory](./component-inventory.md) - All classes and components
@@ -151,6 +153,8 @@ boolean has = TalentAPI.hasTalent(player, talentId);
 ✅ Iron's Spellbooks integration
 ✅ Command system
 ✅ Configuration system
+✅ 5 Specialized Origins (Assassin, Dark Mage, Elemental Mage, High Priest, Warrior)
+✅ Signature active and passive skills for each origin
 ✅ Elemental Mage talent set (5 talents)
 
 ### In Progress
@@ -169,7 +173,8 @@ boolean has = TalentAPI.hasTalent(player, talentId);
 
 - **Total Java Files**: 94
 - **Total Lines of Code**: ~15,000+
-- **Talents Registered**: 12 (7 mastery + 5 Elemental Mage)
+- **Talents Registered**: 22 (7 mastery, 5 Elemental Mage, 5 Origins, 5 Skills)
+- **Origins Support**: 5 (Assassin, Dark Mage, Elemental Mage, High Priest, Warrior)
 - **Elemental Reactions**: 16
 - **Super-Reactions**: 6 (one per element)
 - **Custom Effects**: 10

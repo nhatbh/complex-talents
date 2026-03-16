@@ -20,6 +20,8 @@ public class ClientSoulData {
     private static float spellPower = 0f;
     private static float critChance = 0f;
     private static float critDamage = 0f;
+    private static float drainMultiplier = 1.0f;
+    private static float soulMultiplier = 1.0f;
 
     /**
      * Set souls from server sync.
@@ -66,6 +68,17 @@ public class ClientSoulData {
         ClientSoulData.critChance = critChance;
         ClientSoulData.critDamage = critDamage;
     }
+
+    /**
+     * Set Blood Pact multipliers from server sync.
+     */
+    public static void setBloodPactMultipliers(float drainMult, float soulMult) {
+        drainMultiplier = drainMult;
+        soulMultiplier = soulMult;
+    }
+
+    public static float getDrainMultiplier() { return drainMultiplier; }
+    public static float getSoulMultiplier() { return soulMultiplier; }
 
     public static float getSpellPower() { return spellPower; }
     public static float getCritChance() { return critChance; }
@@ -127,5 +140,7 @@ public class ClientSoulData {
         spellPower = 0f;
         critChance = 0f;
         critDamage = 0f;
+        drainMultiplier = 1.0f;
+        soulMultiplier = 1.0f;
     }
 }

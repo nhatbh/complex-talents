@@ -22,6 +22,7 @@ public class ShadowWalkSkill {
     public static void register() {
         SkillBuilder.create("complextalents", "shadow_walk")
                 .nature(SkillNature.ACTIVE)
+                .description("Phase into shadows for up to 60 seconds. Grants increased movement speed and a massive damage bonus (up to +100%) on your next backstab.")
                 .targeting(TargetType.NONE)
                 .icon(ResourceLocation.fromNamespaceAndPath("complextalents",
                         "textures/skill/assassin/shadow_walk.png"))

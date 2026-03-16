@@ -108,6 +108,23 @@ This document catalogs all major components (classes, interfaces, enums) in the 
 | ElementalConfluxTalent | Class | elemental.talents.mage.conflux | CRESCENDO - Multi-element trigger |
 | ElementalUnleashTalent | Class | elemental.talents.mage.unleash | FINALE - Massive Focus dump |
 
+---
+
+## Origin & Skill Implementations
+
+| Component | Type | Package | Description |
+|-----------|------|---------|-------------|
+| AssassinOrigin | Class | impl.assassin.origin | Assassin origin registration and stats |
+| ShadowWalkSkill | Class | impl.assassin.skill | Assassin active stealth skill |
+| DarkMageOrigin | Class | impl.darkmage.origin | Dark Mage origin and soul mechanics |
+| BloodPactSkill | Class | impl.darkmage.skill | Dark Mage HP-for-power toggle skill |
+| ElementalMageOrigin | Class | impl.elementalmage.origin | Elemental Mage resonance and regen |
+| HarmonicConvergenceSkill | Class | impl.elementalmage.skill | Elemental Mage mana/crit active skill |
+| HighPriestOrigin | Class | impl.highpriest.origin | High Priest Grace and Command system |
+| SeraphicEchoSkill | Class | impl.highpriest.skills.seraphsedge | High Priest beacon management skill |
+| WarriorOrigin | Class | impl.warrior | Warrior origin and Style mechanics |
+| ChallengersRetribution | Class | impl.warrior.skills | Warrior charge/reflect skill |
+
 ### Custom Mob Effects (10 total)
 
 | Component | Type | Package | Description |
@@ -232,6 +249,7 @@ This document catalogs all major components (classes, interfaces, enums) in the 
 | Elemental Talents | 12 | Mastery + Elemental Mage |
 | Elemental Effects | 11 | Custom mob effects |
 | Elemental Entities | 4 | Reaction entities |
+| Origin Implementations | 10 | Core classes for 5 origins |
 | Super-Reactions | 9 | Advanced reaction system |
 | Attributes | 2 | Mastery attributes |
 | Integration | 3 | Mod integrations |

@@ -1,6 +1,7 @@
 package com.complextalents.impl.darkmage.events;
 
 import com.complextalents.TalentsMod;
+import com.complextalents.impl.darkmage.data.SoulData;
 import com.complextalents.impl.darkmage.origin.DarkMageOrigin;
 import com.complextalents.impl.darkmage.skill.BloodPactSkill;
 import com.complextalents.origin.OriginManager;
@@ -88,9 +89,22 @@ public class BloodPactTickHandler {
                 activationStartTick.putIfAbsent(playerId, gameTime);
                 long startTick = activationStartTick.get(playerId);
 
-                // Exponential drain: doubles every 10 seconds for testing (2^(t/10))
+                // Exponential drain: doubles every 20 seconds (2^(t/20))
                 double elapsedSeconds = (gameTime - startTick) / 20.0;
-                double exponentialMultiplier = Math.pow(2.0, elapsedSeconds / 10.0);
+                double exponentialMultiplier = Math.pow(2.0, elapsedSeconds / 20.0);
+                
+                // Soul scaling: increases by 1.5x every 20 seconds (1.5^(t/20))
+                double soulEffectMultiplier = Math.pow(1.5, elapsedSeconds / 20.0);
+
+                // Update multipliers in SoulData for HUD sync
+                SoulData.setBloodPactMultipliers(serverPlayer.getUUID(), (float) exponentialMultiplier, (float) soulEffectMultiplier);
+
+                // Update attribute bonuses periodically (every 10 ticks = 0.5s) to reflect soul scaling
+                if (gameTime % 10 == 0) {
+                    BloodPactSkill.updateScaledBonuses(serverPlayer, soulEffectMultiplier);
+                    // Also sync to client when multipliers change significantly or periodically
+                    SoulData.syncToClient(serverPlayer);
+                }
 
                 // Get base drain rate from scaled stats and apply exponential multiplier
                 double drainPerSecond = OriginManager.getOriginStat(serverPlayer, "bloodPactHpDrainPercent");
