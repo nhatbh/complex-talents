@@ -3,6 +3,7 @@ package com.complextalents.epicfight.event;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.eventbus.api.Event;
+import yesman.epicfight.skill.SkillContainer;
 import yesman.epicfight.world.entity.eventlistener.TakeDamageEvent;
 
 /**
@@ -16,14 +17,18 @@ public class EpicFightGuardEvent extends Event {
     private final float impact;
     private final float penalty;
     private final boolean isParry;
+    private final float staminaConsumed;
+    private final SkillContainer container;
 
-    public EpicFightGuardEvent(ServerPlayer player, LivingEntity attacker, TakeDamageEvent.Attack attackEvent, float impact, float penalty, boolean isParry) {
+    public EpicFightGuardEvent(ServerPlayer player, LivingEntity attacker, TakeDamageEvent.Attack attackEvent, float impact, float penalty, boolean isParry, float staminaConsumed, SkillContainer container) {
         this.player = player;
         this.attacker = attacker;
         this.attackEvent = attackEvent;
         this.impact = impact;
         this.penalty = penalty;
         this.isParry = isParry;
+        this.staminaConsumed = staminaConsumed;
+        this.container = container;
     }
 
     public ServerPlayer getPlayer() {
@@ -48,5 +53,13 @@ public class EpicFightGuardEvent extends Event {
 
     public boolean isParry() {
         return isParry;
+    }
+
+    public float getStaminaConsumed() {
+        return staminaConsumed;
+    }
+
+    public SkillContainer getContainer() {
+        return container;
     }
 }

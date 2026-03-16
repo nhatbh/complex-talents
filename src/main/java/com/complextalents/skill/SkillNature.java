@@ -26,14 +26,13 @@ public enum SkillNature implements StringRepresentable {
      */
     BOTH("both"),
 
+    TOGGLE("toggle"),
+
     /**
-     * Toggle skills that occupy a slot and can be turned on/off.
-     * First press activates the toggle (consumes initial cost, starts toggle).
-     * Second press deactivates (stops resource consumption).
-     * While active, consumes resources per tick.
-     * If resources run out, automatically turns off.
+     * Skill that has a start-charge phase and an end-release phase.
+     * Pressing starts charging, releasing triggers the final effect.
      */
-    TOGGLE("toggle");
+    CHARGE("charge");
 
     private final String name;
 
@@ -57,7 +56,7 @@ public enum SkillNature implements StringRepresentable {
      * @return true if this skill can be actively cast
      */
     public boolean hasActive() {
-        return this == ACTIVE || this == BOTH || this == TOGGLE;
+        return this == ACTIVE || this == BOTH || this == TOGGLE || this == CHARGE;
     }
 
     /**

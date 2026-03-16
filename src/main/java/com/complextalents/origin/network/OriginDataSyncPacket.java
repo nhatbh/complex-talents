@@ -20,15 +20,20 @@ public class OriginDataSyncPacket {
     private final double resourceValue;
     private final double resourceMax;
     private final ResourceLocation resourceTypeId;
+    private final double shieldValue;
+    private final double shieldMax;
 
     public OriginDataSyncPacket(UUID playerUuid, ResourceLocation originId, int originLevel,
-                                  double resourceValue, double resourceMax, ResourceLocation resourceTypeId) {
+                                  double resourceValue, double resourceMax, ResourceLocation resourceTypeId,
+                                  double shieldValue, double shieldMax) {
         this.playerUuid = playerUuid;
         this.originId = originId;
         this.originLevel = originLevel;
         this.resourceValue = resourceValue;
         this.resourceMax = resourceMax;
         this.resourceTypeId = resourceTypeId;
+        this.shieldValue = shieldValue;
+        this.shieldMax = shieldMax;
     }
 
     /**
@@ -43,12 +48,16 @@ public class OriginDataSyncPacket {
         double resourceValue = 0;
         double resourceMax = 0;
         ResourceLocation resourceTypeId = null;
+        double shieldValue = 0;
+        double shieldMax = 0;
 
         if (hasOrigin) {
             originId = buffer.readResourceLocation();
             originLevel = buffer.readVarInt();
             resourceValue = buffer.readDouble();
             resourceMax = buffer.readDouble();
+            shieldValue = buffer.readDouble();
+            shieldMax = buffer.readDouble();
 
             boolean hasResourceType = buffer.readBoolean();
             if (hasResourceType) {
@@ -56,7 +65,7 @@ public class OriginDataSyncPacket {
             }
         }
 
-        return new OriginDataSyncPacket(uuid, originId, originLevel, resourceValue, resourceMax, resourceTypeId);
+        return new OriginDataSyncPacket(uuid, originId, originLevel, resourceValue, resourceMax, resourceTypeId, shieldValue, shieldMax);
     }
 
     /**
@@ -73,6 +82,8 @@ public class OriginDataSyncPacket {
             buffer.writeVarInt(originLevel);
             buffer.writeDouble(resourceValue);
             buffer.writeDouble(resourceMax);
+            buffer.writeDouble(shieldValue);
+            buffer.writeDouble(shieldMax);
 
             boolean hasResourceType = resourceTypeId != null;
             buffer.writeBoolean(hasResourceType);
@@ -88,7 +99,7 @@ public class OriginDataSyncPacket {
     public void handle(Supplier<NetworkEvent.Context> context) {
         context.get().enqueueWork(() -> {
             // Update client-side data
-            ClientOriginData.syncFromServer(originId, originLevel, resourceValue, resourceMax, resourceTypeId);
+            ClientOriginData.syncFromServer(originId, originLevel, resourceValue, resourceMax, resourceTypeId, shieldValue, shieldMax);
         });
         context.get().setPacketHandled(true);
     }
@@ -101,14 +112,18 @@ public class OriginDataSyncPacket {
                             int originLevel,
                             double resourceValue,
                             double resourceMax,
-                            ResourceLocation resourceTypeId) {
+                            ResourceLocation resourceTypeId,
+                            double shieldValue,
+                            double shieldMax) {
         OriginDataSyncPacket packet = new OriginDataSyncPacket(
                 player.getUUID(),
                 originId,
                 originLevel,
                 resourceValue,
                 resourceMax,
-                resourceTypeId
+                resourceTypeId,
+                shieldValue,
+                shieldMax
         );
         com.complextalents.network.PacketHandler.sendTo(packet, player);
     }
@@ -154,4 +169,5 @@ public class OriginDataSyncPacket {
     public ResourceLocation getResourceTypeId() {
         return resourceTypeId;
     }
+
 }

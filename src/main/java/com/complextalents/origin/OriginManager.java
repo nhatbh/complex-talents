@@ -17,6 +17,13 @@ import org.jetbrains.annotations.Nullable;
  * </p>
  */
 public class OriginManager {
+ 
+    /**
+     * Get the raw origin data capability for a player.
+     */
+    public static net.minecraftforge.common.util.LazyOptional<IPlayerOriginData> getCapability(ServerPlayer player) {
+        return player.getCapability(OriginDataProvider.ORIGIN_DATA);
+    }
 
     /**
      * Set a player's origin.
@@ -258,6 +265,7 @@ public class OriginManager {
         int level = getOriginLevel(player);
         return origin.getScaledStat(statName, level);
     }
+
 
     // ========== Passive Stacks API (removed - use PassiveManager) ==========
 

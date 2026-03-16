@@ -246,6 +246,15 @@ public interface Skill extends PassiveOwner {
     void executeChanneled(ExecutionContext context, double channelTime);
 
     /**
+     * Execute the release effect of a charge skill.
+     * Only called for CHARGE nature skills.
+     *
+     * @param context The execution context containing player and target data
+     * @param chargeTime The total charge time in seconds
+     */
+    void executeRelease(ExecutionContext context, double chargeTime);
+
+    /**
      * Check if this skill has an active execution handler.
      */
     boolean hasActiveHandler();

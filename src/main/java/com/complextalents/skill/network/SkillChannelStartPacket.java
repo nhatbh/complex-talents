@@ -76,6 +76,9 @@ public class SkillChannelStartPacket {
             if (result.isValid()) {
                 // Success - allow channeling to start
                 PacketHandler.sendTo(new SkillChannelStartResponsePacket(true, skillId, slotIndex, null, null, player.level().getGameTime()), player);
+                
+                // For CHARGE skills, trigger the start-charge effect
+                com.complextalents.skill.server.SkillExecutionHandler.handleChargeStart(player, skillId);
             } else {
                 // Failed - check if it's a cooldown failure and get expiration time
                 Long cooldownExpiration = null;

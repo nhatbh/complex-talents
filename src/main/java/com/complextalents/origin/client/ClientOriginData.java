@@ -19,6 +19,8 @@ public class ClientOriginData {
     private static double resourceValue = 0;
     private static double resourceMax = 0;
     private static ResourceLocation resourceTypeId = null;
+    private static double shieldValue = 0;
+    private static double shieldMax = 0;
 
     /**
      * Sync origin data from the server.
@@ -30,12 +32,24 @@ public class ClientOriginData {
      * @param resTypeId        The resource type ID
      */
     public static void syncFromServer(@Nullable ResourceLocation origin, int level,
-                                       double resourceVal, double resMax, @Nullable ResourceLocation resTypeId) {
+                                       double resourceVal, double resMax, @Nullable ResourceLocation resTypeId,
+                                       double sVal, double sMax) {
         originId = origin;
         originLevel = level;
         resourceValue = resourceVal;
         resourceMax = resMax;
         resourceTypeId = resTypeId;
+        shieldValue = sVal;
+        shieldMax = sMax;
+    }
+
+
+    public static double getShieldValue() {
+        return shieldValue;
+    }
+
+    public static double getShieldMax() {
+        return shieldMax;
     }
 
     /**

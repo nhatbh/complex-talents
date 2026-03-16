@@ -124,8 +124,14 @@ public class SkillExecutionHandler {
                     return;
                 }
 
-                // Execute the skill (channelTime is available in context for onActive handlers)
-                builtSkill.executeActive(context);
+                // Execute the skill
+                if (builtSkill.getNature() == com.complextalents.skill.SkillNature.CHARGE) {
+                    // For charge skills, this event is the RELEASE phase
+                    builtSkill.executeRelease(context, context.channelTime());
+                } else {
+                    // Normal active execution
+                    builtSkill.executeActive(context);
+                }
 
                 // Consume resource after successful execution
                 consumeOriginResource(player, builtSkill);
@@ -136,6 +142,40 @@ public class SkillExecutionHandler {
         }
         // For custom skill implementations, they should have their own event listeners
         // This allows for more complex skill behaviors
+    }
+
+    /**
+     * Triggered when a CHARGE skill starts its charging phase.
+     * This triggers the activeHandler of the skill.
+     *
+     * @param player  The player starting the charge
+     * @param skillId The skill ID
+     */
+    public static void handleChargeStart(ServerPlayer player, ResourceLocation skillId) {
+        Skill skill = SkillRegistry.getInstance().getSkill(skillId);
+        if (skill instanceof BuiltSkill builtSkill && builtSkill.getNature() == com.complextalents.skill.SkillNature.CHARGE) {
+            // Check for enhanced skill first
+            int slotIndex = findSlotForSkill(player, skillId);
+            Skill actualSkill = builtSkill;
+            ResourceLocation actualSkillId = skillId;
+
+            if (slotIndex >= 0 && slotIndex <= 2) {
+                ResourceLocation enhancedId = SkillFormManager.getEnhancedSkillId(player, slotIndex);
+                if (enhancedId != null) {
+                    Skill enhanced = SkillRegistry.getInstance().getSkill(enhancedId);
+                    if (enhanced != null) {
+                        actualSkill = (BuiltSkill) enhanced;
+                        actualSkillId = enhancedId;
+                    }
+                }
+            }
+
+            // Create context (with 0 channel time as it just started)
+            Skill.ExecutionContext context = createExecutionContextForSkill(player, actualSkillId, 0.0);
+
+            // Execute the START phase (using activeHandler)
+            actualSkill.executeActive(context);
+        }
     }
 
     /**
@@ -154,6 +194,24 @@ public class SkillExecutionHandler {
 
         Skill.ServerPlayerWrapper playerWrapper = new Skill.ServerPlayerWrapper(player);
         Skill.ResolvedTargetWrapper targetWrapper = new Skill.ResolvedTargetWrapper(targetData);
+
+        return new Skill.ExecutionContext(playerWrapper, targetWrapper, skillId, skillLevel, channelTime);
+    }
+
+    /**
+     * Create an execution context for a specific skill ID and player.
+     */
+    private static Skill.ExecutionContext createExecutionContextForSkill(ServerPlayer player, ResourceLocation skillId, double channelTime) {
+        // Get player's skill level from capability for the specified skill
+        int skillLevel = player.getCapability(SkillDataProvider.SKILL_DATA)
+                .map(data -> data.getSkillLevel(skillId))
+                .orElse(1);
+
+        Skill.ServerPlayerWrapper playerWrapper = new Skill.ServerPlayerWrapper(player);
+        // During start-charge, we might not have target data yet, use dummy
+        Skill.ResolvedTargetWrapper targetWrapper = new Skill.ResolvedTargetWrapper(
+                new ResolvedTargetData(player, player, player.position(), player.getLookAngle(), true, true, 0.0)
+        );
 
         return new Skill.ExecutionContext(playerWrapper, targetWrapper, skillId, skillLevel, channelTime);
     }

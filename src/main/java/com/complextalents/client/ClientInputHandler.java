@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
@@ -78,6 +79,26 @@ public class ClientInputHandler {
             SkillCastingClient.cancelChanneling();
             MC.player.displayClientMessage(Component.literal("§7Channeling canceled"), true);
             event.setCanceled(true);
+        }
+    }
+
+    /**
+     * Handle client tick events - check for auto-release of charge skills.
+     */
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || MC.player == null) {
+            return;
+        }
+
+        if (SkillCastingClient.isChanneling()) {
+            double maxTime = SkillCastingClient.getMaxChannelTime();
+            if (maxTime > 0) {
+                long currentTimeMs = SkillCastingClient.getCurrentChannelTime();
+                if (currentTimeMs >= maxTime * 1000) {
+                    handleSkillKeyRelease(SkillCastingClient.getCurrentSlot());
+                }
+            }
         }
     }
 

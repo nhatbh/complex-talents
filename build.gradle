@@ -149,7 +149,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 repositories {
     // Put repositories for dependencies here
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
-    mavenLocal()
+    // mavenLocal()
     // Iron's Spellbooks repository for testing integration
     maven {
         name = "Iron's Maven - Release"

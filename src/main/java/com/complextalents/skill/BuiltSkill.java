@@ -2,7 +2,6 @@ package com.complextalents.skill;
 
 import com.complextalents.passive.PassiveStackDef;
 import com.complextalents.targeting.TargetType;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,6 +17,8 @@ import java.util.function.Consumer;
 public class BuiltSkill implements Skill {
 
     private final ResourceLocation id;
+    private final net.minecraft.network.chat.Component displayName;
+    private final net.minecraft.network.chat.Component description;
     private final SkillNature nature;
     private final TargetType targetingType;
     private final double maxRange;
@@ -46,6 +47,7 @@ public class BuiltSkill implements Skill {
     private final BiConsumer<ExecutionContext, Object> activeHandler;
     private final Consumer<Object> passiveHandler;
     private final SkillBuilder.ChanneledHandler channeledHandler;
+    private final SkillBuilder.ReleaseHandler releaseHandler;
     private final BiFunction<ExecutionContext, Object, Boolean> validationHandler;
 
     // Channeling properties
@@ -58,6 +60,8 @@ public class BuiltSkill implements Skill {
      */
     BuiltSkill(SkillBuilder builder) {
         this.id = builder.getId();
+        this.displayName = builder.getDisplayName();
+        this.description = builder.getDescription();
         this.nature = builder.getNature();
         this.targetingType = builder.getTargetingType();
         this.maxRange = builder.getMaxRange();
@@ -85,6 +89,7 @@ public class BuiltSkill implements Skill {
         this.activeHandler = builder.getActiveHandler();
         this.passiveHandler = builder.getPassiveHandler();
         this.channeledHandler = builder.getChanneledHandler();
+        this.releaseHandler = builder.getReleaseHandler();
         this.validationHandler = builder.getValidationHandler();
     }
 
@@ -104,13 +109,13 @@ public class BuiltSkill implements Skill {
     }
 
     @Override
-    public Component getDisplayName() {
-        return Component.translatable("skill." + id.getNamespace() + "." + id.getPath());
+    public net.minecraft.network.chat.Component getDisplayName() {
+        return displayName != null ? displayName : net.minecraft.network.chat.Component.literal("skill." + id.getNamespace() + "." + id.getPath());
     }
 
     @Override
-    public Component getDescription() {
-        return Component.translatable("skill." + id.getNamespace() + "." + id.getPath() + ".desc");
+    public net.minecraft.network.chat.Component getDescription() {
+        return description != null ? description : net.minecraft.network.chat.Component.literal("skill." + id.getNamespace() + "." + id.getPath() + ".desc");
     }
 
     @Override
@@ -278,8 +283,15 @@ public class BuiltSkill implements Skill {
     }
 
     @Override
+    public void executeRelease(ExecutionContext context, double chargeTime) {
+        if (releaseHandler != null) {
+            releaseHandler.handle(context, context.player().get(), chargeTime);
+        }
+    }
+
+    @Override
     public boolean hasActiveHandler() {
-        return activeHandler != null || channeledHandler != null;
+        return activeHandler != null || channeledHandler != null || releaseHandler != null;
     }
 
     @Override

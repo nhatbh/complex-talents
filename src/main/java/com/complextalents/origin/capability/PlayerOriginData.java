@@ -30,6 +30,11 @@ public class PlayerOriginData implements IPlayerOriginData {
     // Current resource value
     private double resourceValue = 0;
 
+
+    // Temporary shield data for HUD (not persisted)
+    private double shieldValue = 0;
+    private double shieldMax = 0;
+
     public PlayerOriginData(ServerPlayer player) {
         this.player = player;
     }
@@ -134,10 +139,35 @@ public class PlayerOriginData implements IPlayerOriginData {
                 originLevel,
                 resourceValue,
                 resourceMax,
-                resourceTypeId
+                resourceTypeId,
+                shieldValue,
+                shieldMax
         );
 
         // Passive stacks are synced separately by the shared capability
+    }
+
+
+    @Override
+    public double getShieldValue() {
+        return shieldValue;
+    }
+
+    @Override
+    public void setShieldValue(double value) {
+        this.shieldValue = value;
+        sync();
+    }
+
+    @Override
+    public double getShieldMax() {
+        return shieldMax;
+    }
+
+    @Override
+    public void setShieldMax(double value) {
+        this.shieldMax = value;
+        sync();
     }
 
     @Override
@@ -165,6 +195,11 @@ public class PlayerOriginData implements IPlayerOriginData {
 
         // Copy resource value
         resourceValue = other.getResource();
+
+
+        // Copy Shield (might be useful for dimension changes)
+        shieldValue = other.getShieldValue();
+        shieldMax = other.getShieldMax();
 
         sync();
     }
@@ -195,6 +230,7 @@ public class PlayerOriginData implements IPlayerOriginData {
 
         // Serialize resource value (resets on death, but saved for logout/login)
         tag.putDouble("resourceValue", resourceValue);
+
 
         // Passive stacks are now serialized by the shared capability
 
@@ -234,6 +270,7 @@ public class PlayerOriginData implements IPlayerOriginData {
             ResourceType resourceType = getResourceType();
             resourceValue = resourceType != null ? resourceType.getMin() : 0;
         }
+
 
         // Passive stacks are now deserialized by the shared capability
     }

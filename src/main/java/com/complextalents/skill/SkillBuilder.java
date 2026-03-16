@@ -15,6 +15,8 @@ import java.util.function.Consumer;
  */
 public class SkillBuilder {
     private ResourceLocation id;
+    private net.minecraft.network.chat.Component displayName;
+    private net.minecraft.network.chat.Component description;
     private SkillNature nature = SkillNature.ACTIVE;
     private TargetType targetingType = TargetType.NONE;
     private double maxRange = 32.0;
@@ -38,6 +40,7 @@ public class SkillBuilder {
     private BiConsumer<Skill.ExecutionContext, Object> activeHandler;
     private Consumer<Object> passiveHandler;
     private ChanneledHandler channeledHandler;
+    private ReleaseHandler releaseHandler;
 
     // Validation handler (runs before cast to check if skill can be used)
     private BiFunction<Skill.ExecutionContext, Object, Boolean> validationHandler;
@@ -58,6 +61,14 @@ public class SkillBuilder {
     @FunctionalInterface
     public interface ChanneledHandler {
         void handle(Skill.ExecutionContext context, Object player, double channelTime);
+    }
+
+    /**
+     * Handler for charge skills that receives the duration of the charge.
+     */
+    @FunctionalInterface
+    public interface ReleaseHandler {
+        void handle(Skill.ExecutionContext context, Object player, double chargeTime);
     }
 
     /**
@@ -83,6 +94,22 @@ public class SkillBuilder {
 
     private SkillBuilder(ResourceLocation id) {
         this.id = id;
+    }
+
+    /**
+     * Set the display name for this skill.
+     */
+    public SkillBuilder displayName(String name) {
+        this.displayName = net.minecraft.network.chat.Component.literal(name);
+        return this;
+    }
+
+    /**
+     * Set the description for this skill.
+     */
+    public SkillBuilder description(String desc) {
+        this.description = net.minecraft.network.chat.Component.literal(desc);
+        return this;
     }
 
     /**
@@ -298,6 +325,16 @@ public class SkillBuilder {
     }
 
     /**
+     * Register the release execution handler.
+     * This is called for CHARGE skills when the player releases the skill key.
+     * The handler receives the Skill.ExecutionContext, the raw ServerPlayer, and the charge time in seconds.
+     */
+    public SkillBuilder onRelease(ReleaseHandler handler) {
+        this.releaseHandler = handler;
+        return this;
+    }
+
+    /**
      * Register a validation handler that runs before the skill is cast.
      * This allows custom conditions to be checked before skill execution.
      * <p>
@@ -502,6 +539,8 @@ public class SkillBuilder {
 
     // Package-private getters for BuiltSkill
     ResourceLocation getId() { return id; }
+    net.minecraft.network.chat.Component getDisplayName() { return displayName; }
+    net.minecraft.network.chat.Component getDescription() { return description; }
     SkillNature getNature() { return nature; }
     TargetType getTargetingType() { return targetingType; }
     double getMaxRange() { return maxRange; }
@@ -521,6 +560,7 @@ public class SkillBuilder {
     BiConsumer<Skill.ExecutionContext, Object> getActiveHandler() { return activeHandler; }
     Consumer<Object> getPassiveHandler() { return passiveHandler; }
     ChanneledHandler getChanneledHandler() { return channeledHandler; }
+    ReleaseHandler getReleaseHandler() { return releaseHandler; }
     BiFunction<Skill.ExecutionContext, Object, Boolean> getValidationHandler() { return validationHandler; }
     int getMaxLevel() { return maxLevel; }
     java.util.Map<String, double[]> getScaledStats() { return new java.util.HashMap<>(scaledStats); }

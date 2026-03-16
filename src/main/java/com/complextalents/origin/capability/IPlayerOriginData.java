@@ -87,6 +87,27 @@ public interface IPlayerOriginData extends INBTSerializable<net.minecraft.nbt.Co
      */
     void tick();
 
+
+    /**
+     * Get the player's temporary shield value (e.g., for Warrior HUD).
+     */
+    double getShieldValue();
+
+    /**
+     * Set the player's temporary shield value.
+     */
+    void setShieldValue(double value);
+
+    /**
+     * Get the player's temporary shield maximum.
+     */
+    double getShieldMax();
+
+    /**
+     * Set the player's temporary shield maximum.
+     */
+    void setShieldMax(double value);
+
     /**
      * Copy all origin data from another instance.
      * Used during player clone/respawn to persist data.

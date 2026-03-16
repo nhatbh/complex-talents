@@ -110,6 +110,7 @@ public class TalentsMod {
         DarkMageRegistrar.register();
         AssassinRegistrar.register();
         ElementalMageOrigin.register();
+        com.complextalents.impl.warrior.WarriorRegistrar.register();
         LOGGER.info("Example origins registered");
     }
 
