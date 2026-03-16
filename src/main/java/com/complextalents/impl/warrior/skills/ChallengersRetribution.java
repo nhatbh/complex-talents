@@ -215,6 +215,19 @@ public class ChallengersRetribution {
                 kbAttr.removeModifier(KB_RESIST_UUID);
 
             if (data.health > 0) {
+                // Shield survived - award XP based on total absorbed damage
+                double parryXP = XPFormula.calculateWarriorPerfectParryXP(data.absorbedDamage);
+                ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                XPContext xpContext = XPContext.builder()
+                    .source(XPSource.WARRIOR_PARRY)
+                    .chunkPos(chunkPos)
+                    .rawAmount(parryXP)
+                    .metadata("damageAbsorbed", data.absorbedDamage)
+                    .metadata("shieldMaxHealth", data.maxHealth)
+                    .metadata("shieldRemainingHealth", data.health)
+                    .build();
+                LevelingService.getInstance().awardXP(player, parryXP, XPSource.WARRIOR_PARRY, xpContext);
+
                 // Reflect Damage
                 double reflectMult = context.getStat("reflectPercent");
                 double damage = data.absorbedDamage * reflectMult;
@@ -272,45 +285,14 @@ public class ChallengersRetribution {
                 data.absorbedDamage += amount;
                 data.health -= amount;
 
-                // Perfect Parry Window: First 10 ticks (500ms)
-                boolean isPerfect = (System.currentTimeMillis() - data.startTime) <= 500;
+                // Award style points for blocking
+                WarriorOriginHandler.addStylePoints(player, 20.0);
 
-                if (isPerfect) {
-                    // Award 50 Style points
-                    WarriorOriginHandler.addStylePoints(player, 50.0);
-
-                    // Award XP
-                    double parryXP = XPFormula.calculateWarriorPerfectParryXP(amount);
-                    ChunkPos chunkPos = new ChunkPos(player.blockPosition());
-                    long parryTiming = System.currentTimeMillis() - data.startTime;
-                    XPContext context = XPContext.builder()
-                        .source(XPSource.WARRIOR_PARRY)
-                        .chunkPos(chunkPos)
-                        .rawAmount(parryXP)
-                        .metadata("damageAbsorbed", amount)
-                        .metadata("parryTimingMs", parryTiming)
-                        .metadata("isPerfect", true)
-                        .build();
-                    LevelingService.getInstance().awardXP(player, parryXP, XPSource.WARRIOR_PARRY, context);
-
-                    // FX: High-pitched block sound and particles
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.2f, 1.5f);
-                    
-                    ((net.minecraft.server.level.ServerLevel) player.level()).sendParticles(
-                            ParticleTypes.FLASH,
-                            player.getX(), player.getY() + 1.2, player.getZ(),
-                            1, 0, 0, 0, 0);
-                } else {
-                    // Standard block: 20 Style points
-                    WarriorOriginHandler.addStylePoints(player, 20.0);
-                    
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 0.8f, 0.8f);
-                }
+                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 0.8f, 0.8f);
 
                 if (data.health <= 0) {
-                    // Shield BROKEN
+                    // Shield BROKEN - remove without awarding XP
                     ACTIVE_SHIELDS.remove(player.getUUID());
 
                     // Clear HUD
@@ -338,10 +320,6 @@ public class ChallengersRetribution {
                             playerPatch.playAnimationSynchronized(anim, 0.0F);
                         }
                     }
-
-                    // Cancellations for Skill system (requires some way to tell the client/handler
-                    // to stop)
-                    // Currently, the server just stops release from happening if data is removed
                 } else {
                     // Update HUD
                     OriginManager.getCapability(player).ifPresent(cap -> {
