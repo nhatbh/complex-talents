@@ -15,7 +15,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import com.complextalents.leveling.util.XPFormula;
-import com.complextalents.leveling.events.LevelingEventHandler;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import net.minecraft.world.level.ChunkPos;
 import com.complextalents.elemental.api.ReactionContext;
 import net.minecraft.server.level.ServerLevel;
 
@@ -126,7 +129,19 @@ public class ElementalReactionHandler {
             // Award Master of Elements XP
             if (executed) {
                 double reactionXP = XPFormula.calculateElementalMageMasterOfElementsXP(reactionDamage);
-                LevelingEventHandler.awardSecondaryXP(player, reactionXP);
+                ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                XPContext xpContext = XPContext.builder()
+                    .source(XPSource.ELEMENTAL_MASTER)
+                    .chunkPos(chunkPos)
+                    .rawAmount(reactionXP)
+                    .metadata("reactionDamage", reactionDamage)
+                    .metadata("reactionType", reaction.name())
+                    .metadata("triggeringElement", newElement.name())
+                    .metadata("existingElement", existingElement.name())
+                    .metadata("elementalMastery", mastery)
+                    .metadata("targetUUID", target.getUUID().toString())
+                    .build();
+                LevelingService.getInstance().awardXP(player, reactionXP, XPSource.ELEMENTAL_MASTER, xpContext);
             }
 
             TalentsMod.LOGGER.info("REACTION_EXECUTED: {} reaction on {} (UUID: {}). Reaction executed: {}. Existing element: {}, New element: {}",

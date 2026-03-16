@@ -1,8 +1,11 @@
 package com.complextalents.impl.warrior.skills;
 
 import com.complextalents.impl.warrior.WarriorOriginHandler;
-import com.complextalents.leveling.events.LevelingEventHandler;
 import com.complextalents.leveling.util.XPFormula;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import net.minecraft.world.level.ChunkPos;
 import com.complextalents.origin.OriginManager;
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.SkillNature;
@@ -278,7 +281,17 @@ public class ChallengersRetribution {
 
                     // Award XP
                     double parryXP = XPFormula.calculateWarriorPerfectParryXP(amount);
-                    LevelingEventHandler.awardSecondaryXP(player, parryXP);
+                    ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                    long parryTiming = System.currentTimeMillis() - data.startTime;
+                    XPContext context = XPContext.builder()
+                        .source(XPSource.WARRIOR_PARRY)
+                        .chunkPos(chunkPos)
+                        .rawAmount(parryXP)
+                        .metadata("damageAbsorbed", amount)
+                        .metadata("parryTimingMs", parryTiming)
+                        .metadata("isPerfect", true)
+                        .build();
+                    LevelingService.getInstance().awardXP(player, parryXP, XPSource.WARRIOR_PARRY, context);
 
                     // FX: High-pitched block sound and particles
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),

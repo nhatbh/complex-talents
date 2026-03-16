@@ -30,6 +30,11 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import com.complextalents.leveling.util.XPFormula;
+import net.minecraft.world.level.ChunkPos;
 
 import java.util.UUID;
 
@@ -157,9 +162,21 @@ public class HighPriestOrigin {
             }
 
             // Award Clutch Savior XP
-            double clutchXP = com.complextalents.leveling.util.XPFormula.calculateHighPriestClutchSaviorXP(
+            double clutchXP = XPFormula.calculateHighPriestClutchSaviorXP(
                 effectiveHeal, target.getMaxHealth(), targetCurrentHealth);
-            com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(player, clutchXP);
+            ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+            double hpCriticality = targetCurrentHealth > 0 ? target.getMaxHealth() / targetCurrentHealth : 5.0;
+            XPContext context = XPContext.builder()
+                .source(XPSource.HIGHPRIEST_SAVIOR)
+                .chunkPos(chunkPos)
+                .rawAmount(clutchXP)
+                .metadata("healAmount", effectiveHeal)
+                .metadata("targetMaxHP", target.getMaxHealth())
+                .metadata("targetCurrentHP", targetCurrentHealth)
+                .metadata("hpCriticality", Math.min(hpCriticality, 5.0))
+                .metadata("targetUUID", target.getUUID().toString())
+                .build();
+            LevelingService.getInstance().awardXP(player, clutchXP, XPSource.HIGHPRIEST_SAVIOR, context);
         }
     }
 

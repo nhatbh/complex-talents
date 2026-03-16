@@ -14,7 +14,10 @@ import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import com.complextalents.leveling.util.XPFormula;
-import com.complextalents.leveling.events.LevelingEventHandler;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import net.minecraft.world.level.ChunkPos;
 import yesman.epicfight.world.capabilities.EpicFightCapabilities;
 import yesman.epicfight.world.capabilities.entitypatch.player.ServerPlayerPatch;
 import yesman.epicfight.skill.SkillContainer;
@@ -98,7 +101,15 @@ public class WarriorOriginHandler {
                 // Award Unstoppable Momentum XP
                 if (rank == StyleRank.SSS) {
                     double momentumXP = XPFormula.calculateWarriorUnstoppableMomentumXP(event.getAmount());
-                    LevelingEventHandler.awardSecondaryXP(player, momentumXP);
+                    ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                    XPContext context = XPContext.builder()
+                        .source(XPSource.WARRIOR_MOMENTUM)
+                        .chunkPos(chunkPos)
+                        .rawAmount(momentumXP)
+                        .metadata("sssDamage", event.getAmount())
+                        .metadata("styleRank", "SSS")
+                        .build();
+                    LevelingService.getInstance().awardXP(player, momentumXP, XPSource.WARRIOR_MOMENTUM, context);
                 }
             }
         }

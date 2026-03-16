@@ -12,7 +12,10 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import com.complextalents.leveling.util.XPFormula;
-import com.complextalents.leveling.events.LevelingEventHandler;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * Event handler for Soul Siphon passive.
@@ -66,12 +69,30 @@ public class SoulSiphonHandler {
 
         // Award Soul Hoarder XP
         double soulXP = XPFormula.calculateDarkMageSoulHoarderXP(soulsGained);
-        LevelingEventHandler.awardSecondaryXP(player, soulXP);
+        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+        XPContext soulContext = XPContext.builder()
+            .source(XPSource.DARKMAGE_SOUL_HOARDER)
+            .chunkPos(chunkPos)
+            .rawAmount(soulXP)
+            .metadata("soulsHarvested", soulsGained)
+            .metadata("victimMaxHealth", victim.getMaxHealth())
+            .build();
+        LevelingService.getInstance().awardXP(player, soulXP, XPSource.DARKMAGE_SOUL_HOARDER, soulContext);
 
         // Award Edge of Death XP
         float currentHPPercentage = player.getHealth() / player.getMaxHealth();
         double edgeXP = XPFormula.calculateDarkMageEdgeOfDeathXP(victim.getMaxHealth(), currentHPPercentage);
-        LevelingEventHandler.awardSecondaryXP(player, edgeXP);
+        ChunkPos chunkPos2 = new ChunkPos(player.blockPosition());
+        XPContext edgeContext = XPContext.builder()
+            .source(XPSource.DARKMAGE_EDGE)
+            .chunkPos(chunkPos2)
+            .rawAmount(edgeXP)
+            .metadata("killingBlowDamage", victim.getMaxHealth())
+            .metadata("playerHPPercentage", currentHPPercentage)
+            .metadata("playerCurrentHP", player.getHealth())
+            .metadata("playerMaxHP", player.getMaxHealth())
+            .build();
+        LevelingService.getInstance().awardXP(player, edgeXP, XPSource.DARKMAGE_EDGE, edgeContext);
 
         // Soul escape particles at the killed mob (more souls = more particles)
         if (victim.level() instanceof ServerLevel serverLevel) {

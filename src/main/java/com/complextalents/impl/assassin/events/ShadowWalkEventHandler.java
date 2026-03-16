@@ -6,6 +6,10 @@ import com.complextalents.impl.assassin.effect.AssassinEffects;
 import com.complextalents.impl.assassin.origin.AssassinOrigin;
 import com.complextalents.impl.assassin.skill.ShadowWalkSkill;
 import com.complextalents.leveling.util.XPFormula;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import net.minecraft.world.level.ChunkPos;
 import com.complextalents.skill.SkillManager;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -205,7 +209,15 @@ public class ShadowWalkEventHandler {
                 
                 // Award Ambush XP
                 double ambushXP = XPFormula.calculateAssassinAmbushXP(ambushDamage);
-                com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(attacker, ambushXP);
+                ChunkPos chunkPos = new ChunkPos(attacker.blockPosition());
+                XPContext context = XPContext.builder()
+                    .source(XPSource.ASSASSIN_AMBUSH)
+                    .chunkPos(chunkPos)
+                    .rawAmount(ambushXP)
+                    .metadata("totalDamage", ambushDamage)
+                    .metadata("apBuffMultiplier", apBuff)
+                    .build();
+                LevelingService.getInstance().awardXP(attacker, ambushXP, XPSource.ASSASSIN_AMBUSH, context);
             }
             if (attacker.hasEffect(AssassinEffects.SHADOW_WALK.get())) {
                 attacker.removeEffect(AssassinEffects.SHADOW_WALK.get());
@@ -239,7 +251,18 @@ public class ShadowWalkEventHandler {
 
                     // Award Ghost XP
                     double ghostXP = XPFormula.calculateAssassinGhostXP(finalBackstabDamage, currentGauge, maxGauge);
-                    com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(attacker, ghostXP);
+                    ChunkPos chunkPos = new ChunkPos(attacker.blockPosition());
+                    double gaugeEfficiency = maxGauge > 0 ? currentGauge / maxGauge : 0;
+                    XPContext ghostContext = XPContext.builder()
+                        .source(XPSource.ASSASSIN_GHOST)
+                        .chunkPos(chunkPos)
+                        .rawAmount(ghostXP)
+                        .metadata("backstabDamage", finalBackstabDamage)
+                        .metadata("currentGauge", currentGauge)
+                        .metadata("maxGauge", maxGauge)
+                        .metadata("gaugeEfficiency", gaugeEfficiency)
+                        .build();
+                    LevelingService.getInstance().awardXP(attacker, ghostXP, XPSource.ASSASSIN_GHOST, ghostContext);
                     
                     // Backstab FX (Blood Splatter + Fine Mist)
                     ServerLevel serverLevel = attacker.serverLevel();

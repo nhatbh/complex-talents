@@ -14,6 +14,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
+import com.complextalents.leveling.service.LevelingService;
+import com.complextalents.leveling.events.xp.XPSource;
+import com.complextalents.leveling.events.xp.XPContext;
+import com.complextalents.leveling.util.XPFormula;
+import com.complextalents.leveling.data.PlayerLevelingData;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * Seraphic Echo - A divine orb of light that hovers and moves through space.
@@ -87,9 +93,18 @@ public class SeraphicEchoSkill {
 
                         // Award Crowd Control XP
                         if (pulledCount > 0) {
-                            int level = com.complextalents.persistence.PlayerPersistentData.get((net.minecraft.server.level.ServerLevel) player.level()).getLevel(player.getUUID());
-                            double crowdXP = com.complextalents.leveling.util.XPFormula.calculateHighPriestCrowdControlXP(pulledCount, level);
-                            com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(player, crowdXP);
+                            int playerLevel = PlayerLevelingData.get(player.serverLevel()).getLevel(player.getUUID());
+                            double crowdXP = XPFormula.calculateHighPriestCrowdControlXP(pulledCount, playerLevel);
+                            ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                            XPContext crowdContext = XPContext.builder()
+                                .source(XPSource.HIGHPRIEST_CROWD_CONTROL)
+                                .chunkPos(chunkPos)
+                                .rawAmount(crowdXP)
+                                .metadata("mobsPulled", pulledCount)
+                                .metadata("playerLevel", playerLevel)
+                                .metadata("swordPosition", sword != null ? sword.position().toString() : "unknown")
+                                .build();
+                            LevelingService.getInstance().awardXP(player, crowdXP, XPSource.HIGHPRIEST_CROWD_CONTROL, crowdContext);
                         }
                         return;
                     }
