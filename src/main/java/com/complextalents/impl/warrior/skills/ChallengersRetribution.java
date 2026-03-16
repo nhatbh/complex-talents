@@ -1,6 +1,8 @@
 package com.complextalents.impl.warrior.skills;
 
 import com.complextalents.impl.warrior.WarriorOriginHandler;
+import com.complextalents.leveling.events.LevelingEventHandler;
+import com.complextalents.leveling.util.XPFormula;
 import com.complextalents.origin.OriginManager;
 import com.complextalents.skill.SkillBuilder;
 import com.complextalents.skill.SkillNature;
@@ -266,6 +268,33 @@ public class ChallengersRetribution {
                 double amount = event.getAmount();
                 data.absorbedDamage += amount;
                 data.health -= amount;
+
+                // Perfect Parry Window: First 10 ticks (500ms)
+                boolean isPerfect = (System.currentTimeMillis() - data.startTime) <= 500;
+
+                if (isPerfect) {
+                    // Award 50 Style points
+                    WarriorOriginHandler.addStylePoints(player, 50.0);
+
+                    // Award XP
+                    double parryXP = XPFormula.calculateWarriorPerfectParryXP(amount);
+                    LevelingEventHandler.awardSecondaryXP(player, parryXP);
+
+                    // FX: High-pitched block sound and particles
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.2f, 1.5f);
+                    
+                    ((net.minecraft.server.level.ServerLevel) player.level()).sendParticles(
+                            ParticleTypes.FLASH,
+                            player.getX(), player.getY() + 1.2, player.getZ(),
+                            1, 0, 0, 0, 0);
+                } else {
+                    // Standard block: 20 Style points
+                    WarriorOriginHandler.addStylePoints(player, 20.0);
+                    
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 0.8f, 0.8f);
+                }
 
                 if (data.health <= 0) {
                     // Shield BROKEN

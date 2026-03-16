@@ -11,6 +11,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import com.complextalents.leveling.util.XPFormula;
+import com.complextalents.leveling.events.LevelingEventHandler;
 
 /**
  * Event handler for Soul Siphon passive.
@@ -61,6 +63,15 @@ public class SoulSiphonHandler {
 
         // Add souls and sync
         SoulData.addSouls(player, soulsGained);
+
+        // Award Soul Hoarder XP
+        double soulXP = XPFormula.calculateDarkMageSoulHoarderXP(soulsGained);
+        LevelingEventHandler.awardSecondaryXP(player, soulXP);
+
+        // Award Edge of Death XP
+        float currentHPPercentage = player.getHealth() / player.getMaxHealth();
+        double edgeXP = XPFormula.calculateDarkMageEdgeOfDeathXP(victim.getMaxHealth(), currentHPPercentage);
+        LevelingEventHandler.awardSecondaryXP(player, edgeXP);
 
         // Soul escape particles at the killed mob (more souls = more particles)
         if (victim.level() instanceof ServerLevel serverLevel) {

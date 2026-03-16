@@ -14,6 +14,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import com.complextalents.leveling.util.XPFormula;
+import com.complextalents.leveling.events.LevelingEventHandler;
+import com.complextalents.elemental.api.ReactionContext;
+import net.minecraft.server.level.ServerLevel;
 
 import java.util.Map;
 import java.util.UUID;
@@ -98,17 +102,38 @@ public class ElementalReactionHandler {
                 continue;
             }
 
+            // Calculate damage for XP before execution
+            float mastery = ReactionRegistry.getInstance().calculateElementalMastery(player);
+            ReactionContext context = ReactionContext.builder()
+                .target(target)
+                .attacker(player)
+                .reaction(reaction)
+                .triggeringElement(newElement)
+                .existingElement(existingElement)
+                .damageMultiplier(1.0f)
+                .elementalMastery(mastery)
+                .level((ServerLevel) target.level())
+                .build();
+            var strategy = ReactionRegistry.getInstance().getStrategy(reaction);
+            if (strategy == null) continue;
+            float reactionDamage = strategy.calculateDamage(context);
+
             // Trigger the reaction
             boolean executed = ReactionRegistry.getInstance().executeReaction(
                 target, reaction, newElement, existingElement, player, 1.0f
             );
+
+            // Award Master of Elements XP
+            if (executed) {
+                double reactionXP = XPFormula.calculateElementalMageMasterOfElementsXP(reactionDamage);
+                LevelingEventHandler.awardSecondaryXP(player, reactionXP);
+            }
 
             TalentsMod.LOGGER.info("REACTION_EXECUTED: {} reaction on {} (UUID: {}). Reaction executed: {}. Existing element: {}, New element: {}",
                 reaction, target.getName().getString(), targetId, executed, existingElement, newElement);
 
             // If reaction was executed and it consumes stacks, remove the existing element
             if (executed) {
-                IReactionStrategy strategy = ReactionRegistry.getInstance().getStrategy(reaction);
                 if (strategy != null && strategy.consumesStacks()) {
                     TalentsMod.LOGGER.info("CONSUMING_STACK: Removing {} stack from {} (UUID: {}) after {} reaction. Stacks before removal: {}",
                         existingElement, target.getName().getString(), targetId, reaction, elements.keySet());

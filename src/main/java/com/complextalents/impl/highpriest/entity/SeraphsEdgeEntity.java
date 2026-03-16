@@ -152,9 +152,9 @@ public class SeraphsEdgeEntity extends LivingEntity {
         setDeltaMovement(velocity);
     }
 
-    public void pullEnemies() {
+    public int pullEnemies() {
         if (level().isClientSide)
-            return;
+            return 0;
 
         Entity owner = getOwner();
         List<LivingEntity> enemies = level().getEntitiesOfClass(
@@ -182,7 +182,7 @@ public class SeraphsEdgeEntity extends LivingEntity {
                 }
             });
         }
-
+        
         // Play orb pull particle effect
         PacketHandler.sendToNearby(
                 new S2CSpawnAAAParticlePacket(
@@ -195,6 +195,8 @@ public class SeraphsEdgeEntity extends LivingEntity {
                 new SpawnSeraphSwordFXPacket(position().add(0, 0, 0), null, 4),
                 (ServerLevel) level(),
                 position());
+
+        return enemies.size();
     }
 
     @Override

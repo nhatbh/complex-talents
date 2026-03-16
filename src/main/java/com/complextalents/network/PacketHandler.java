@@ -33,6 +33,7 @@ import com.complextalents.network.assassin.AssassinEntitySyncPacket;
 
 import com.complextalents.network.elementalmage.ElementalMageSyncPacket;
 import com.complextalents.network.highpriest.FaithSyncPacket;
+import com.complextalents.leveling.network.LevelDataSyncPacket;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -285,6 +286,12 @@ public class PacketHandler {
                                 FaithSyncPacket::encode,
                                 FaithSyncPacket::decode,
                                 FaithSyncPacket::handle);
+
+                INSTANCE.registerMessage(packetId++,
+                                LevelDataSyncPacket.class,
+                                LevelDataSyncPacket::encode,
+                                LevelDataSyncPacket::decode,
+                                LevelDataSyncPacket::handle);
 
                 TalentsMod.LOGGER.info("Network packets registered");
         }

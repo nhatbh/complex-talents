@@ -81,9 +81,16 @@ public class SeraphicEchoSkill {
                         }
                         com.complextalents.passive.PassiveManager.modifyPassiveStacks(player, "command", -5);
 
-                        sword.pullEnemies();
+                        int pulledCount = sword.pullEnemies();
                         player.level().playSound(null, sword.getX(), sword.getY(), sword.getZ(),
                                 SoundEvents.TRIDENT_RETURN, SoundSource.PLAYERS, 1.0f, 1.5f);
+
+                        // Award Crowd Control XP
+                        if (pulledCount > 0) {
+                            int level = com.complextalents.persistence.PlayerPersistentData.get((net.minecraft.server.level.ServerLevel) player.level()).getLevel(player.getUUID());
+                            double crowdXP = com.complextalents.leveling.util.XPFormula.calculateHighPriestCrowdControlXP(pulledCount, level);
+                            com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(player, crowdXP);
+                        }
                         return;
                     }
 

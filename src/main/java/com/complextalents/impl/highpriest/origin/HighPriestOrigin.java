@@ -155,6 +155,11 @@ public class HighPriestOrigin {
             if (overheal > 0) {
                 applyOverhealToAbsorption(player, target, overheal);
             }
+
+            // Award Clutch Savior XP
+            double clutchXP = com.complextalents.leveling.util.XPFormula.calculateHighPriestClutchSaviorXP(
+                effectiveHeal, target.getMaxHealth(), targetCurrentHealth);
+            com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(player, clutchXP);
         }
     }
 

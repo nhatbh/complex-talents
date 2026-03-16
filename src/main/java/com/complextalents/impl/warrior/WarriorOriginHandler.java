@@ -13,6 +13,8 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import com.complextalents.leveling.util.XPFormula;
+import com.complextalents.leveling.events.LevelingEventHandler;
 import yesman.epicfight.world.capabilities.EpicFightCapabilities;
 import yesman.epicfight.world.capabilities.entitypatch.player.ServerPlayerPatch;
 import yesman.epicfight.skill.SkillContainer;
@@ -92,6 +94,12 @@ public class WarriorOriginHandler {
                 markCombat(player);
                 
                 event.setAmount((float) (event.getAmount() * multiplier));
+
+                // Award Unstoppable Momentum XP
+                if (rank == StyleRank.SSS) {
+                    double momentumXP = XPFormula.calculateWarriorUnstoppableMomentumXP(event.getAmount());
+                    LevelingEventHandler.awardSecondaryXP(player, momentumXP);
+                }
             }
         }
 
@@ -119,33 +127,6 @@ public class WarriorOriginHandler {
                 if (!event.isCanceled()) {
                     modifyStylePoints(player, -200);
                 }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onGuard(EpicFightGuardEvent event) {
-        ServerPlayer player = event.getPlayer();
-        if (isWarrior(player)) {
-            markCombat(player);
-            double points = event.isParry() ? 50 : 20; // More points for perfect parry
-            addStylePoints(player, points);
-
-            ServerPlayerPatch playerpatch = EpicFightCapabilities.getEntityPatch(player, ServerPlayerPatch.class);
-            if (playerpatch != null) {
-                float refund = event.getStaminaConsumed();
-                if (event.isParry()) {
-                    float currentStamina = playerpatch.getStamina();
-                    playerpatch.resetActionTick();
-                    playerpatch.setStamina(currentStamina + refund);
-                    
-                    // Reset penalty on perfect parry
-                    SkillContainer container = event.getContainer();
-                    container.getDataManager().setDataSync(SkillDataKeys.PENALTY.get(), 0.0F);
-                    container.getDataManager().setDataSync(SkillDataKeys.PENALTY_RESTORE_COUNTER.get(), player.tickCount);
-                }
-                player.sendSystemMessage(Component.literal(String.format("Warrior Guard: Parry=%b | Consumed=%.2f | CurrentStamina=%.2f", 
-                    event.isParry(), refund, playerpatch.getStamina())));
             }
         }
     }
@@ -194,13 +175,13 @@ public class WarriorOriginHandler {
         return WarriorOrigin.ID.equals(origin);
     }
 
-    private static void addStylePoints(ServerPlayer player, double amount) {
+    public static void addStylePoints(ServerPlayer player, double amount) {
         double current = OriginManager.getResource(player);
         StyleRank rank = StyleRank.getRank(current);
         modifyStylePoints(player, amount * 2.0 * rank.gainMultiplier);
     }
 
-    private static void modifyStylePoints(ServerPlayer player, double delta) {
+    public static void modifyStylePoints(ServerPlayer player, double delta) {
         double current = OriginManager.getResource(player);
         double next = Math.max(0, Math.min(1000, current + delta));
         OriginManager.setResource(player, next);

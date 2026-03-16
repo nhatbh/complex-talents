@@ -5,6 +5,7 @@ import com.complextalents.impl.assassin.data.AssassinData;
 import com.complextalents.impl.assassin.effect.AssassinEffects;
 import com.complextalents.impl.assassin.origin.AssassinOrigin;
 import com.complextalents.impl.assassin.skill.ShadowWalkSkill;
+import com.complextalents.leveling.util.XPFormula;
 import com.complextalents.skill.SkillManager;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -199,7 +200,12 @@ public class ShadowWalkEventHandler {
             // Apply Ambush Damage Scaling (Multiplicative)
             if (attacker.hasEffect(AssassinEffects.AMBUSH.get())) {
                 double apBuff = SkillManager.getSkillStat(attacker, ShadowWalkSkill.ID, "stealthBackstabBuff");
-                event.setAmount((float) (event.getAmount() * (1.0 + apBuff)));
+                float ambushDamage = (float) (event.getAmount() * (1.0 + apBuff));
+                event.setAmount(ambushDamage);
+                
+                // Award Ambush XP
+                double ambushXP = XPFormula.calculateAssassinAmbushXP(ambushDamage);
+                com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(attacker, ambushXP);
             }
             if (attacker.hasEffect(AssassinEffects.SHADOW_WALK.get())) {
                 attacker.removeEffect(AssassinEffects.SHADOW_WALK.get());
@@ -228,7 +234,12 @@ public class ShadowWalkEventHandler {
                     attacker.addEffect(new MobEffectInstance(AssassinEffects.AMBUSH.get(), (int) (buffDuration * 20), 0));
 
                     // Apply scaling to the initial backstab hit immediately
-                    event.setAmount((float) (event.getAmount() * (1.0 + apBuff)));
+                    float finalBackstabDamage = (float) (event.getAmount() * (1.0 + apBuff));
+                    event.setAmount(finalBackstabDamage);
+
+                    // Award Ghost XP
+                    double ghostXP = XPFormula.calculateAssassinGhostXP(finalBackstabDamage, currentGauge, maxGauge);
+                    com.complextalents.leveling.events.LevelingEventHandler.awardSecondaryXP(attacker, ghostXP);
                     
                     // Backstab FX (Blood Splatter + Fine Mist)
                     ServerLevel serverLevel = attacker.serverLevel();

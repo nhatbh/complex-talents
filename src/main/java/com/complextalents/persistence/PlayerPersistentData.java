@@ -25,6 +25,16 @@ public class PlayerPersistentData extends SavedData {
     private final Map<UUID, CompoundTag> elementalMageData = new ConcurrentHashMap<>();
     private final Map<UUID, CompoundTag> faithData = new ConcurrentHashMap<>();
 
+    // Leveling stats keyed by player UUID
+    private final Map<UUID, Integer> playerLevels = new ConcurrentHashMap<>();
+    private final Map<UUID, Double> playerCurrentXP = new ConcurrentHashMap<>();
+    private final Map<UUID, Double> playerTotalXP = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> playerSkillPoints = new ConcurrentHashMap<>();
+
+    // Assist data: Map<PlayerUUID, Map<TargetUUID, LastInteractionTimestamp>>
+    private final Map<UUID, Map<UUID, Long>> assistData = new ConcurrentHashMap<>();
+
+
     /**
      * Get or create the PlayerPersistentData for a server level.
      */
@@ -72,6 +82,16 @@ public class PlayerPersistentData extends SavedData {
             data.faithData.put(UUID.fromString(uuidStr), faithTag.getCompound(uuidStr));
         }
 
+        CompoundTag levelingTag = tag.getCompound("levelingData");
+        for (String uuidStr : levelingTag.getAllKeys()) {
+            UUID uuid = UUID.fromString(uuidStr);
+            CompoundTag pTag = levelingTag.getCompound(uuidStr);
+            data.playerLevels.put(uuid, pTag.getInt("level"));
+            data.playerCurrentXP.put(uuid, pTag.getDouble("currentXP"));
+            data.playerTotalXP.put(uuid, pTag.getDouble("totalXP"));
+            data.playerSkillPoints.put(uuid, pTag.getInt("skillPoints"));
+        }
+
         return data;
     }
 
@@ -115,6 +135,17 @@ public class PlayerPersistentData extends SavedData {
             faithTag.put(entry.getKey().toString(), entry.getValue());
         }
         tag.put("faithData", faithTag);
+
+        CompoundTag levelingTag = new CompoundTag();
+        for (UUID uuid : playerLevels.keySet()) {
+            CompoundTag pTag = new CompoundTag();
+            pTag.putInt("level", playerLevels.getOrDefault(uuid, 1));
+            pTag.putDouble("currentXP", playerCurrentXP.getOrDefault(uuid, 0.0));
+            pTag.putDouble("totalXP", playerTotalXP.getOrDefault(uuid, 0.0));
+            pTag.putInt("skillPoints", playerSkillPoints.getOrDefault(uuid, 0));
+            levelingTag.put(uuid.toString(), pTag);
+        }
+        tag.put("levelingData", levelingTag);
 
         return tag;
     }
@@ -248,6 +279,84 @@ public class PlayerPersistentData extends SavedData {
         darkMageData.remove(playerId);
         elementalMageData.remove(playerId);
         faithData.remove(playerId);
+        playerLevels.remove(playerId);
+        playerCurrentXP.remove(playerId);
+        playerTotalXP.remove(playerId);
+        playerSkillPoints.remove(playerId);
+        assistData.remove(playerId);
         setDirty();
     }
+
+    // --- Leveling Data Methods ---
+
+    public int getLevel(UUID playerId) {
+        return playerLevels.getOrDefault(playerId, 1);
+    }
+
+    public double getCurrentXP(UUID playerId) {
+        return playerCurrentXP.getOrDefault(playerId, 0.0);
+    }
+
+    public double getTotalXP(UUID playerId) {
+        return playerTotalXP.getOrDefault(playerId, 0.0);
+    }
+
+    public int getSkillPoints(UUID playerId) {
+        return playerSkillPoints.getOrDefault(playerId, 0);
+    }
+
+    public void addXP(UUID playerId, double amount) {
+        if (amount <= 0) return;
+
+        double currentXP = playerCurrentXP.getOrDefault(playerId, 0.0) + amount;
+        double totalXP = playerTotalXP.getOrDefault(playerId, 0.0) + amount;
+        int level = playerLevels.getOrDefault(playerId, 1);
+        int sp = playerSkillPoints.getOrDefault(playerId, 0);
+
+        // Level up logic
+        double xpForNext = 100 + (Math.pow(level, 1.5) * 50);
+        while (currentXP >= xpForNext) {
+            currentXP -= xpForNext;
+            level++;
+            sp += 2;
+            xpForNext = 100 + (Math.pow(level, 1.5) * 50);
+        }
+
+        playerCurrentXP.put(playerId, currentXP);
+        playerTotalXP.put(playerId, totalXP);
+        playerLevels.put(playerId, level);
+        playerSkillPoints.put(playerId, sp);
+        
+        setDirty();
+        // TODO: Notification should be handled in EventHandler or via a sync packet
+    }
+
+    public void resetCurrentXP(UUID playerId) {
+        playerCurrentXP.put(playerId, 0.0);
+        setDirty();
+    }
+
+    // --- Assist Data Methods ---
+
+    public void recordAssist(UUID playerId, UUID targetId, long timestamp) {
+        assistData.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>()).put(targetId, timestamp);
+    }
+
+    public boolean hasAssist(UUID playerId, UUID targetId, long currentTimestamp, long windowMillis) {
+        Map<UUID, Long> playerAssists = assistData.get(playerId);
+        if (playerAssists == null) return false;
+        
+        Long lastTime = playerAssists.get(targetId);
+        if (lastTime == null) return false;
+        
+        return (currentTimestamp - lastTime) <= windowMillis;
+    }
+
+    public void clearAssist(UUID playerId, UUID targetId) {
+        Map<UUID, Long> playerAssists = assistData.get(playerId);
+        if (playerAssists != null) {
+            playerAssists.remove(targetId);
+        }
+    }
+
 }
