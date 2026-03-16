@@ -143,15 +143,61 @@ public class LevelingService {
     }
 
     /**
+     * Gets a player's total earned skill points.
+     *
+     * @param player The player to query
+     * @return The total number of skill points earned
+     */
+    public int getTotalSkillPoints(ServerPlayer player) {
+        Objects.requireNonNull(player, "Player cannot be null");
+        PlayerLevelingData data = PlayerLevelingData.get(player.serverLevel());
+        return data.getTotalSkillPoints(player.getUUID());
+    }
+
+    /**
+     * Gets a player's consumed skill points.
+     *
+     * @param player The player to query
+     * @return The number of skill points already used
+     */
+    public int getConsumedSkillPoints(ServerPlayer player) {
+        Objects.requireNonNull(player, "Player cannot be null");
+        PlayerLevelingData data = PlayerLevelingData.get(player.serverLevel());
+        return data.getConsumedSkillPoints(player.getUUID());
+    }
+
+    /**
      * Gets a player's available skill points.
      *
      * @param player The player to query
-     * @return The number of skill points
+     * @return The number of available skill points (Total - Consumed)
      */
-    public int getSkillPoints(ServerPlayer player) {
+    public int getAvailableSkillPoints(ServerPlayer player) {
         Objects.requireNonNull(player, "Player cannot be null");
         PlayerLevelingData data = PlayerLevelingData.get(player.serverLevel());
-        return data.getSkillPoints(player.getUUID());
+        return data.getAvailableSkillPoints(player.getUUID());
+    }
+
+    /**
+     * Consumes skill points for a player.
+     *
+     * @param player The player
+     * @param amount The amount to consume
+     * @return true if successful, false if not enough points
+     */
+    public boolean consumeSkillPoints(ServerPlayer player, int amount) {
+        Objects.requireNonNull(player, "Player cannot be null");
+        if (amount <= 0) return true;
+
+        PlayerLevelingData data = PlayerLevelingData.get(player.serverLevel());
+        int available = data.getAvailableSkillPoints(player.getUUID());
+        if (available < amount) {
+            return false;
+        }
+
+        int newConsumed = data.getConsumedSkillPoints(player.getUUID()) + amount;
+        data.setConsumedSkillPoints(player.getUUID(), newConsumed);
+        return true;
     }
 
     /**

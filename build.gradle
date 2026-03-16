@@ -183,6 +183,11 @@ repositories {
         name = "CurseMaven"
         url = "https://cursemaven.com"
     }
+
+    maven {
+        name "firstdarkdev"
+        url "https://maven.firstdark.dev/snapshots"
+    }
     
     exclusiveContent {
         forRepository { maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" } }
@@ -216,6 +221,7 @@ dependencies {
     // WorldEdit Forge (CurseForge artifact for MC 1.20.1)
     // If you change WorldEdit version, update the file ID accordingly.
     implementation fg.deobf("curse.maven:worldedit-225608:4586218")
+    implementation fg.deobf("com.lowdragmc.ldlib:ldlib-forge-${minecraft_version}:${ldlib_version}") { transitive = false }
     // Iron's Spellbooks runtime dependencies - Required for :runClient
     runtimeOnly fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
     runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")

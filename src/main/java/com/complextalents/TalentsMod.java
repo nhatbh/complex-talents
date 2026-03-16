@@ -98,6 +98,9 @@ public class TalentsMod {
         OriginRegistry.getInstance().initialize();
         LOGGER.info("Origin registry initialized");
 
+        // Initialize dev UI
+        com.complextalents.dev.OriginSkillSelectionUI.init();
+
         // Register example origins
         HighPriestOrigin.register();
         HighPriestOrigin.initIntegration();
@@ -124,6 +127,10 @@ public class TalentsMod {
         // Register origin commands
         OriginCommand.register(event.getServer().getCommands().getDispatcher());
         LOGGER.info("Origin commands registered");
+
+        // Register dev UI command
+        com.complextalents.command.DevUICommand.register(event.getServer().getCommands().getDispatcher());
+        LOGGER.info("Dev UI command registered");
     }
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)

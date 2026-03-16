@@ -128,13 +128,33 @@ public class PlayerLevelingData extends SavedData {
     }
 
     /**
+     * Gets the player's total earned skill points.
+     *
+     * @param playerId The UUID of the player
+     * @return The total number of skill points earned
+     */
+    public int getTotalSkillPoints(UUID playerId) {
+        return getStats(playerId).getTotalSkillPoints();
+    }
+
+    /**
+     * Gets the player's consumed skill points.
+     *
+     * @param playerId The UUID of the player
+     * @return The number of skill points already used
+     */
+    public int getConsumedSkillPoints(UUID playerId) {
+        return getStats(playerId).getConsumedSkillPoints();
+    }
+
+    /**
      * Gets the player's available skill points.
      *
      * @param playerId The UUID of the player
-     * @return The number of skill points
+     * @return The number of available skill points (Total - Consumed)
      */
-    public int getSkillPoints(UUID playerId) {
-        return getStats(playerId).getSkillPoints();
+    public int getAvailableSkillPoints(UUID playerId) {
+        return getStats(playerId).getAvailableSkillPoints();
     }
 
     /**
@@ -150,7 +170,7 @@ public class PlayerLevelingData extends SavedData {
         double currentXP = oldStats.getCurrentXP() + amount;
         double totalXP = oldStats.getTotalXP() + amount;
         int level = oldStats.getLevel();
-        int skillPoints = oldStats.getSkillPoints();
+        int totalSkillPoints = oldStats.getTotalSkillPoints();
 
         // XP required for next level: 100 + (level^1.5 * 50)
         final int SKILL_POINTS_PER_LEVEL = 2;
@@ -160,11 +180,24 @@ public class PlayerLevelingData extends SavedData {
         while (currentXP >= xpForNext) {
             currentXP -= xpForNext;
             level++;
-            skillPoints += SKILL_POINTS_PER_LEVEL;
+            totalSkillPoints += SKILL_POINTS_PER_LEVEL;
             xpForNext = 100 + (Math.pow(level, 1.5) * 50);
         }
 
-        LevelStats newStats = new LevelStats(level, currentXP, totalXP, skillPoints);
+        LevelStats newStats = new LevelStats(level, currentXP, totalXP, totalSkillPoints, oldStats.getConsumedSkillPoints());
+        playerStats.put(playerId, newStats);
+        setDirty();
+    }
+
+    /**
+     * Sets consumed skill points for a player.
+     *
+     * @param playerId The UUID of the player
+     * @param amount The new consumed skill points amount
+     */
+    public void setConsumedSkillPoints(UUID playerId, int amount) {
+        LevelStats oldStats = getStats(playerId);
+        LevelStats newStats = oldStats.withConsumedPoints(amount);
         playerStats.put(playerId, newStats);
         setDirty();
     }
@@ -181,7 +214,8 @@ public class PlayerLevelingData extends SavedData {
                 oldStats.getLevel(),
                 0.0, // Reset current XP
                 oldStats.getTotalXP(), // Keep total
-                oldStats.getSkillPoints() // Keep skill points
+                oldStats.getTotalSkillPoints(), // Keep total skill points
+                oldStats.getConsumedSkillPoints() // Keep consumed skill points
         );
         playerStats.put(playerId, newStats);
         setDirty();

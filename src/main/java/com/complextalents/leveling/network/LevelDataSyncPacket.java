@@ -14,12 +14,14 @@ public class LevelDataSyncPacket {
     private final double currentXP;
     private final double xpForNext;
     private final double chunkFatigue;
+    private final int availableSkillPoints;
 
-    public LevelDataSyncPacket(int level, double currentXP, double xpForNext, double chunkFatigue) {
+    public LevelDataSyncPacket(int level, double currentXP, double xpForNext, double chunkFatigue, int availableSkillPoints) {
         this.level = level;
         this.currentXP = currentXP;
         this.xpForNext = xpForNext;
         this.chunkFatigue = chunkFatigue;
+        this.availableSkillPoints = availableSkillPoints;
     }
 
     public static void encode(LevelDataSyncPacket msg, FriendlyByteBuf buffer) {
@@ -27,6 +29,7 @@ public class LevelDataSyncPacket {
         buffer.writeDouble(msg.currentXP);
         buffer.writeDouble(msg.xpForNext);
         buffer.writeDouble(msg.chunkFatigue);
+        buffer.writeInt(msg.availableSkillPoints);
     }
 
     public static LevelDataSyncPacket decode(FriendlyByteBuf buffer) {
@@ -34,7 +37,8 @@ public class LevelDataSyncPacket {
             buffer.readInt(),
             buffer.readDouble(),
             buffer.readDouble(),
-            buffer.readDouble()
+            buffer.readDouble(),
+            buffer.readInt()
         );
     }
 
@@ -45,6 +49,7 @@ public class LevelDataSyncPacket {
             ClientLevelingData.setCurrentXP(msg.currentXP);
             ClientLevelingData.setXpForNext(msg.xpForNext);
             ClientLevelingData.setChunkFatigue(msg.chunkFatigue);
+            ClientLevelingData.setAvailableSkillPoints(msg.availableSkillPoints);
         });
         context.setPacketHandled(true);
     }

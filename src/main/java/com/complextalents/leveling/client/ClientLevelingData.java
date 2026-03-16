@@ -13,6 +13,8 @@ public class ClientLevelingData {
     private static double xpForNext = 100;
     private static double chunkFatigue = 1.0;
 
+    private static int availableSkillPoints = 0;
+
     public static int getLevel() {
         return level;
     }
@@ -43,5 +45,13 @@ public class ClientLevelingData {
 
     public static void setChunkFatigue(double chunkFatigue) {
         ClientLevelingData.chunkFatigue = chunkFatigue;
+    }
+
+    public static int getAvailableSkillPoints() {
+        return availableSkillPoints;
+    }
+
+    public static void setAvailableSkillPoints(int points) {
+        availableSkillPoints = points;
     }
 }

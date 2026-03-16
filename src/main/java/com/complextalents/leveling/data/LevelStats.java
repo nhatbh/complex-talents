@@ -10,13 +10,14 @@ public class LevelStats {
     private final int level;
     private final double currentXP;
     private final double totalXP;
-    private final int skillPoints;
+    private final int totalSkillPoints;
+    private final int consumedSkillPoints;
 
     /**
      * Creates a new LevelStats with default values.
      */
     public LevelStats() {
-        this(1, 0.0, 0.0, 0);
+        this(1, 0.0, 0.0, 0, 0);
     }
 
     /**
@@ -25,13 +26,15 @@ public class LevelStats {
      * @param level The player's level
      * @param currentXP The current XP progress towards next level
      * @param totalXP The total XP accumulated
-     * @param skillPoints The number of available skill points
+     * @param totalSkillPoints The total number of skill points earned
+     * @param consumedSkillPoints The number of skill points already used
      */
-    public LevelStats(int level, double currentXP, double totalXP, int skillPoints) {
+    public LevelStats(int level, double currentXP, double totalXP, int totalSkillPoints, int consumedSkillPoints) {
         this.level = Math.max(1, level);
         this.currentXP = Math.max(0, currentXP);
         this.totalXP = Math.max(0, totalXP);
-        this.skillPoints = Math.max(0, skillPoints);
+        this.totalSkillPoints = Math.max(0, totalSkillPoints);
+        this.consumedSkillPoints = Math.max(0, consumedSkillPoints);
     }
 
     // Getters (immutable)
@@ -47,8 +50,16 @@ public class LevelStats {
         return totalXP;
     }
 
-    public int getSkillPoints() {
-        return skillPoints;
+    public int getTotalSkillPoints() {
+        return totalSkillPoints;
+    }
+
+    public int getConsumedSkillPoints() {
+        return consumedSkillPoints;
+    }
+
+    public int getAvailableSkillPoints() {
+        return Math.max(0, totalSkillPoints - consumedSkillPoints);
     }
 
     /**
@@ -63,7 +74,8 @@ public class LevelStats {
                 level,
                 currentXP + amount,
                 totalXP + amount,
-                skillPoints
+                totalSkillPoints,
+                consumedSkillPoints
         );
     }
 
@@ -73,7 +85,7 @@ public class LevelStats {
      * @return A new LevelStats with current XP reset
      */
     public LevelStats withResetCurrentXP() {
-        return new LevelStats(level, 0.0, totalXP, skillPoints);
+        return new LevelStats(level, 0.0, totalXP, totalSkillPoints, consumedSkillPoints);
     }
 
     /**
@@ -88,8 +100,19 @@ public class LevelStats {
                 level + levelIncrease,
                 currentXP,
                 totalXP,
-                skillPoints + (levelIncrease * skillPointsPerLevel)
+                totalSkillPoints + (levelIncrease * skillPointsPerLevel),
+                consumedSkillPoints
         );
+    }
+
+    /**
+     * Creates a new LevelStats with updated consumed points.
+     *
+     * @param consumedPoints The new consumed points value
+     * @return A new LevelStats with updated consumed points
+     */
+    public LevelStats withConsumedPoints(int consumedPoints) {
+        return new LevelStats(level, currentXP, totalXP, totalSkillPoints, consumedPoints);
     }
 
     /**
@@ -102,7 +125,8 @@ public class LevelStats {
         tag.putInt("level", level);
         tag.putDouble("currentXP", currentXP);
         tag.putDouble("totalXP", totalXP);
-        tag.putInt("skillPoints", skillPoints);
+        tag.putInt("totalSkillPoints", totalSkillPoints);
+        tag.putInt("consumedSkillPoints", consumedSkillPoints);
         return tag;
     }
 
@@ -113,18 +137,21 @@ public class LevelStats {
      * @return A new LevelStats loaded from the tag
      */
     public static LevelStats deserializeNBT(CompoundTag tag) {
+        // Migration: Check for old "skillPoints" key
+        int totalSP = tag.contains("totalSkillPoints") ? tag.getInt("totalSkillPoints") : tag.getInt("skillPoints");
         return new LevelStats(
                 tag.getInt("level"),
                 tag.getDouble("currentXP"),
                 tag.getDouble("totalXP"),
-                tag.getInt("skillPoints")
+                totalSP,
+                tag.getInt("consumedSkillPoints")
         );
     }
 
     @Override
     public String toString() {
-        return String.format("LevelStats{level=%d, currentXP=%.1f, totalXP=%.1f, skillPoints=%d}",
-                level, currentXP, totalXP, skillPoints);
+        return String.format("LevelStats{level=%d, currentXP=%.1f, totalXP=%.1f, totalSP=%d, consumedSP=%d}",
+                level, currentXP, totalXP, totalSkillPoints, consumedSkillPoints);
     }
 
     @Override
@@ -137,7 +164,8 @@ public class LevelStats {
         if (level != that.level) return false;
         if (Double.compare(that.currentXP, currentXP) != 0) return false;
         if (Double.compare(that.totalXP, totalXP) != 0) return false;
-        if (skillPoints != that.skillPoints) return false;
+        if (totalSkillPoints != that.totalSkillPoints) return false;
+        if (consumedSkillPoints != that.consumedSkillPoints) return false;
 
         return true;
     }
@@ -151,7 +179,8 @@ public class LevelStats {
         result = 31 * result + (int) (temp ^ (temp >>> 32));
         temp = Double.doubleToLongBits(totalXP);
         result = 31 * result + (int) (temp ^ (temp >>> 32));
-        result = 31 * result + skillPoints;
+        result = 31 * result + totalSkillPoints;
+        result = 31 * result + consumedSkillPoints;
         return result;
     }
 }

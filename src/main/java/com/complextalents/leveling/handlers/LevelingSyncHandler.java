@@ -101,6 +101,7 @@ public class LevelingSyncHandler {
         int playerLevel = levelingData.getLevel(uuid);
         double currentXP = levelingData.getCurrentXP(uuid);
         double xpForNext = 100 + (Math.pow(playerLevel, 1.5) * 50);
+        int availableSP = levelingData.getAvailableSkillPoints(uuid);
 
         // Get fatigue multiplier for current chunk
         ChunkPos chunkPos = new ChunkPos(player.blockPosition());
@@ -108,7 +109,7 @@ public class LevelingSyncHandler {
         double fatigue = fatigueData.getMultiplier(chunkPos);
 
         // Send packet to player
-        PacketHandler.sendTo(new LevelDataSyncPacket(playerLevel, currentXP, xpForNext, fatigue), player);
+        PacketHandler.sendTo(new LevelDataSyncPacket(playerLevel, currentXP, xpForNext, fatigue, availableSP), player);
     }
 
     /**
