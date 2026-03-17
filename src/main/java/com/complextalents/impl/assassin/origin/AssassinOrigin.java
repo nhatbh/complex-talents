@@ -2,6 +2,8 @@ package com.complextalents.impl.assassin.origin;
 
 import com.complextalents.TalentsMod;
 import com.complextalents.impl.assassin.client.AssassinRenderer;
+import com.complextalents.stats.ClassCostMatrix;
+import com.complextalents.stats.StatType;
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.OriginManager;
 import com.complextalents.origin.Origin;
@@ -39,6 +41,17 @@ public class AssassinOrigin {
                 .scaledStat("disengageMoveSpeed", new double[] { 0.30, 0.45, 0.60, 0.75, 1.00 })
                 .scaledStat("disengageDuration", new double[] { 1.5, 1.5, 2.0, 2.0, 2.5 })
                 .register();
+
+        ClassCostMatrix.defineCosts(ID)
+                .cost(StatType.FLAT_AD, 1)
+                .cost(StatType.PERCENT_AD, 1)
+                .cost(StatType.AP, 4)
+                .cost(StatType.ARMOR_PEN, 1)
+                .cost(StatType.LUCK_CRIT, 1)
+                .cost(StatType.MAX_HP, 3)
+                .cost(StatType.MAX_MANA, 4)
+                .cost(StatType.MOBILITY, 1)
+                .cost(StatType.CDR, 2);
 
         TalentsMod.LOGGER.info("Assassin origin registered");
     }

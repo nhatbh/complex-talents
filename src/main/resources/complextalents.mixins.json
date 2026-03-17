@@ -4,7 +4,8 @@
   "package": "com.complextalents.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "epicfight.GuardSkillMixin"
+    "epicfight.GuardSkillMixin",
+    "AbstractSpellMixin"
   ],
   "server": [
   ],

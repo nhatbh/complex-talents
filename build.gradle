@@ -188,7 +188,12 @@ repositories {
         name "firstdarkdev"
         url "https://maven.firstdark.dev/snapshots"
     }
-    
+
+    maven {
+        // Shadows_of_Fire's Maven
+        url "https://maven.shadowsoffire.dev/releases"
+    }
+        
     exclusiveContent {
         forRepository { maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" } }
         forRepositories(fg.repository)
@@ -220,6 +225,8 @@ dependencies {
     // implementation fg.deobf("com.nhatbh.basedefensev2:basedefensev2:1.0.0")
     // WorldEdit Forge (CurseForge artifact for MC 1.20.1)
     // If you change WorldEdit version, update the file ID accordingly.
+    implementation fg.deobf("dev.shadowsoffire:Placebo:${minecraft_version}-${placeboVersion}")
+    implementation fg.deobf("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${attributesLibVersion}")
     implementation fg.deobf("curse.maven:worldedit-225608:4586218")
     implementation fg.deobf("com.lowdragmc.ldlib:ldlib-forge-${minecraft_version}:${ldlib_version}") { transitive = false }
     // Iron's Spellbooks runtime dependencies - Required for :runClient

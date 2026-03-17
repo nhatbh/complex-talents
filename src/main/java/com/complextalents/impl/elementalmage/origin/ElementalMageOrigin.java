@@ -5,6 +5,8 @@ import com.complextalents.elemental.events.ElementalDamageEvent;
 import com.complextalents.impl.elementalmage.ElementalMageData;
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.OriginManager;
+import com.complextalents.stats.ClassCostMatrix;
+import com.complextalents.stats.StatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -55,6 +57,17 @@ public class ElementalMageOrigin {
                 })
                 .renderer(new com.complextalents.impl.elementalmage.client.ElementalMageRenderer())
                 .register();
+
+        ClassCostMatrix.defineCosts(ID)
+                .cost(StatType.FLAT_AD, 4)
+                .cost(StatType.PERCENT_AD, 4)
+                .cost(StatType.AP, 1)
+                .cost(StatType.ARMOR_PEN, 4)
+                .cost(StatType.LUCK_CRIT, 2)
+                .cost(StatType.MAX_HP, 3)
+                .cost(StatType.MAX_MANA, 1)
+                .cost(StatType.MOBILITY, 2)
+                .cost(StatType.CDR, 1);
 
         // Register Harmonic Convergence Skill
         com.complextalents.impl.elementalmage.skill.HarmonicConvergenceSkill.register();

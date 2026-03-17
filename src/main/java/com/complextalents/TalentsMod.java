@@ -21,8 +21,10 @@ import com.complextalents.network.PacketHandler;
 import com.complextalents.origin.OriginRegistry;
 import com.complextalents.origin.command.OriginCommand;
 import com.complextalents.origin.integration.OriginModIntegrationHandler;
+import com.complextalents.registry.ModAttributes;
 import com.complextalents.registry.SoundRegistry;
-import com.complextalents.origin.integration.SpellCritAttributes;
+import com.complextalents.spellmastery.command.SpellMasteryCommand;
+import com.complextalents.stats.command.StatsCommand;
 import com.complextalents.skill.SkillRegistry;
 import com.complextalents.skill.command.SkillCommand;
 import com.mojang.logging.LogUtils;
@@ -54,8 +56,8 @@ public class TalentsMod {
         HighPriestEffects.register(modEventBus);
         AssassinEffects.register(modEventBus);
 
-        // Register spell crit attributes
-        SpellCritAttributes.register(modEventBus);
+        // Register common attributes
+        ModAttributes.register(modEventBus);
 
         // Register custom entities
         ModEntities.register(modEventBus);
@@ -100,6 +102,7 @@ public class TalentsMod {
 
         // Initialize dev UI
         com.complextalents.dev.OriginSkillSelectionUI.init();
+        com.complextalents.spellmastery.client.SpellMasteryUI.init();
 
         // Register example origins
         HighPriestOrigin.register();
@@ -131,6 +134,18 @@ public class TalentsMod {
         // Register dev UI command
         com.complextalents.command.DevUICommand.register(event.getServer().getCommands().getDispatcher());
         LOGGER.info("Dev UI command registered");
+
+        // Register stats commands
+        StatsCommand.register(event.getServer().getCommands().getDispatcher());
+        LOGGER.info("Stats commands registered");
+
+        // Register spell mastery commands
+        SpellMasteryCommand.register(event.getServer().getCommands().getDispatcher());
+        LOGGER.info("Spell mastery commands registered");
+
+        // Register leveling commands
+        com.complextalents.leveling.command.LevelingCommand.register(event.getServer().getCommands().getDispatcher());
+        LOGGER.info("Leveling commands registered");
     }
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)

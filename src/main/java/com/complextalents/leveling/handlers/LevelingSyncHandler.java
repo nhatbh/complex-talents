@@ -92,7 +92,7 @@ public class LevelingSyncHandler {
     /**
      * Sends level and fatigue data to the player.
      */
-    private static void syncPlayerLevelData(ServerPlayer player) {
+    public static void syncPlayerLevelData(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
         PlayerLevelingData levelingData = PlayerLevelingData.get(level);
         UUID uuid = player.getUUID();

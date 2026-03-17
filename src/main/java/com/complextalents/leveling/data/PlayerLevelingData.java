@@ -203,6 +203,25 @@ public class PlayerLevelingData extends SavedData {
     }
 
     /**
+     * Adds skill points to a player.
+     *
+     * @param playerId The UUID of the player
+     * @param amount The number of skill points to add
+     */
+    public void addSkillPoints(UUID playerId, int amount) {
+        LevelStats oldStats = getStats(playerId);
+        LevelStats newStats = new LevelStats(
+                oldStats.getLevel(),
+                oldStats.getCurrentXP(),
+                oldStats.getTotalXP(),
+                oldStats.getTotalSkillPoints() + amount,
+                oldStats.getConsumedSkillPoints()
+        );
+        playerStats.put(playerId, newStats);
+        setDirty();
+    }
+
+    /**
      * Resets player's current XP to 0.
      * Used for death penalties - total XP and level remain unchanged.
      *

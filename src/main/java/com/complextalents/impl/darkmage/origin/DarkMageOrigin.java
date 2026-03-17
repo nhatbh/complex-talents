@@ -5,6 +5,8 @@ import com.complextalents.impl.darkmage.client.DarkMageRenderer;
 import com.complextalents.impl.darkmage.data.SoulData;
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.OriginManager;
+import com.complextalents.stats.ClassCostMatrix;
+import com.complextalents.stats.StatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -70,9 +72,19 @@ public class DarkMageOrigin {
                 // Spell crit chance per soul during Blood Pact: 0.08%/0.1%/0.12%/0.14%/0.16% per soul
                 .scaledStat("soulSpellCritPercent", new double[]{0.0008, 0.001, 0.0012, 0.0014, 0.0016})
                 // Phylactery cooldown in seconds: 300s (5 min) at all levels
-                .scaledStat("phylacteryCooldown", new double[]{300.0, 300.0, 300.0, 300.0, 300.0})
                 .renderer(new DarkMageRenderer())
                 .register();
+
+        ClassCostMatrix.defineCosts(ID)
+                .cost(StatType.FLAT_AD, 3)
+                .cost(StatType.PERCENT_AD, 3)
+                .cost(StatType.AP, 1)
+                .cost(StatType.ARMOR_PEN, 2)
+                .cost(StatType.LUCK_CRIT, 2)
+                .cost(StatType.MAX_HP, 2)
+                .cost(StatType.MAX_MANA, 2)
+                .cost(StatType.MOBILITY, 3)
+                .cost(StatType.CDR, 2);
 
         TalentsMod.LOGGER.info("Dark Mage origin registered");
     }

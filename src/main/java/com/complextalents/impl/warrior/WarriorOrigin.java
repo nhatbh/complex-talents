@@ -2,6 +2,8 @@ package com.complextalents.impl.warrior;
 
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.ResourceType;
+import com.complextalents.stats.ClassCostMatrix;
+import com.complextalents.stats.StatType;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -38,5 +40,16 @@ public class WarriorOrigin {
                         .build())
                 .renderer(new com.complextalents.impl.warrior.client.WarriorRenderer())
                 .register();
+
+        ClassCostMatrix.defineCosts(ID)
+                .cost(StatType.FLAT_AD, 2)
+                .cost(StatType.PERCENT_AD, 1)
+                .cost(StatType.AP, 4)
+                .cost(StatType.ARMOR_PEN, 2)
+                .cost(StatType.LUCK_CRIT, 3)
+                .cost(StatType.MAX_HP, 1)
+                .cost(StatType.MAX_MANA, 4)
+                .cost(StatType.MOBILITY, 2)
+                .cost(StatType.CDR, 3);
     }
 }

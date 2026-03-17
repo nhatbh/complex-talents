@@ -8,6 +8,8 @@ import com.complextalents.impl.highpriest.events.HolySpellHealEvent;
 import com.complextalents.impl.highpriest.integration.HighPriestIntegration;
 import com.complextalents.origin.OriginBuilder;
 import com.complextalents.origin.OriginManager;
+import com.complextalents.stats.ClassCostMatrix;
+import com.complextalents.stats.StatType;
 
 import com.complextalents.origin.events.OriginChangeEvent;
 import com.complextalents.passive.PassiveManager;
@@ -121,6 +123,17 @@ public class HighPriestOrigin {
                 .scaledStat("absorptionDuration", new double[] { 600.0, 800.0, 1000.0, 1200.0, 1500.0 })
                 .scaledStat("manaPerFaith", new double[] { 0.1, 0.15, 0.2, 0.25, 0.3 })
                 .register();
+
+        ClassCostMatrix.defineCosts(ID)
+                .cost(StatType.FLAT_AD, 2)
+                .cost(StatType.PERCENT_AD, 3)
+                .cost(StatType.AP, 1)
+                .cost(StatType.ARMOR_PEN, 3)
+                .cost(StatType.LUCK_CRIT, 4)
+                .cost(StatType.MAX_HP, 2)
+                .cost(StatType.MAX_MANA, 1)
+                .cost(StatType.MOBILITY, 3)
+                .cost(StatType.CDR, 1);
     }
 
     /**
